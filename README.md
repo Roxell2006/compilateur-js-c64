@@ -51,15 +51,34 @@ The generated `.prg` uses a BASIC stub with `10 SYS 2064` and starts machine cod
 - `c64.clearScreen()`
 - `c64.print(text)`
 - `c64.printAt(x, y, text)`
+- `c64.printCentered(y, text)`
 - `c64.poke(address, value)`
 - `c64.peek(address)`
 - `c64.memset(address, value, length)`
 - `c64.memcpy(dest, src, length)`
+- `c64.copyDataTo(address, dataRefOrName, length)`
+- `c64.memsetColor(address, color, length)`
+- `c64.writeChar(x, y, char, color)`
+- `c64.fillRect(x, y, w, h, char, color)`
+- `c64.drawFrame(x, y, w, h, char, color)`
+- `c64.clearLine(y, char, color)`
 - `c64.screen(address = 0x0400)`
 - `c64.colorRam(address = 0xD800)`
 - `c64.sys(address)`
 - `c64.label(name)`
 - `c64.comment(text)`
+
+### Data and variables
+
+- `c64.data.byte(name, values)`
+- `c64.data.word(name, values)`
+- `c64.data.string(name, text)`
+- `c64.data.screenString(name, text)`
+- `c64.data.length(name)`
+- `c64.var.byte(name, address, initialValue)`
+- `c64.var.word(name, address, initialValue)`
+- `c64.varRef(name)`
+- `c64.dataRef(name, length?)`
 
 ### Low-level assembler helpers
 
@@ -151,6 +170,8 @@ c64js init my-c64-demo
 
 - [examples/hello.js](./examples/hello.js)
 - [examples/colors.js](./examples/colors.js)
+- [examples/comfort-frame.js](./examples/comfort-frame.js)
+- [examples/comfort-data-vars.js](./examples/comfort-data-vars.js)
 - [examples/screen-fill.js](./examples/screen-fill.js)
 - [examples/keyboard.js](./examples/keyboard.js)
 - [examples/joystick.js](./examples/joystick.js)

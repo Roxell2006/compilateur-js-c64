@@ -38,7 +38,7 @@ printat_loop_4:
 printat_done_5:
   SEI
   LDA #$00
-  STA $FB
+  STA $C0FE
   LDA #$01
   STA $D01A
   LDA #$01
@@ -63,7 +63,7 @@ irq_dispatch:
   PHA
   TYA
   PHA
-  LDA $FB
+  LDA $C0FE
   CMP #$00
   BEQ irq_handler_0
   JMP irq_handler_0
@@ -75,7 +75,7 @@ irq_handler_0:
   STA $C000
   STA $D020
   LDA #$00
-  STA $FB
+  STA $C0FE
   LDA #$FA
   STA $D012
   LDA $D011

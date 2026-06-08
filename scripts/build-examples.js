@@ -6,6 +6,8 @@ import { createBasicDataProgram, createPrg } from "../src/prgWriter.js";
 const EXAMPLES = [
   "hello",
   "colors",
+  "comfort-frame",
+  "comfort-data-vars",
   "screen-fill",
   "keyboard",
   "joystick",

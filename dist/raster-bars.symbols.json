@@ -1,6 +1,15 @@
 {
-  "irq_dispatch": 2135,
-  "irq_handler_0": 2153,
-  "irq_handler_1": 2186,
-  "program_end": 2219
+  "printat_loop_0": 2086,
+  "printat_done_1": 2103,
+  "printat_loop_2": 2105,
+  "printat_done_3": 2122,
+  "printat_loop_4": 2124,
+  "printat_done_5": 2141,
+  "irq_dispatch": 2184,
+  "irq_handler_0": 2203,
+  "irq_handler_1": 2239,
+  "program_end": 2275,
+  "str_screen_0": 2276,
+  "str_screen_1": 2293,
+  "str_screen_2": 2308
 }

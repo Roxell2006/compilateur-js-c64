@@ -1,5 +1,17 @@
 # Changelog
 
+# Changelog
+
+## Unreleased
+
+- Added `v0.2.0` comfort foundations
+- Added `c64.data.*` declarations for bytes, words, PETSCII strings, and screen strings
+- Added `c64.var.*` declarations plus `c64.varRef()`
+- Added `c64.dataRef()`, `c64.copyDataTo()`, and `c64.memsetColor()`
+- Added screen helpers including `printCentered`, `writeChar`, `fillRect`, `drawFrame`, and `clearLine`
+- Added comfort-focused examples for frames, data, and variables
+- Updated `examples/screen-fill.js` to use the new comfort API
+
 ## 0.1.0
 
 - First npm-oriented release of `js-c64`

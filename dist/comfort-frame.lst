@@ -5,12 +5,12 @@
 081A  A9 06       LDA #$06
 081C  8D 21 D0    STA $D021
 081F  A2 00       LDX #$00
-0821        memset_400_81_40:
-0821  A9 51       LDA #$51
+0821        memset_400_32_40:
+0821  A9 20       LDA #$20
 0823  9D 00 04    STA $0400,X
 0826  E8          INX
 0827  E0 28       CPX #$28
-0829  D0 F6       BNE memset_400_81_40
+0829  D0 F6       BNE memset_400_32_40
 082B  A2 00       LDX #$00
 082D        memset_d800_14_40:
 082D  A9 0E       LDA #$0E
@@ -19,12 +19,12 @@
 0833  E0 28       CPX #$28
 0835  D0 F6       BNE memset_d800_14_40
 0837  A2 00       LDX #$00
-0839        memset_428_81_40:
-0839  A9 51       LDA #$51
+0839        memset_428_32_40:
+0839  A9 20       LDA #$20
 083B  9D 28 04    STA $0428,X
 083E  E8          INX
 083F  E0 28       CPX #$28
-0841  D0 F6       BNE memset_428_81_40
+0841  D0 F6       BNE memset_428_32_40
 0843  A2 00       LDX #$00
 0845        memset_d828_14_40:
 0845  A9 0E       LDA #$0E
@@ -33,12 +33,12 @@
 084B  E0 28       CPX #$28
 084D  D0 F6       BNE memset_d828_14_40
 084F  A2 00       LDX #$00
-0851        memset_450_81_40:
-0851  A9 51       LDA #$51
+0851        memset_450_32_40:
+0851  A9 20       LDA #$20
 0853  9D 50 04    STA $0450,X
 0856  E8          INX
 0857  E0 28       CPX #$28
-0859  D0 F6       BNE memset_450_81_40
+0859  D0 F6       BNE memset_450_32_40
 085B  A2 00       LDX #$00
 085D        memset_d850_14_40:
 085D  A9 0E       LDA #$0E
@@ -47,12 +47,12 @@
 0863  E0 28       CPX #$28
 0865  D0 F6       BNE memset_d850_14_40
 0867  A2 00       LDX #$00
-0869        memset_478_81_40:
-0869  A9 51       LDA #$51
+0869        memset_478_32_40:
+0869  A9 20       LDA #$20
 086B  9D 78 04    STA $0478,X
 086E  E8          INX
 086F  E0 28       CPX #$28
-0871  D0 F6       BNE memset_478_81_40
+0871  D0 F6       BNE memset_478_32_40
 0873  A2 00       LDX #$00
 0875        memset_d878_14_40:
 0875  A9 0E       LDA #$0E
@@ -61,12 +61,12 @@
 087B  E0 28       CPX #$28
 087D  D0 F6       BNE memset_d878_14_40
 087F  A2 00       LDX #$00
-0881        memset_4a0_81_40:
-0881  A9 51       LDA #$51
+0881        memset_4a0_32_40:
+0881  A9 20       LDA #$20
 0883  9D A0 04    STA $04A0,X
 0886  E8          INX
 0887  E0 28       CPX #$28
-0889  D0 F6       BNE memset_4a0_81_40
+0889  D0 F6       BNE memset_4a0_32_40
 088B  A2 00       LDX #$00
 088D        memset_d8a0_14_40:
 088D  A9 0E       LDA #$0E
@@ -75,12 +75,12 @@
 0893  E0 28       CPX #$28
 0895  D0 F6       BNE memset_d8a0_14_40
 0897  A2 00       LDX #$00
-0899        memset_4c8_81_40:
-0899  A9 51       LDA #$51
+0899        memset_4c8_32_40:
+0899  A9 20       LDA #$20
 089B  9D C8 04    STA $04C8,X
 089E  E8          INX
 089F  E0 28       CPX #$28
-08A1  D0 F6       BNE memset_4c8_81_40
+08A1  D0 F6       BNE memset_4c8_32_40
 08A3  A2 00       LDX #$00
 08A5        memset_d8c8_14_40:
 08A5  A9 0E       LDA #$0E
@@ -89,12 +89,12 @@
 08AB  E0 28       CPX #$28
 08AD  D0 F6       BNE memset_d8c8_14_40
 08AF  A2 00       LDX #$00
-08B1        memset_4f0_81_40:
-08B1  A9 51       LDA #$51
+08B1        memset_4f0_32_40:
+08B1  A9 20       LDA #$20
 08B3  9D F0 04    STA $04F0,X
 08B6  E8          INX
 08B7  E0 28       CPX #$28
-08B9  D0 F6       BNE memset_4f0_81_40
+08B9  D0 F6       BNE memset_4f0_32_40
 08BB  A2 00       LDX #$00
 08BD        memset_d8f0_14_40:
 08BD  A9 0E       LDA #$0E
@@ -103,12 +103,12 @@
 08C3  E0 28       CPX #$28
 08C5  D0 F6       BNE memset_d8f0_14_40
 08C7  A2 00       LDX #$00
-08C9        memset_518_81_40:
-08C9  A9 51       LDA #$51
+08C9        memset_518_32_40:
+08C9  A9 20       LDA #$20
 08CB  9D 18 05    STA $0518,X
 08CE  E8          INX
 08CF  E0 28       CPX #$28
-08D1  D0 F6       BNE memset_518_81_40
+08D1  D0 F6       BNE memset_518_32_40
 08D3  A2 00       LDX #$00
 08D5        memset_d918_14_40:
 08D5  A9 0E       LDA #$0E
@@ -117,12 +117,12 @@
 08DB  E0 28       CPX #$28
 08DD  D0 F6       BNE memset_d918_14_40
 08DF  A2 00       LDX #$00
-08E1        memset_540_81_40:
-08E1  A9 51       LDA #$51
+08E1        memset_540_32_40:
+08E1  A9 20       LDA #$20
 08E3  9D 40 05    STA $0540,X
 08E6  E8          INX
 08E7  E0 28       CPX #$28
-08E9  D0 F6       BNE memset_540_81_40
+08E9  D0 F6       BNE memset_540_32_40
 08EB  A2 00       LDX #$00
 08ED        memset_d940_14_40:
 08ED  A9 0E       LDA #$0E
@@ -131,12 +131,12 @@
 08F3  E0 28       CPX #$28
 08F5  D0 F6       BNE memset_d940_14_40
 08F7  A2 00       LDX #$00
-08F9        memset_568_81_40:
-08F9  A9 51       LDA #$51
+08F9        memset_568_32_40:
+08F9  A9 20       LDA #$20
 08FB  9D 68 05    STA $0568,X
 08FE  E8          INX
 08FF  E0 28       CPX #$28
-0901  D0 F6       BNE memset_568_81_40
+0901  D0 F6       BNE memset_568_32_40
 0903  A2 00       LDX #$00
 0905        memset_d968_14_40:
 0905  A9 0E       LDA #$0E
@@ -145,12 +145,12 @@
 090B  E0 28       CPX #$28
 090D  D0 F6       BNE memset_d968_14_40
 090F  A2 00       LDX #$00
-0911        memset_590_81_40:
-0911  A9 51       LDA #$51
+0911        memset_590_32_40:
+0911  A9 20       LDA #$20
 0913  9D 90 05    STA $0590,X
 0916  E8          INX
 0917  E0 28       CPX #$28
-0919  D0 F6       BNE memset_590_81_40
+0919  D0 F6       BNE memset_590_32_40
 091B  A2 00       LDX #$00
 091D        memset_d990_14_40:
 091D  A9 0E       LDA #$0E
@@ -159,12 +159,12 @@
 0923  E0 28       CPX #$28
 0925  D0 F6       BNE memset_d990_14_40
 0927  A2 00       LDX #$00
-0929        memset_5b8_81_40:
-0929  A9 51       LDA #$51
+0929        memset_5b8_32_40:
+0929  A9 20       LDA #$20
 092B  9D B8 05    STA $05B8,X
 092E  E8          INX
 092F  E0 28       CPX #$28
-0931  D0 F6       BNE memset_5b8_81_40
+0931  D0 F6       BNE memset_5b8_32_40
 0933  A2 00       LDX #$00
 0935        memset_d9b8_14_40:
 0935  A9 0E       LDA #$0E
@@ -173,12 +173,12 @@
 093B  E0 28       CPX #$28
 093D  D0 F6       BNE memset_d9b8_14_40
 093F  A2 00       LDX #$00
-0941        memset_5e0_81_40:
-0941  A9 51       LDA #$51
+0941        memset_5e0_32_40:
+0941  A9 20       LDA #$20
 0943  9D E0 05    STA $05E0,X
 0946  E8          INX
 0947  E0 28       CPX #$28
-0949  D0 F6       BNE memset_5e0_81_40
+0949  D0 F6       BNE memset_5e0_32_40
 094B  A2 00       LDX #$00
 094D        memset_d9e0_14_40:
 094D  A9 0E       LDA #$0E
@@ -187,12 +187,12 @@
 0953  E0 28       CPX #$28
 0955  D0 F6       BNE memset_d9e0_14_40
 0957  A2 00       LDX #$00
-0959        memset_608_81_40:
-0959  A9 51       LDA #$51
+0959        memset_608_32_40:
+0959  A9 20       LDA #$20
 095B  9D 08 06    STA $0608,X
 095E  E8          INX
 095F  E0 28       CPX #$28
-0961  D0 F6       BNE memset_608_81_40
+0961  D0 F6       BNE memset_608_32_40
 0963  A2 00       LDX #$00
 0965        memset_da08_14_40:
 0965  A9 0E       LDA #$0E
@@ -201,12 +201,12 @@
 096B  E0 28       CPX #$28
 096D  D0 F6       BNE memset_da08_14_40
 096F  A2 00       LDX #$00
-0971        memset_630_81_40:
-0971  A9 51       LDA #$51
+0971        memset_630_32_40:
+0971  A9 20       LDA #$20
 0973  9D 30 06    STA $0630,X
 0976  E8          INX
 0977  E0 28       CPX #$28
-0979  D0 F6       BNE memset_630_81_40
+0979  D0 F6       BNE memset_630_32_40
 097B  A2 00       LDX #$00
 097D        memset_da30_14_40:
 097D  A9 0E       LDA #$0E
@@ -215,12 +215,12 @@
 0983  E0 28       CPX #$28
 0985  D0 F6       BNE memset_da30_14_40
 0987  A2 00       LDX #$00
-0989        memset_658_81_40:
-0989  A9 51       LDA #$51
+0989        memset_658_32_40:
+0989  A9 20       LDA #$20
 098B  9D 58 06    STA $0658,X
 098E  E8          INX
 098F  E0 28       CPX #$28
-0991  D0 F6       BNE memset_658_81_40
+0991  D0 F6       BNE memset_658_32_40
 0993  A2 00       LDX #$00
 0995        memset_da58_14_40:
 0995  A9 0E       LDA #$0E
@@ -229,12 +229,12 @@
 099B  E0 28       CPX #$28
 099D  D0 F6       BNE memset_da58_14_40
 099F  A2 00       LDX #$00
-09A1        memset_680_81_40:
-09A1  A9 51       LDA #$51
+09A1        memset_680_32_40:
+09A1  A9 20       LDA #$20
 09A3  9D 80 06    STA $0680,X
 09A6  E8          INX
 09A7  E0 28       CPX #$28
-09A9  D0 F6       BNE memset_680_81_40
+09A9  D0 F6       BNE memset_680_32_40
 09AB  A2 00       LDX #$00
 09AD        memset_da80_14_40:
 09AD  A9 0E       LDA #$0E
@@ -243,12 +243,12 @@
 09B3  E0 28       CPX #$28
 09B5  D0 F6       BNE memset_da80_14_40
 09B7  A2 00       LDX #$00
-09B9        memset_6a8_81_40:
-09B9  A9 51       LDA #$51
+09B9        memset_6a8_32_40:
+09B9  A9 20       LDA #$20
 09BB  9D A8 06    STA $06A8,X
 09BE  E8          INX
 09BF  E0 28       CPX #$28
-09C1  D0 F6       BNE memset_6a8_81_40
+09C1  D0 F6       BNE memset_6a8_32_40
 09C3  A2 00       LDX #$00
 09C5        memset_daa8_14_40:
 09C5  A9 0E       LDA #$0E
@@ -257,12 +257,12 @@
 09CB  E0 28       CPX #$28
 09CD  D0 F6       BNE memset_daa8_14_40
 09CF  A2 00       LDX #$00
-09D1        memset_6d0_81_40:
-09D1  A9 51       LDA #$51
+09D1        memset_6d0_32_40:
+09D1  A9 20       LDA #$20
 09D3  9D D0 06    STA $06D0,X
 09D6  E8          INX
 09D7  E0 28       CPX #$28
-09D9  D0 F6       BNE memset_6d0_81_40
+09D9  D0 F6       BNE memset_6d0_32_40
 09DB  A2 00       LDX #$00
 09DD        memset_dad0_14_40:
 09DD  A9 0E       LDA #$0E
@@ -271,12 +271,12 @@
 09E3  E0 28       CPX #$28
 09E5  D0 F6       BNE memset_dad0_14_40
 09E7  A2 00       LDX #$00
-09E9        memset_6f8_81_40:
-09E9  A9 51       LDA #$51
+09E9        memset_6f8_32_40:
+09E9  A9 20       LDA #$20
 09EB  9D F8 06    STA $06F8,X
 09EE  E8          INX
 09EF  E0 28       CPX #$28
-09F1  D0 F6       BNE memset_6f8_81_40
+09F1  D0 F6       BNE memset_6f8_32_40
 09F3  A2 00       LDX #$00
 09F5        memset_daf8_14_40:
 09F5  A9 0E       LDA #$0E
@@ -285,12 +285,12 @@
 09FB  E0 28       CPX #$28
 09FD  D0 F6       BNE memset_daf8_14_40
 09FF  A2 00       LDX #$00
-0A01        memset_720_81_40:
-0A01  A9 51       LDA #$51
+0A01        memset_720_32_40:
+0A01  A9 20       LDA #$20
 0A03  9D 20 07    STA $0720,X
 0A06  E8          INX
 0A07  E0 28       CPX #$28
-0A09  D0 F6       BNE memset_720_81_40
+0A09  D0 F6       BNE memset_720_32_40
 0A0B  A2 00       LDX #$00
 0A0D        memset_db20_14_40:
 0A0D  A9 0E       LDA #$0E
@@ -299,12 +299,12 @@
 0A13  E0 28       CPX #$28
 0A15  D0 F6       BNE memset_db20_14_40
 0A17  A2 00       LDX #$00
-0A19        memset_748_81_40:
-0A19  A9 51       LDA #$51
+0A19        memset_748_32_40:
+0A19  A9 20       LDA #$20
 0A1B  9D 48 07    STA $0748,X
 0A1E  E8          INX
 0A1F  E0 28       CPX #$28
-0A21  D0 F6       BNE memset_748_81_40
+0A21  D0 F6       BNE memset_748_32_40
 0A23  A2 00       LDX #$00
 0A25        memset_db48_14_40:
 0A25  A9 0E       LDA #$0E
@@ -313,12 +313,12 @@
 0A2B  E0 28       CPX #$28
 0A2D  D0 F6       BNE memset_db48_14_40
 0A2F  A2 00       LDX #$00
-0A31        memset_770_81_40:
-0A31  A9 51       LDA #$51
+0A31        memset_770_32_40:
+0A31  A9 20       LDA #$20
 0A33  9D 70 07    STA $0770,X
 0A36  E8          INX
 0A37  E0 28       CPX #$28
-0A39  D0 F6       BNE memset_770_81_40
+0A39  D0 F6       BNE memset_770_32_40
 0A3B  A2 00       LDX #$00
 0A3D        memset_db70_14_40:
 0A3D  A9 0E       LDA #$0E
@@ -327,12 +327,12 @@
 0A43  E0 28       CPX #$28
 0A45  D0 F6       BNE memset_db70_14_40
 0A47  A2 00       LDX #$00
-0A49        memset_798_81_40:
-0A49  A9 51       LDA #$51
+0A49        memset_798_32_40:
+0A49  A9 20       LDA #$20
 0A4B  9D 98 07    STA $0798,X
 0A4E  E8          INX
 0A4F  E0 28       CPX #$28
-0A51  D0 F6       BNE memset_798_81_40
+0A51  D0 F6       BNE memset_798_32_40
 0A53  A2 00       LDX #$00
 0A55        memset_db98_14_40:
 0A55  A9 0E       LDA #$0E
@@ -341,12 +341,12 @@
 0A5B  E0 28       CPX #$28
 0A5D  D0 F6       BNE memset_db98_14_40
 0A5F  A2 00       LDX #$00
-0A61        memset_7c0_81_40:
-0A61  A9 51       LDA #$51
+0A61        memset_7c0_32_40:
+0A61  A9 20       LDA #$20
 0A63  9D C0 07    STA $07C0,X
 0A66  E8          INX
 0A67  E0 28       CPX #$28
-0A69  D0 F6       BNE memset_7c0_81_40
+0A69  D0 F6       BNE memset_7c0_32_40
 0A6B  A2 00       LDX #$00
 0A6D        memset_dbc0_14_40:
 0A6D  A9 0E       LDA #$0E
@@ -355,16 +355,120 @@
 0A73  E0 28       CPX #$28
 0A75  D0 F6       BNE memset_dbc0_14_40
 0A77  A2 00       LDX #$00
-0A79        printat_loop_0:
-0A79  BD 8B 0A    LDA str_screen_0,X
-0A7C  F0 0C       BEQ printat_done_1
-0A7E  9D ED 05    STA $05ED,X
-0A81  A9 01       LDA #$01
-0A83  9D ED D9    STA $D9ED,X
-0A86  E8          INX
-0A87  4C 79 0A    JMP printat_loop_0
-0A8A        printat_done_1:
-0A8A  60          RTS
+0A79        memset_47a_81_36:
+0A79  A9 51       LDA #$51
+0A7B  9D 7A 04    STA $047A,X
+0A7E  E8          INX
+0A7F  E0 24       CPX #$24
+0A81  D0 F6       BNE memset_47a_81_36
+0A83  A2 00       LDX #$00
+0A85        memset_d87a_1_36:
+0A85  A9 01       LDA #$01
+0A87  9D 7A D8    STA $D87A,X
+0A8A  E8          INX
+0A8B  E0 24       CPX #$24
+0A8D  D0 F6       BNE memset_d87a_1_36
+0A8F  A2 00       LDX #$00
+0A91        memset_5e2_81_36:
+0A91  A9 51       LDA #$51
+0A93  9D E2 05    STA $05E2,X
+0A96  E8          INX
+0A97  E0 24       CPX #$24
+0A99  D0 F6       BNE memset_5e2_81_36
+0A9B  A2 00       LDX #$00
+0A9D        memset_d9e2_1_36:
+0A9D  A9 01       LDA #$01
+0A9F  9D E2 D9    STA $D9E2,X
+0AA2  E8          INX
+0AA3  E0 24       CPX #$24
+0AA5  D0 F6       BNE memset_d9e2_1_36
+0AA7  A9 51       LDA #$51
+0AA9  8D A2 04    STA $04A2
+0AAC  A9 01       LDA #$01
+0AAE  8D A2 D8    STA $D8A2
+0AB1  A9 51       LDA #$51
+0AB3  8D C5 04    STA $04C5
+0AB6  A9 01       LDA #$01
+0AB8  8D C5 D8    STA $D8C5
+0ABB  A9 51       LDA #$51
+0ABD  8D CA 04    STA $04CA
+0AC0  A9 01       LDA #$01
+0AC2  8D CA D8    STA $D8CA
+0AC5  A9 51       LDA #$51
+0AC7  8D ED 04    STA $04ED
+0ACA  A9 01       LDA #$01
+0ACC  8D ED D8    STA $D8ED
+0ACF  A9 51       LDA #$51
+0AD1  8D F2 04    STA $04F2
+0AD4  A9 01       LDA #$01
+0AD6  8D F2 D8    STA $D8F2
+0AD9  A9 51       LDA #$51
+0ADB  8D 15 05    STA $0515
+0ADE  A9 01       LDA #$01
+0AE0  8D 15 D9    STA $D915
+0AE3  A9 51       LDA #$51
+0AE5  8D 1A 05    STA $051A
+0AE8  A9 01       LDA #$01
+0AEA  8D 1A D9    STA $D91A
+0AED  A9 51       LDA #$51
+0AEF  8D 3D 05    STA $053D
+0AF2  A9 01       LDA #$01
+0AF4  8D 3D D9    STA $D93D
+0AF7  A9 51       LDA #$51
+0AF9  8D 42 05    STA $0542
+0AFC  A9 01       LDA #$01
+0AFE  8D 42 D9    STA $D942
+0B01  A9 51       LDA #$51
+0B03  8D 65 05    STA $0565
+0B06  A9 01       LDA #$01
+0B08  8D 65 D9    STA $D965
+0B0B  A9 51       LDA #$51
+0B0D  8D 6A 05    STA $056A
+0B10  A9 01       LDA #$01
+0B12  8D 6A D9    STA $D96A
+0B15  A9 51       LDA #$51
+0B17  8D 8D 05    STA $058D
+0B1A  A9 01       LDA #$01
+0B1C  8D 8D D9    STA $D98D
+0B1F  A9 51       LDA #$51
+0B21  8D 92 05    STA $0592
+0B24  A9 01       LDA #$01
+0B26  8D 92 D9    STA $D992
+0B29  A9 51       LDA #$51
+0B2B  8D B5 05    STA $05B5
+0B2E  A9 01       LDA #$01
+0B30  8D B5 D9    STA $D9B5
+0B33  A9 51       LDA #$51
+0B35  8D BA 05    STA $05BA
+0B38  A9 01       LDA #$01
+0B3A  8D BA D9    STA $D9BA
+0B3D  A9 51       LDA #$51
+0B3F  8D DD 05    STA $05DD
+0B42  A9 01       LDA #$01
+0B44  8D DD D9    STA $D9DD
+0B47  A2 00       LDX #$00
+0B49        printat_loop_0:
+0B49  BD 6E 0B    LDA str_screen_0,X
+0B4C  F0 0C       BEQ printat_done_1
+0B4E  9D D5 04    STA $04D5,X
+0B51  A9 01       LDA #$01
+0B53  9D D5 D8    STA $D8D5,X
+0B56  E8          INX
+0B57  4C 49 0B    JMP printat_loop_0
+0B5A        printat_done_1:
+0B5A  A2 00       LDX #$00
+0B5C        printat_loop_2:
+0B5C  BD 7C 0B    LDA str_screen_1,X
+0B5F  F0 0C       BEQ printat_done_3
+0B61  9D 1F 05    STA $051F,X
+0B64  A9 01       LDA #$01
+0B66  9D 1F D9    STA $D91F,X
+0B69  E8          INX
+0B6A  4C 5C 0B    JMP printat_loop_2
+0B6D        printat_done_3:
+0B6D  60          RTS
             ; String pool
-0A8B        str_screen_0:
-0A8B  13 03 12 05 05 0E 20 06 09 0C 0C 05 04 00 .byte $13, $03, $12, $05, $05, $0E, $20, $06, $09, $0C, $0C, $05, $04, $00
+0B6E        str_screen_0:
+0B6E  0A 13 2D 03 36 34 20 16 30 2E 32 2E 30 00 .byte $0A, $13, $2D, $03, $36, $34, $20, $16, $30, $2E, $32, $2E, $30, $00
+0B7C        str_screen_1:
+0B7C  06 12 01 0D 05 20 2B 20 06 09 0C 0C 12 05 03 14 20 2B 20 03 05 0E 14 05 12 00 .byte $06, $12, $01, $0D, $05, $20, $2B, $20, $06, $09, $0C, $0C, $12, $05, $03, $14, $20, $2B, $20, $03, $05, $0E, $14, $05, $12, $00

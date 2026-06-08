@@ -1,0 +1,43 @@
+0810  A9 93       LDA #$93
+0812  20 D2 FF    JSR $FFD2
+0815  A9 00       LDA #$00
+0817  8D 20 D0    STA $D020
+081A  A9 00       LDA #$00
+081C  8D 21 D0    STA $D021
+081F  A9 01       LDA #$01
+0821  8D 86 02    STA $0286
+0824  A9 03       LDA #$03
+0826  8D 00 C2    STA $C200
+0829  A2 00       LDX #$00
+082B        copydata_428_titleText_17_0:
+082B  BD 73 08    LDA titleText,X
+082E  9D 28 04    STA $0428,X
+0831  E8          INX
+0832  E0 11       CPX #$11
+0834  D0 F5       BNE copydata_428_titleText_17_0
+0836  A2 00       LDX #$00
+0838        memset_d828_7_17:
+0838  A9 07       LDA #$07
+083A  9D 28 D8    STA $D828,X
+083D  E8          INX
+083E  E0 11       CPX #$11
+0840  D0 F6       BNE memset_d828_7_17
+0842  A9 09       LDA #$09
+0844  8D 00 C2    STA $C200
+0847  A2 00       LDX #$00
+0849        printat_loop_1:
+0849  BD 5B 08    LDA str_screen_0,X
+084C  F0 0C       BEQ printat_done_2
+084E  9D A0 04    STA $04A0,X
+0851  A9 01       LDA #$01
+0853  9D A0 D8    STA $D8A0,X
+0856  E8          INX
+0857  4C 49 08    JMP printat_loop_1
+085A        printat_done_2:
+085A  60          RTS
+            ; String pool
+085B        str_screen_0:
+085B  03 0F 15 0E 14 05 12 20 13 14 0F 12 05 04 20 01 14 20 24 03 32 30 30 00 .byte $03, $0F, $15, $0E, $14, $05, $12, $20, $13, $14, $0F, $12, $05, $04, $20, $01, $14, $20, $24, $03, $32, $30, $30, $00
+            ; User data
+0873        titleText:
+0873  04 01 14 01 20 2B 20 16 01 12 20 2B 20 03 0F 10 19 00 .byte $04, $01, $14, $01, $20, $2B, $20, $16, $01, $12, $20, $2B, $20, $03, $0F, $10, $19, $00

@@ -6,6 +6,7 @@ const initialState = () => ({
   currentTextColor: 1,
   screenBase: 0x0400,
   colorBase: 0xd800,
+  dataDefinitions: new Map(),
   irq: {
     handlers: [],
     disableKernalTimer: false,
@@ -31,6 +32,7 @@ export function resetRuntime() {
   state.currentTextColor = fresh.currentTextColor;
   state.screenBase = fresh.screenBase;
   state.colorBase = fresh.colorBase;
+  state.dataDefinitions = fresh.dataDefinitions;
   state.irq = fresh.irq;
 }
 
@@ -56,6 +58,7 @@ export function getProgramState() {
     currentTextColor: state.currentTextColor,
     screenBase: state.screenBase,
     colorBase: state.colorBase,
+    dataDefinitions: Object.fromEntries(state.dataDefinitions.entries()),
     irq: {
       handlers: state.irq.handlers.map((handler) => ({
         line: handler.line,
@@ -68,6 +71,14 @@ export function getProgramState() {
       chainToKernal: state.irq.chainToKernal
     }
   };
+}
+
+export function defineRuntimeData(name, length) {
+  state.dataDefinitions.set(name, length);
+}
+
+export function getRuntimeDataLength(name) {
+  return state.dataDefinitions.get(name);
 }
 
 export function setTextColor(color) {

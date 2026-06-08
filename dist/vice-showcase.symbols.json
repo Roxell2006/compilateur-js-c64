@@ -7,11 +7,11 @@
   "printat_done_5": 2141,
   "printat_loop_6": 2143,
   "printat_done_7": 2160,
-  "irq_dispatch": 2207,
-  "irq_handler_0": 2221,
-  "program_end": 2270,
-  "str_screen_0": 2271,
-  "str_screen_1": 2292,
-  "str_screen_2": 2323,
-  "str_screen_3": 2354
+  "irq_dispatch": 2208,
+  "irq_handler_0": 2223,
+  "program_end": 2273,
+  "str_screen_0": 2274,
+  "str_screen_1": 2295,
+  "str_screen_2": 2326,
+  "str_screen_3": 2357
 }
