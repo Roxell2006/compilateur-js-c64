@@ -1,4 +1,4 @@
-import { createRuntimeFacade, getProgramState, pushInstruction, resetRuntime, setColorBase, setScreenBase, setTextColor } from "./runtime.js";
+import { createRuntimeFacade, defineRuntimeData, getProgramState, getRuntimeDataLength, pushInstruction, resetRuntime, setColorBase, setScreenBase, setTextColor } from "./runtime.js";
 
 export const C64_CONSTANTS = {
   COLOR_BLACK: 0,
@@ -93,10 +93,17 @@ c64.textColor = (color) => {
 c64.clearScreen = () => pushInstruction("clearScreen");
 c64.print = (text) => pushInstruction("print", String(text));
 c64.printAt = (x, y, text) => pushInstruction("printAt", x, y, String(text), getProgramState().currentTextColor);
+c64.printCentered = (y, text) => pushInstruction("printCentered", y, String(text), getProgramState().currentTextColor);
 c64.poke = (address, value) => pushInstruction("poke", address, value);
 c64.peek = (address) => ({ type: "peek", address });
 c64.memset = (address, value, length) => pushInstruction("memset", address, value, length);
 c64.memcpy = (dest, src, length) => pushInstruction("memcpy", dest, src, length);
+c64.copyDataTo = (address, dataRefOrName, length) => pushInstruction("copyDataTo", address, dataRefOrName, length);
+c64.memsetColor = (address, color, length) => pushInstruction("memsetColor", address, color, length);
+c64.writeChar = (x, y, char, color = getProgramState().currentTextColor) => pushInstruction("writeChar", x, y, char, color);
+c64.fillRect = (x, y, w, h, char = 32, color = getProgramState().currentTextColor) => pushInstruction("fillRect", x, y, w, h, char, color);
+c64.drawFrame = (x, y, w, h, char = 81, color = getProgramState().currentTextColor) => pushInstruction("drawFrame", x, y, w, h, char, color);
+c64.clearLine = (y, char = 32, color = getProgramState().currentTextColor) => pushInstruction("clearLine", y, char, color);
 c64.screen = (address = 0x0400) => {
   setScreenBase(address);
   pushInstruction("screen", address);
@@ -108,5 +115,47 @@ c64.colorRam = (address = 0xd800) => {
 c64.sys = (address) => pushInstruction("sys", address);
 c64.label = (name) => pushInstruction("label", name);
 c64.comment = (text) => pushInstruction("comment", text);
+
+c64.data = {
+  byte(name, values) {
+    const bytes = Array.from(values);
+    defineRuntimeData(name, bytes.length);
+    pushInstruction("dataByte", name, bytes);
+  },
+  word(name, values) {
+    const words = Array.from(values);
+    defineRuntimeData(name, words.length * 2);
+    pushInstruction("dataWord", name, words);
+  },
+  string(name, text) {
+    const normalized = String(text);
+    defineRuntimeData(name, normalized.length + 1);
+    pushInstruction("dataString", name, normalized);
+  },
+  screenString(name, text) {
+    const normalized = String(text);
+    defineRuntimeData(name, normalized.length + 1);
+    pushInstruction("dataScreenString", name, normalized);
+  },
+  length(name) {
+    const length = getRuntimeDataLength(name);
+    if (length === undefined) {
+      throw new Error(`Unknown data length for: ${name}`);
+    }
+    return length;
+  }
+};
+
+c64.var = {
+  byte(name, address, initialValue = 0) {
+    pushInstruction("varByte", name, address, initialValue);
+  },
+  word(name, address, initialValue = 0) {
+    pushInstruction("varWord", name, address, initialValue);
+  }
+};
+
+c64.varRef = (name) => ({ type: "varRef", name });
+c64.dataRef = (name, length = undefined) => ({ type: "dataRef", name, length });
 
 export { getProgramState, resetRuntime };

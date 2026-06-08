@@ -133,7 +133,22 @@ import { c64 } from "js-c64";
 c64.printAt(10, 5, "AU MILIEU");
 
 
-4.7 c64.poke(adresse, valeur)
+4.7 c64.printCentered(y, texte)
+-------------------------------
+
+Affiche un texte centre horizontalement sur une ligne.
+
+Vous ne donnez que la ligne y.
+La librairie calcule toute seule la bonne colonne.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.printCentered(10, "TEXTE AU CENTRE");
+
+
+4.8 c64.poke(adresse, valeur)
 -----------------------------
 
 Ecrit une valeur dans une adresse memoire du C64.
@@ -145,7 +160,7 @@ import { c64 } from "js-c64";
 c64.poke(c64.VIC_BORDER_COLOR, c64.COLOR_GREEN);
 
 
-4.8 c64.peek(adresse)
+4.9 c64.peek(adresse)
 ---------------------
 
 Lit une adresse memoire.
@@ -161,7 +176,7 @@ c64.poke(0x0400, c64.peek(0xD020));
 Cet exemple copie la couleur du border dans le premier caractere ecran.
 
 
-4.9 c64.memset(adresse, valeur, longueur)
+4.10 c64.memset(adresse, valeur, longueur)
 -----------------------------------------
 
 Remplit une zone memoire avec la meme valeur.
@@ -175,7 +190,7 @@ c64.memset(c64.SCREEN_RAM, 81, 40);
 Ici on remplit 40 cases ecran avec le code 81.
 
 
-4.10 c64.memcpy(destination, source, longueur)
+4.11 c64.memcpy(destination, source, longueur)
 ----------------------------------------------
 
 Copie un bloc memoire vers une autre zone memoire.
@@ -189,7 +204,103 @@ c64.memcpy(0x0428, 0x0400, 40);
 Ici on copie 40 octets de la premiere ligne vers la deuxieme.
 
 
-4.11 c64.screen(adresse)
+4.12 c64.copyDataTo(adresse, dataRefOuNom, longueur)
+----------------------------------------------------
+
+Copie une donnee declaree avec c64.data.* vers une zone memoire.
+
+C'est tres utile pour copier une chaine vers SCREEN_RAM, ou copier des octets
+prepares a l'avance.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.data.screenString("titre", "BONJOUR");
+c64.copyDataTo(c64.SCREEN_RAM, c64.dataRef("titre"), 8);
+
+Ici la chaine "titre" est copiee au debut de l'ecran.
+
+
+4.13 c64.memsetColor(adresse, couleur, longueur)
+------------------------------------------------
+
+Remplit une zone memoire couleur avec la meme couleur.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.memsetColor(c64.COLOR_RAM, c64.COLOR_YELLOW, 40);
+
+Ici on met les 40 premieres couleurs texte en jaune.
+
+
+4.14 c64.writeChar(x, y, caractere, couleur)
+--------------------------------------------
+
+Ecrit un seul caractere a une position precise.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.writeChar(5, 5, 81, c64.COLOR_WHITE);
+
+Ici on ecrit le code caractere 81 en blanc.
+
+Vous pouvez aussi donner une chaine d'un caractere :
+
+c64.writeChar(10, 10, "*", c64.COLOR_RED);
+
+
+4.15 c64.fillRect(x, y, largeur, hauteur, caractere, couleur)
+--------------------------------------------------------------
+
+Remplit un rectangle sur l'ecran texte.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.fillRect(0, 0, 40, 25, 32, c64.COLOR_BLUE);
+
+Ici on remplit tout l'ecran avec des espaces bleus.
+
+Exemple plus visible :
+
+c64.fillRect(5, 5, 10, 4, 81, c64.COLOR_LIGHTBLUE);
+
+
+4.16 c64.drawFrame(x, y, largeur, hauteur, caractere, couleur)
+---------------------------------------------------------------
+
+Dessine un cadre rectangulaire en mode texte.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.drawFrame(2, 2, 20, 8, 81, c64.COLOR_WHITE);
+
+Ici on dessine un cadre blanc.
+
+
+4.17 c64.clearLine(y, caractere, couleur)
+-----------------------------------------
+
+Efface ou remplit une ligne complete.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.clearLine(10, 32, c64.COLOR_BLUE);
+
+Ici on remplit la ligne 10 avec des espaces bleus.
+
+
+4.18 c64.screen(adresse)
 ------------------------
 
 Change l'adresse de base utilisee par printAt() pour l'ecran.
@@ -202,7 +313,7 @@ c64.screen(0x0400);
 c64.printAt(0, 0, "LIGNE 1");
 
 
-4.12 c64.colorRam(adresse)
+4.19 c64.colorRam(adresse)
 --------------------------
 
 Change l'adresse de base utilisee pour les couleurs texte.
@@ -216,7 +327,7 @@ c64.textColor(c64.COLOR_YELLOW);
 c64.printAt(0, 0, "JAUNE");
 
 
-4.13 c64.sys(adresse)
+4.20 c64.sys(adresse)
 ---------------------
 
 Fait un JSR vers une routine machine.
@@ -231,7 +342,7 @@ Remarque : pour CHROUT seul, il faut en pratique charger A avant si on veut
 envoyer un caractere utile.
 
 
-4.14 c64.label(nom)
+4.21 c64.label(nom)
 -------------------
 
 Ajoute un label dans le code genere.
@@ -244,7 +355,7 @@ import { c64 } from "js-c64";
 c64.label("debut");
 
 
-4.15 c64.comment(texte)
+4.22 c64.comment(texte)
 -----------------------
 
 Ajoute un commentaire dans la sortie assembleur/listing.
@@ -257,7 +368,140 @@ c64.comment("Preparation de l'ecran");
 c64.clearScreen();
 
 
-5. LES COULEURS DISPONIBLES
+5. DONNEES ET VARIABLES
+-----------------------
+
+La version v0.2.0 ajoute une facon plus propre de manipuler :
+
+- des donnees
+- des variables
+- des references symboliques
+
+Cela evite d'ecrire trop d'adresses "magiques" a la main.
+
+
+5.1 c64.data.byte(nom, valeurs)
+-------------------------------
+
+Declare une suite d'octets.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.data.byte("palette", [1, 2, 3, 4]);
+
+
+5.2 c64.data.word(nom, valeurs)
+-------------------------------
+
+Declare une suite de mots 16 bits.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.data.word("positions", [0x0400, 0x0428, 0x0450]);
+
+
+5.3 c64.data.string(nom, texte)
+-------------------------------
+
+Declare une chaine de texte de type PETSCII/texte KERNAL.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.data.string("message", "BONJOUR");
+
+
+5.4 c64.data.screenString(nom, texte)
+-------------------------------------
+
+Declare une chaine deja preparee pour l'ecran texte.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.data.screenString("titre", "HELLO");
+
+
+5.5 c64.data.length(nom)
+------------------------
+
+Renvoie la longueur de la donnee en octets.
+
+Important :
+
+Pour les chaines, la longueur inclut aussi l'octet de fin 0.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.data.screenString("titre", "HELLO");
+
+const taille = c64.data.length("titre");
+
+
+5.6 c64.dataRef(nom, longueurOptionnelle)
+-----------------------------------------
+
+Cree une reference vers une donnee declaree.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.data.screenString("titre", "BONJOUR");
+c64.copyDataTo(c64.SCREEN_RAM, c64.dataRef("titre"), c64.data.length("titre"));
+
+La longueur optionnelle peut etre utile si vous voulez referencer une donnee
+avant sa declaration.
+
+
+5.7 c64.var.byte(nom, adresse, valeurInitiale)
+----------------------------------------------
+
+Declare une variable octet.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.var.byte("counter", 0xC200, 3);
+
+
+5.8 c64.var.word(nom, adresse, valeurInitiale)
+----------------------------------------------
+
+Declare une variable mot 16 bits.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.var.word("playerX", 0xC210, 320);
+
+
+5.9 c64.varRef(nom)
+-------------------
+
+Cree une reference vers une variable declaree.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.var.byte("counter", 0xC200, 0);
+c64.poke(c64.varRef("counter"), 9);
+
+Ici on ecrit 9 dans la variable "counter".
+
+
+6. LES COULEURS DISPONIBLES
 ---------------------------
 
 Les constantes de couleur disponibles sont :
@@ -288,7 +532,7 @@ c64.backgroundColor(c64.COLOR_BROWN);
 c64.textColor(c64.COLOR_WHITE);
 
 
-6. CONSTANTES UTILES
+7. CONSTANTES UTILES
 --------------------
 
 Quelques constantes pratiques :
@@ -311,12 +555,12 @@ import { c64 } from "js-c64";
 c64.poke(c64.VIC_BACKGROUND_COLOR, c64.COLOR_CYAN);
 
 
-7. GESTION DES IRQ RASTER
+8. GESTION DES IRQ RASTER
 -------------------------
 
 Les IRQ raster permettent de faire un effet visuel pendant que le C64 tourne.
 
-7.1 c64.irq.raster(ligne, fonction)
+8.1 c64.irq.raster(ligne, fonction)
 -----------------------------------
 
 Ajoute un handler appele a une ligne raster donnee.
@@ -330,7 +574,7 @@ c64.irq.raster(50, () => {
 });
 
 
-7.2 c64.irq.install()
+8.2 c64.irq.install()
 ---------------------
 
 Installe les IRQ que vous avez definies.
@@ -346,7 +590,7 @@ c64.irq.raster(50, () => {
 c64.irq.install();
 
 
-7.3 c64.irq.chainToKernal()
+8.3 c64.irq.chainToKernal()
 ---------------------------
 
 Apres votre IRQ, le programme saute vers l'IRQ KERNAL standard.
@@ -364,7 +608,7 @@ c64.irq.chainToKernal();
 c64.irq.install();
 
 
-7.4 c64.irq.disableKernalTimer()
+8.4 c64.irq.disableKernalTimer()
 --------------------------------
 
 Desactive les interruptions timer CIA du KERNAL.
@@ -381,7 +625,7 @@ c64.irq.raster(50, () => {
 c64.irq.install();
 
 
-7.5 c64.irq.enableKernalTimer()
+8.5 c64.irq.enableKernalTimer()
 -------------------------------
 
 Reactive le mode normal des timers KERNAL dans l'etat interne du compilateur.
@@ -394,7 +638,7 @@ c64.irq.disableKernalTimer();
 c64.irq.enableKernalTimer();
 
 
-7.6 c64.irq.ack()
+8.6 c64.irq.ack()
 -----------------
 
 Ajoute un acquittement IRQ.
@@ -407,7 +651,7 @@ import { c64 } from "js-c64";
 c64.irq.ack();
 
 
-7.7 c64.irq.rasterLoop(ligne, fonction, options)
+8.7 c64.irq.rasterLoop(ligne, fonction, options)
 ------------------------------------------------
 
 Version simplifiee pour un effet raster en boucle.
@@ -444,7 +688,7 @@ c64.irq.rasterLoop(245, () => {
 });
 
 
-8. ASSEMBLEUR BAS NIVEAU : c64.asm
+9. ASSEMBLEUR BAS NIVEAU : c64.asm
 ----------------------------------
 
 Si vous voulez faire du code plus avance, vous pouvez utiliser c64.asm.
@@ -474,7 +718,7 @@ c64.asm.sta(c64.abs(c64.VIC_BORDER_COLOR));
 c64.asm.cli();
 
 
-9. LES MODES D'ADRESSAGE
+10. LES MODES D'ADRESSAGE
 ------------------------
 
 Pour les instructions assembleur, on utilise des helpers :
@@ -503,7 +747,7 @@ c64.asm.lda(c64.zp(0xFB));
 c64.asm.bne(c64.rel("boucle"));
 
 
-10. LABELS ET DONNEES EN ASSEMBLEUR
+11. LABELS ET DONNEES EN ASSEMBLEUR
 -----------------------------------
 
 10.1 c64.asm.label(nom)
@@ -542,7 +786,10 @@ c64.asm.byte(0, 24, 60, 126, 255);
 11. EXEMPLES TRES COURTS
 ------------------------
 
-11.1 Ecran bleu avec texte blanc
+12. EXEMPLES TRES COURTS
+------------------------
+
+12.1 Ecran bleu avec texte blanc
 --------------------------------
 
 import { c64 } from "js-c64";
@@ -554,7 +801,7 @@ c64.textColor(c64.COLOR_WHITE);
 c64.printAt(0, 0, "HELLO");
 
 
-11.2 Copier une ligne ecran
+12.2 Copier une ligne ecran
 ---------------------------
 
 import { c64 } from "js-c64";
@@ -563,7 +810,7 @@ c64.printAt(0, 0, "BONJOUR");
 c64.memcpy(0x0428, 0x0400, 7);
 
 
-11.3 Faire clignoter le border avec rasterLoop
+12.3 Faire clignoter le border avec rasterLoop
 ----------------------------------------------
 
 import { c64 } from "js-c64";
@@ -579,7 +826,30 @@ c64.asm.label("etat");
 c64.asm.byte(0);
 
 
-12. LIMITES IMPORTANTES
+12.4 Utiliser data + dataRef + varRef
+-------------------------------------
+
+import { c64 } from "js-c64";
+
+c64.var.byte("counter", 0xC200, 3);
+c64.data.screenString("titre", "BONJOUR");
+
+c64.copyDataTo(c64.SCREEN_RAM, c64.dataRef("titre"), c64.data.length("titre"));
+c64.memsetColor(c64.COLOR_RAM, c64.COLOR_YELLOW, c64.data.length("titre"));
+c64.poke(c64.varRef("counter"), 9);
+
+
+12.5 Dessiner une boite texte
+-----------------------------
+
+import { c64 } from "js-c64";
+
+c64.fillRect(0, 0, 40, 25, 32, c64.COLOR_BLUE);
+c64.drawFrame(2, 2, 20, 8, 81, c64.COLOR_WHITE);
+c64.printCentered(5, "MENU");
+
+
+13. LIMITES IMPORTANTES
 -----------------------
 
 - Ce n'est pas un compilateur JavaScript complet.
@@ -590,7 +860,7 @@ c64.asm.byte(0);
 - Pour des effets tres avances, il faut souvent utiliser c64.asm.
 
 
-13. CONSEIL POUR BIEN COMMENCER
+14. CONSEIL POUR BIEN COMMENCER
 -------------------------------
 
 Pour debuter, apprenez d'abord ces 6 fonctions :
@@ -604,17 +874,25 @@ Pour debuter, apprenez d'abord ces 6 fonctions :
 
 Puis essayez ensuite :
 
+- c64.printCentered()
+- c64.fillRect()
+- c64.drawFrame()
 - c64.memset()
 - c64.memcpy()
+- c64.copyDataTo()
+- c64.var.byte()
+- c64.data.screenString()
 - c64.irq.rasterLoop()
 - c64.asm.lda(), c64.asm.sta(), c64.asm.jmp()
 
 
-14. FICHIERS D'EXEMPLE A REGARDER
+15. FICHIERS D'EXEMPLE A REGARDER
 ---------------------------------
 
 examples/hello.js
 examples/colors.js
+examples/comfort-frame.js
+examples/comfort-data-vars.js
 examples/screen-fill.js
 examples/raster-bars.js
 examples/raster-ready-border-cycle.js
@@ -624,7 +902,11 @@ Le plus simple pour commencer :
 
 examples/hello.js
 
+Pour comprendre les nouvelles fonctions de confort :
+
+examples/comfort-frame.js
+examples/comfort-data-vars.js
+
 Le plus interessant pour voir un effet qui continue pendant READY. :
 
 examples/raster-ready-border-cycle.js
-

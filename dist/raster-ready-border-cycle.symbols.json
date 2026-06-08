@@ -5,10 +5,10 @@
   "printat_done_3": 2122,
   "printat_loop_4": 2124,
   "printat_done_5": 2141,
-  "irq_dispatch": 2188,
-  "irq_handler_0": 2202,
-  "program_end": 2246,
-  "str_screen_0": 2247,
-  "str_screen_1": 2272,
-  "str_screen_2": 2292
+  "irq_dispatch": 2189,
+  "irq_handler_0": 2204,
+  "program_end": 2249,
+  "str_screen_0": 2250,
+  "str_screen_1": 2275,
+  "str_screen_2": 2295
 }

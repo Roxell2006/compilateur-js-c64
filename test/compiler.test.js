@@ -87,6 +87,82 @@ describe("string-backed text output", () => {
     expect(matches).toHaveLength(1);
     expect(result.asm).toMatch(/LDA str_screen_0,X/);
   });
+
+  it("centers text on a 40-column screen", () => {
+    const result = compileInstructions([
+      { op: "printCentered", args: [5, "HELLO", 1] }
+    ]);
+
+    expect(result.asm).toMatch(/STA \$04D9,X/);
+  });
+});
+
+describe("v0.2 comfort helpers", () => {
+  it("registers user byte data with a stable label", () => {
+    const result = compileInstructions([
+      { op: "dataByte", args: ["demo_bytes", [1, 2, 3, 4]] }
+    ]);
+
+    expect(result.asm).toMatch(/demo_bytes:/);
+    expect(result.asm).toMatch(/\.byte \$01, \$02, \$03, \$04/);
+  });
+
+  it("declares byte variables and allows varRef in poke()", () => {
+    const result = compileInstructions([
+      { op: "varByte", args: ["counter", 0xc100, 7] },
+      { op: "poke", args: [{ type: "varRef", name: "counter" }, 9] }
+    ]);
+
+    expect(result.asm).toMatch(/STA \$C100/);
+    expect(result.bytes).toBeInstanceOf(Uint8Array);
+  });
+
+  it("copies named data to memory with dataRef()", () => {
+    const result = compileInstructions([
+      { op: "dataScreenString", args: ["titleText", "DATA"] },
+      { op: "copyDataTo", args: [0x0400, { type: "dataRef", name: "titleText" }, 5] }
+    ]);
+
+    expect(result.asm).toMatch(/LDA titleText,X/);
+    expect(result.asm).toMatch(/STA \$0400,X/);
+    expect(result.asm).toMatch(/titleText:/);
+  });
+
+  it("allows copyDataTo() to use a dataRef-carried length", () => {
+    const result = compileInstructions([
+      { op: "copyDataTo", args: [0x0400, { type: "dataRef", name: "lateText", length: 5 }, undefined] },
+      { op: "dataScreenString", args: ["lateText", "DATA"] }
+    ]);
+
+    expect(result.asm).toMatch(/LDA lateText,X/);
+    expect(result.asm).toMatch(/CPX #\$05/);
+  });
+
+  it("supports memsetColor() as a color-memory convenience helper", () => {
+    const result = compileInstructions([
+      { op: "memsetColor", args: [0xd800, 7, 8] }
+    ]);
+
+    expect(result.asm).toMatch(/memset_d800_7_8:/i);
+  });
+
+  it("emits a screen fill rectangle with compact row loops", () => {
+    const result = compileInstructions([
+      { op: "fillRect", args: [0, 0, 4, 2, 81, 1] }
+    ]);
+
+    expect(result.asm).toMatch(/memset_400_81_4:/i);
+    expect(result.asm).toMatch(/memset_d800_1_4:/i);
+  });
+
+  it("emits frame drawing helpers", () => {
+    const result = compileInstructions([
+      { op: "drawFrame", args: [1, 1, 4, 3, 81, 1] }
+    ]);
+
+    expect(result.bytes.length).toBeGreaterThan(0);
+    expect(result.asm).toMatch(/STA \$0429/);
+  });
 });
 
 describe("irq raster", () => {
@@ -138,5 +214,12 @@ describe("irq raster", () => {
     expect(result.asm).toMatch(/LDX #\$00/);
     expect(result.asm).toMatch(/LDA balloon_sprite_data,X/);
     expect(result.asm).toMatch(/STA \$2000,X/);
+  });
+
+  it("compiles comfort-data-vars example without error", async () => {
+    const result = await compileFile("examples/comfort-data-vars.js");
+    expect(result.bytes.length).toBeGreaterThan(0);
+    expect(result.asm).toMatch(/titleText:/);
+    expect(result.asm).toMatch(/STA \$C200/);
   });
 });
