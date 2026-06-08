@@ -1,0 +1,232 @@
+0810  A9 93       LDA #$93
+0812  20 D2 FF    JSR $FFD2
+0815  A9 00       LDA #$00
+0817  8D 21 D0    STA $D021
+081A  A9 00       LDA #$00
+081C  8D 20 D0    STA $D020
+081F  A9 00       LDA #$00
+0821  8D 86 02    STA $0286
+0824  A2 00       LDX #$00
+0826        printat_loop_0:
+0826  BD A0 09    LDA str_screen_0,X
+0829  F0 0C       BEQ printat_done_1
+082B  9D 00 04    STA $0400,X
+082E  A9 00       LDA #$00
+0830  9D 00 D8    STA $D800,X
+0833  E8          INX
+0834  4C 26 08    JMP printat_loop_0
+0837        printat_done_1:
+0837  A9 01       LDA #$01
+0839  8D 86 02    STA $0286
+083C  A2 00       LDX #$00
+083E        printat_loop_2:
+083E  BD A8 09    LDA str_screen_1,X
+0841  F0 0C       BEQ printat_done_3
+0843  9D 28 04    STA $0428,X
+0846  A9 01       LDA #$01
+0848  9D 28 D8    STA $D828,X
+084B  E8          INX
+084C  4C 3E 08    JMP printat_loop_2
+084F        printat_done_3:
+084F  A9 02       LDA #$02
+0851  8D 86 02    STA $0286
+0854  A2 00       LDX #$00
+0856        printat_loop_4:
+0856  BD B0 09    LDA str_screen_2,X
+0859  F0 0C       BEQ printat_done_5
+085B  9D 50 04    STA $0450,X
+085E  A9 02       LDA #$02
+0860  9D 50 D8    STA $D850,X
+0863  E8          INX
+0864  4C 56 08    JMP printat_loop_4
+0867        printat_done_5:
+0867  A9 03       LDA #$03
+0869  8D 86 02    STA $0286
+086C  A2 00       LDX #$00
+086E        printat_loop_6:
+086E  BD B8 09    LDA str_screen_3,X
+0871  F0 0C       BEQ printat_done_7
+0873  9D 78 04    STA $0478,X
+0876  A9 03       LDA #$03
+0878  9D 78 D8    STA $D878,X
+087B  E8          INX
+087C  4C 6E 08    JMP printat_loop_6
+087F        printat_done_7:
+087F  A9 04       LDA #$04
+0881  8D 86 02    STA $0286
+0884  A2 00       LDX #$00
+0886        printat_loop_8:
+0886  BD C0 09    LDA str_screen_4,X
+0889  F0 0C       BEQ printat_done_9
+088B  9D A0 04    STA $04A0,X
+088E  A9 04       LDA #$04
+0890  9D A0 D8    STA $D8A0,X
+0893  E8          INX
+0894  4C 86 08    JMP printat_loop_8
+0897        printat_done_9:
+0897  A9 05       LDA #$05
+0899  8D 86 02    STA $0286
+089C  A2 00       LDX #$00
+089E        printat_loop_10:
+089E  BD C8 09    LDA str_screen_5,X
+08A1  F0 0C       BEQ printat_done_11
+08A3  9D C8 04    STA $04C8,X
+08A6  A9 05       LDA #$05
+08A8  9D C8 D8    STA $D8C8,X
+08AB  E8          INX
+08AC  4C 9E 08    JMP printat_loop_10
+08AF        printat_done_11:
+08AF  A9 06       LDA #$06
+08B1  8D 86 02    STA $0286
+08B4  A2 00       LDX #$00
+08B6        printat_loop_12:
+08B6  BD D0 09    LDA str_screen_6,X
+08B9  F0 0C       BEQ printat_done_13
+08BB  9D F0 04    STA $04F0,X
+08BE  A9 06       LDA #$06
+08C0  9D F0 D8    STA $D8F0,X
+08C3  E8          INX
+08C4  4C B6 08    JMP printat_loop_12
+08C7        printat_done_13:
+08C7  A9 07       LDA #$07
+08C9  8D 86 02    STA $0286
+08CC  A2 00       LDX #$00
+08CE        printat_loop_14:
+08CE  BD D8 09    LDA str_screen_7,X
+08D1  F0 0C       BEQ printat_done_15
+08D3  9D 18 05    STA $0518,X
+08D6  A9 07       LDA #$07
+08D8  9D 18 D9    STA $D918,X
+08DB  E8          INX
+08DC  4C CE 08    JMP printat_loop_14
+08DF        printat_done_15:
+08DF  A9 08       LDA #$08
+08E1  8D 86 02    STA $0286
+08E4  A2 00       LDX #$00
+08E6        printat_loop_16:
+08E6  BD E0 09    LDA str_screen_8,X
+08E9  F0 0C       BEQ printat_done_17
+08EB  9D 40 05    STA $0540,X
+08EE  A9 08       LDA #$08
+08F0  9D 40 D9    STA $D940,X
+08F3  E8          INX
+08F4  4C E6 08    JMP printat_loop_16
+08F7        printat_done_17:
+08F7  A9 09       LDA #$09
+08F9  8D 86 02    STA $0286
+08FC  A2 00       LDX #$00
+08FE        printat_loop_18:
+08FE  BD E8 09    LDA str_screen_9,X
+0901  F0 0C       BEQ printat_done_19
+0903  9D 68 05    STA $0568,X
+0906  A9 09       LDA #$09
+0908  9D 68 D9    STA $D968,X
+090B  E8          INX
+090C  4C FE 08    JMP printat_loop_18
+090F        printat_done_19:
+090F  A9 0A       LDA #$0A
+0911  8D 86 02    STA $0286
+0914  A2 00       LDX #$00
+0916        printat_loop_20:
+0916  BD F0 09    LDA str_screen_10,X
+0919  F0 0C       BEQ printat_done_21
+091B  9D 90 05    STA $0590,X
+091E  A9 0A       LDA #$0A
+0920  9D 90 D9    STA $D990,X
+0923  E8          INX
+0924  4C 16 09    JMP printat_loop_20
+0927        printat_done_21:
+0927  A9 0B       LDA #$0B
+0929  8D 86 02    STA $0286
+092C  A2 00       LDX #$00
+092E        printat_loop_22:
+092E  BD F9 09    LDA str_screen_11,X
+0931  F0 0C       BEQ printat_done_23
+0933  9D B8 05    STA $05B8,X
+0936  A9 0B       LDA #$0B
+0938  9D B8 D9    STA $D9B8,X
+093B  E8          INX
+093C  4C 2E 09    JMP printat_loop_22
+093F        printat_done_23:
+093F  A9 0C       LDA #$0C
+0941  8D 86 02    STA $0286
+0944  A2 00       LDX #$00
+0946        printat_loop_24:
+0946  BD 02 0A    LDA str_screen_12,X
+0949  F0 0C       BEQ printat_done_25
+094B  9D E0 05    STA $05E0,X
+094E  A9 0C       LDA #$0C
+0950  9D E0 D9    STA $D9E0,X
+0953  E8          INX
+0954  4C 46 09    JMP printat_loop_24
+0957        printat_done_25:
+0957  A9 0D       LDA #$0D
+0959  8D 86 02    STA $0286
+095C  A2 00       LDX #$00
+095E        printat_loop_26:
+095E  BD 0B 0A    LDA str_screen_13,X
+0961  F0 0C       BEQ printat_done_27
+0963  9D 08 06    STA $0608,X
+0966  A9 0D       LDA #$0D
+0968  9D 08 DA    STA $DA08,X
+096B  E8          INX
+096C  4C 5E 09    JMP printat_loop_26
+096F        printat_done_27:
+096F  A9 0E       LDA #$0E
+0971  8D 86 02    STA $0286
+0974  A2 00       LDX #$00
+0976        printat_loop_28:
+0976  BD 14 0A    LDA str_screen_14,X
+0979  F0 0C       BEQ printat_done_29
+097B  9D 30 06    STA $0630,X
+097E  A9 0E       LDA #$0E
+0980  9D 30 DA    STA $DA30,X
+0983  E8          INX
+0984  4C 76 09    JMP printat_loop_28
+0987        printat_done_29:
+0987  A9 0F       LDA #$0F
+0989  8D 86 02    STA $0286
+098C  A2 00       LDX #$00
+098E        printat_loop_30:
+098E  BD 1D 0A    LDA str_screen_15,X
+0991  F0 0C       BEQ printat_done_31
+0993  9D 58 06    STA $0658,X
+0996  A9 0F       LDA #$0F
+0998  9D 58 DA    STA $DA58,X
+099B  E8          INX
+099C  4C 8E 09    JMP printat_loop_30
+099F        printat_done_31:
+099F  60          RTS
+            ; String pool
+09A0        str_screen_0:
+09A0  03 0F 0C 0F 12 20 30 00 .byte $03, $0F, $0C, $0F, $12, $20, $30, $00
+09A8        str_screen_1:
+09A8  03 0F 0C 0F 12 20 31 00 .byte $03, $0F, $0C, $0F, $12, $20, $31, $00
+09B0        str_screen_2:
+09B0  03 0F 0C 0F 12 20 32 00 .byte $03, $0F, $0C, $0F, $12, $20, $32, $00
+09B8        str_screen_3:
+09B8  03 0F 0C 0F 12 20 33 00 .byte $03, $0F, $0C, $0F, $12, $20, $33, $00
+09C0        str_screen_4:
+09C0  03 0F 0C 0F 12 20 34 00 .byte $03, $0F, $0C, $0F, $12, $20, $34, $00
+09C8        str_screen_5:
+09C8  03 0F 0C 0F 12 20 35 00 .byte $03, $0F, $0C, $0F, $12, $20, $35, $00
+09D0        str_screen_6:
+09D0  03 0F 0C 0F 12 20 36 00 .byte $03, $0F, $0C, $0F, $12, $20, $36, $00
+09D8        str_screen_7:
+09D8  03 0F 0C 0F 12 20 37 00 .byte $03, $0F, $0C, $0F, $12, $20, $37, $00
+09E0        str_screen_8:
+09E0  03 0F 0C 0F 12 20 38 00 .byte $03, $0F, $0C, $0F, $12, $20, $38, $00
+09E8        str_screen_9:
+09E8  03 0F 0C 0F 12 20 39 00 .byte $03, $0F, $0C, $0F, $12, $20, $39, $00
+09F0        str_screen_10:
+09F0  03 0F 0C 0F 12 20 31 30 00 .byte $03, $0F, $0C, $0F, $12, $20, $31, $30, $00
+09F9        str_screen_11:
+09F9  03 0F 0C 0F 12 20 31 31 00 .byte $03, $0F, $0C, $0F, $12, $20, $31, $31, $00
+0A02        str_screen_12:
+0A02  03 0F 0C 0F 12 20 31 32 00 .byte $03, $0F, $0C, $0F, $12, $20, $31, $32, $00
+0A0B        str_screen_13:
+0A0B  03 0F 0C 0F 12 20 31 33 00 .byte $03, $0F, $0C, $0F, $12, $20, $31, $33, $00
+0A14        str_screen_14:
+0A14  03 0F 0C 0F 12 20 31 34 00 .byte $03, $0F, $0C, $0F, $12, $20, $31, $34, $00
+0A1D        str_screen_15:
+0A1D  03 0F 0C 0F 12 20 31 35 00 .byte $03, $0F, $0C, $0F, $12, $20, $31, $35, $00

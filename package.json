@@ -1,0 +1,52 @@
+{
+  "name": "js-c64",
+  "version": "0.1.0",
+  "description": "JavaScript DSL that emits Commodore 64 6502 machine code, PRG files and listings.",
+  "type": "module",
+  "bin": {
+    "c64js": "./src/cli.js"
+  },
+  "main": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./assembler": "./src/assembler6502.js",
+    "./compiler": "./src/compiler.js",
+    "./irq/raster": "./src/irq/raster.js"
+  },
+  "files": [
+    "src",
+    "examples",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md",
+    "index.d.ts"
+  ],
+  "scripts": {
+    "build:hello": "node src/cli.js build examples/hello.js -o dist/hello.prg",
+    "build:raster": "node src/cli.js build examples/raster-bars.js -o dist/raster-bars.prg",
+    "build:raster-ready": "node src/cli.js build examples/raster-ready-border-cycle.js -o dist/raster-ready-border-cycle.prg",
+    "build:demos": "node scripts/build-examples.js",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "commodore64",
+    "c64",
+    "6502",
+    "assembler",
+    "retro",
+    "dsl",
+    "javascript"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourname/js-c64.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

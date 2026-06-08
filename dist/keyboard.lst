@@ -1,0 +1,21 @@
+0810  A9 93       LDA #$93
+0812  20 D2 FF    JSR $FFD2
+0815  A9 01       LDA #$01
+0817  8D 86 02    STA $0286
+081A  A2 00       LDX #$00
+081C        printat_loop_0:
+081C  BD 37 08    LDA str_screen_0,X
+081F  F0 0C       BEQ printat_done_1
+0821  9D 00 04    STA $0400,X
+0824  A9 01       LDA #$01
+0826  9D 00 D8    STA $D800,X
+0829  E8          INX
+082A  4C 1C 08    JMP printat_loop_0
+082D        printat_done_1:
+082D  20 9F FF    JSR $FF9F
+0830  20 CF FF    JSR $FFCF
+0833  8D 28 04    STA $0428
+0836  60          RTS
+            ; String pool
+0837        str_screen_0:
+0837  10 12 05 13 13 20 01 0E 19 20 0B 05 19 00 .byte $10, $12, $05, $13, $13, $20, $01, $0E, $19, $20, $0B, $05, $19, $00

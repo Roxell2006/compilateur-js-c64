@@ -1,0 +1,15 @@
+  LDA #$93
+  JSR $FFD2
+  LDA #$0F
+  STA $D418
+  LDA #$22
+  STA $D400
+  LDA #$11
+  STA $D401
+  LDA #$11
+  STA $D405
+  LDA #$F0
+  STA $D406
+  LDA #$21
+  STA $D404
+  RTS
