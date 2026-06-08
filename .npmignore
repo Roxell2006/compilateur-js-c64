@@ -1,0 +1,10 @@
+out
+dist
+coverage
+.github
+index.html
+*.prg
+*.bin
+*.lst
+*.asm
+*.bas

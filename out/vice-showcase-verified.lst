@@ -1,0 +1,114 @@
+0810  A9 93       LDA #$93
+0812  20 D2 FF    JSR $FFD2
+0815  A9 00       LDA #$00
+0817  8D 20 D0    STA $D020
+081A  A9 06       LDA #$06
+081C  8D 21 D0    STA $D021
+081F  A9 01       LDA #$01
+0821  8D 86 02    STA $0286
+0824  A2 00       LDX #$00
+0826        printat_loop_0:
+0826  BD E2 08    LDA str_screen_0,X
+0829  F0 0C       BEQ printat_done_1
+082B  9D 00 04    STA $0400,X
+082E  A9 01       LDA #$01
+0830  9D 00 D8    STA $D800,X
+0833  E8          INX
+0834  4C 26 08    JMP printat_loop_0
+0837        printat_done_1:
+0837  A2 00       LDX #$00
+0839        printat_loop_2:
+0839  BD F7 08    LDA str_screen_1,X
+083C  F0 0C       BEQ printat_done_3
+083E  9D 50 04    STA $0450,X
+0841  A9 01       LDA #$01
+0843  9D 50 D8    STA $D850,X
+0846  E8          INX
+0847  4C 39 08    JMP printat_loop_2
+084A        printat_done_3:
+084A  A2 00       LDX #$00
+084C        printat_loop_4:
+084C  BD 16 09    LDA str_screen_2,X
+084F  F0 0C       BEQ printat_done_5
+0851  9D A0 04    STA $04A0,X
+0854  A9 01       LDA #$01
+0856  9D A0 D8    STA $D8A0,X
+0859  E8          INX
+085A  4C 4C 08    JMP printat_loop_4
+085D        printat_done_5:
+085D  A2 00       LDX #$00
+085F        printat_loop_6:
+085F  BD 35 09    LDA str_screen_3,X
+0862  F0 0C       BEQ printat_done_7
+0864  9D F0 04    STA $04F0,X
+0867  A9 01       LDA #$01
+0869  9D F0 D8    STA $D8F0,X
+086C  E8          INX
+086D  4C 5F 08    JMP printat_loop_6
+0870        printat_done_7:
+0870  78          SEI
+0871  A9 00       LDA #$00
+0873  8D FE C0    STA $C0FE
+0876  A9 01       LDA #$01
+0878  8D 1A D0    STA $D01A
+087B  A9 01       LDA #$01
+087D  8D 19 D0    STA $D019
+0880  A9 F5       LDA #$F5
+0882  8D 12 D0    STA $D012
+0885  AD 11 D0    LDA $D011
+0888  29 7F       AND #$7F
+088A  8D 11 D0    STA $D011
+088D  A9 A0       LDA #<irq_dispatch
+088F  8D 14 03    STA $0314
+0892  A9 08       LDA #>irq_dispatch
+0894  8D 15 03    STA $0315
+0897  58          CLI
+0898  A9 05       LDA #$05
+089A  8D 01 C0    STA $C001
+089D  4C E1 08    JMP program_end
+            ; Raster IRQ dispatcher
+08A0        irq_dispatch:
+08A0  48          PHA
+08A1  8A          TXA
+08A2  48          PHA
+08A3  98          TYA
+08A4  48          PHA
+08A5  AD FE C0    LDA $C0FE
+08A8  C9 00       CMP #$00
+08AA  F0 03       BEQ irq_handler_0
+08AC  4C AF 08    JMP irq_handler_0
+08AF        irq_handler_0:
+08AF  AD 01 C0    LDA $C001
+08B2  18          CLC
+08B3  69 01       ADC #$01
+08B5  29 0F       AND #$0F
+08B7  8D 01 C0    STA $C001
+08BA  8D 20 D0    STA $D020
+08BD  49 0F       EOR #$0F
+08BF  8D 21 D0    STA $D021
+08C2  A9 00       LDA #$00
+08C4  8D FE C0    STA $C0FE
+08C7  A9 F5       LDA #$F5
+08C9  8D 12 D0    STA $D012
+08CC  AD 11 D0    LDA $D011
+08CF  29 7F       AND #$7F
+08D1  8D 11 D0    STA $D011
+08D4  A9 01       LDA #$01
+08D6  8D 19 D0    STA $D019
+08D9  68          PLA
+08DA  A8          TAY
+08DB  68          PLA
+08DC  AA          TAX
+08DD  68          PLA
+08DE  4C 31 EA    JMP $EA31
+08E1        program_end:
+08E1  60          RTS
+            ; String pool
+08E2        str_screen_0:
+08E2  0A 13 2D 03 36 34 20 16 09 03 05 20 13 08 0F 17 03 01 13 05 00 .byte $0A, $13, $2D, $03, $36, $34, $20, $16, $09, $03, $05, $20, $13, $08, $0F, $17, $03, $01, $13, $05, $00
+08F7        str_screen_1:
+08F7  09 12 11 20 04 05 0D 0F 20 12 15 0E 0E 09 0E 07 20 09 0E 20 02 01 03 0B 07 12 0F 15 0E 04 00 .byte $09, $12, $11, $20, $04, $05, $0D, $0F, $20, $12, $15, $0E, $0E, $09, $0E, $07, $20, $09, $0E, $20, $02, $01, $03, $0B, $07, $12, $0F, $15, $0E, $04, $00
+0916        str_screen_2:
+0916  12 05 01 04 19 20 13 08 0F 15 0C 04 20 12 05 0D 01 09 0E 20 12 05 13 10 0F 0E 13 09 16 05 00 .byte $12, $05, $01, $04, $19, $20, $13, $08, $0F, $15, $0C, $04, $20, $12, $05, $0D, $01, $09, $0E, $20, $12, $05, $13, $10, $0F, $0E, $13, $09, $16, $05, $00
+0935        str_screen_3:
+0935  02 0F 12 04 05 12 20 01 0E 04 20 02 07 20 0B 05 05 10 20 03 19 03 0C 09 0E 07 00 .byte $02, $0F, $12, $04, $05, $12, $20, $01, $0E, $04, $20, $02, $07, $20, $0B, $05, $05, $10, $20, $03, $19, $03, $0C, $09, $0E, $07, $00

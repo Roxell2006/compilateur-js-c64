@@ -1,0 +1,549 @@
+MODE D'EMPLOI - PUBLIER JS-C64 SUR NPM
+======================================
+
+But de ce guide
+---------------
+
+Ce document explique comment publier ce projet sur npm, pas a pas, en langage simple.
+
+Il est destine a une personne debutante qui n'a jamais publie de package npm.
+
+
+1. CE QUE VOUS ALLEZ FAIRE
+--------------------------
+
+Pour publier un package sur npm, il faut :
+
+1. verifier que le projet est pret
+2. avoir un compte npm
+3. se connecter avec npm dans le terminal
+4. verifier ce qui sera publie
+5. lancer la publication
+6. tester que le package est bien disponible
+
+
+2. CE QU'IL FAUT AVOIR AVANT DE COMMENCER
+-----------------------------------------
+
+Vous devez avoir :
+
+- Node.js installe
+- npm installe
+- un compte npm
+- le projet js-c64 sur votre machine
+- idealement un depot GitHub si vous voulez mettre des liens propres
+
+
+3. VERIFIER NODE ET NPM
+-----------------------
+
+Ouvrez un terminal dans le dossier du projet, puis tapez :
+
+node -v
+
+et :
+
+npm -v
+
+Si vous voyez des numeros de version, c'est bon.
+
+
+4. VERIFIER LE NOM DU PACKAGE
+-----------------------------
+
+Ouvrez le fichier package.json.
+
+Dans ce projet, on a actuellement :
+
+"name": "js-c64"
+
+Important :
+
+- le nom doit etre unique sur npm
+- si "js-c64" est deja pris, npm refusera la publication
+
+Si le nom est deja pris, vous devrez le changer dans package.json.
+
+Exemple :
+
+"name": "mon-js-c64"
+
+
+5. VERIFIER LA VERSION
+----------------------
+
+Dans package.json, il y a aussi :
+
+"version": "0.1.0"
+
+Cette version sera celle publiee sur npm.
+
+Regle importante :
+
+- vous ne pouvez pas publier deux fois la meme version
+
+Si vous avez deja publie la version 0.1.0, vous devrez passer par exemple a :
+
+"version": "0.1.1"
+
+ou :
+
+"version": "0.2.0"
+
+
+6. VERIFIER LES INFOS IMPORTANTES DU PACKAGE
+--------------------------------------------
+
+Avant de publier, regardez dans package.json :
+
+- name
+- version
+- description
+- license
+- repository
+- bin
+- main
+- exports
+- files
+
+Dans ce projet, certaines valeurs sont encore generiques.
+
+Exemple a corriger :
+
+"repository": {
+  "type": "git",
+  "url": "git+https://github.com/yourname/js-c64.git"
+}
+
+Il faut remplacer "yourname" par votre vrai compte GitHub.
+
+
+7. VERIFIER CE QUI SERA PUBLIE
+------------------------------
+
+Le projet controle cela avec :
+
+- le champ "files" dans package.json
+- le fichier .npmignore
+
+Dans ce projet :
+
+Le champ "files" autorise :
+
+- src
+- examples
+- README.md
+- LICENSE
+- CHANGELOG.md
+- index.d.ts
+
+Le fichier .npmignore exclut par exemple :
+
+- dist
+- out
+- fichiers .prg
+- fichiers .asm
+- fichiers .lst
+- fichiers .bas
+
+Donc npm ne devrait publier que les fichiers utiles de la librairie.
+
+
+8. TESTER LE PACKAGE AVANT PUBLICATION
+--------------------------------------
+
+Dans le terminal :
+
+npm test
+
+Si les tests passent, c'est deja une bonne base.
+
+Vous pouvez aussi verifier que la CLI marche :
+
+node src/cli.js build examples/hello.js -o hello.prg
+
+Ou bien :
+
+npm run build:demos
+
+
+9. CREER UN COMPTE NPM
+----------------------
+
+Si vous n'avez pas encore de compte npm :
+
+1. allez sur le site npm
+2. creez un compte
+3. confirmez votre adresse e-mail
+
+Ensuite revenez dans le terminal.
+
+
+10. VOUS CONNECTER A NPM
+------------------------
+
+Dans le terminal :
+
+npm login
+
+Le terminal vous demandera en general :
+
+- votre nom d'utilisateur npm
+- votre mot de passe
+- votre adresse e-mail
+
+Une fois connecte, npm pourra publier sous votre compte.
+
+
+11. VERIFIER VOTRE COMPTE CONNECTE
+----------------------------------
+
+Vous pouvez taper :
+
+npm whoami
+
+Si tout va bien, npm affiche votre nom d'utilisateur.
+
+
+12. VERIFIER LE CONTENU AVANT PUBLICATION
+-----------------------------------------
+
+Commande tres utile :
+
+npm pack --dry-run
+
+Cette commande ne publie rien.
+Elle montre simplement ce qui serait inclus dans le package.
+
+Regardez bien la liste.
+
+Vous devez y voir surtout :
+
+- src/
+- README.md
+- LICENSE
+- CHANGELOG.md
+- index.d.ts
+- examples/
+
+Vous ne devriez pas y voir :
+
+- node_modules/
+- dist/
+- out/
+- gros fichiers temporaires
+
+
+13. FAIRE UN DERNIER CONTROLE DU README
+---------------------------------------
+
+Avant publication, relisez README.md.
+
+Verifiez :
+
+- le nom du package
+- les commandes d'installation
+- les exemples
+- les badges
+- les liens GitHub
+
+Si le README dit :
+
+npm install js-c64
+
+alors le package publie doit bien s'appeler js-c64.
+
+
+14. VERIFIER LE DOSSIER BIN
+---------------------------
+
+Dans package.json, on a :
+
+"bin": {
+  "c64js": "./src/cli.js"
+}
+
+Cela veut dire que npm installera une commande terminal nommee :
+
+c64js
+
+Avant publication, verifiez que src/cli.js commence bien par :
+
+#!/usr/bin/env node
+
+Ce projet est deja configure ainsi.
+
+
+15. PUBLIER LE PACKAGE
+----------------------
+
+Quand tout est pret, dans le terminal :
+
+npm publish
+
+Si tout se passe bien :
+
+- npm envoie le package
+- npm affiche un resume
+- le package devient disponible en ligne
+
+
+16. SI LE NOM EST DEJA PRIS
+---------------------------
+
+Si npm refuse en disant que le nom existe deja :
+
+1. changez le champ "name" dans package.json
+2. adaptez le README si besoin
+3. relancez :
+
+npm publish
+
+
+17. SI VOUS VOULEZ PUBLIER EN PUBLIC
+------------------------------------
+
+Pour un package public standard, la commande normale suffit souvent :
+
+npm publish
+
+Si un jour vous utilisez un scope, par exemple :
+
+"name": "@moncompte/js-c64"
+
+il faudra souvent publier en public avec :
+
+npm publish --access public
+
+
+18. TESTER APRES PUBLICATION
+----------------------------
+
+Une fois publie, faites un vrai test dans un autre dossier.
+
+Exemple :
+
+mkdir test-js-c64-npm
+cd test-js-c64-npm
+npm init -y
+npm install js-c64
+
+Puis creez un fichier :
+
+examples/hello.js
+
+avec :
+
+import { c64 } from "js-c64";
+
+c64.clearScreen();
+c64.borderColor(c64.COLOR_BLUE);
+c64.backgroundColor(c64.COLOR_BLUE);
+c64.textColor(c64.COLOR_WHITE);
+c64.printAt(0, 0, "HELLO FROM NPM");
+
+Puis compilez :
+
+npx c64js build examples/hello.js -o hello.prg
+
+Si cela marche, votre publication npm est correcte.
+
+
+19. COMMENT PUBLIER UNE NOUVELLE VERSION
+----------------------------------------
+
+Quand vous faites une mise a jour, vous devez changer la version.
+
+Exemple :
+
+de :
+
+"version": "0.1.0"
+
+vers :
+
+"version": "0.1.1"
+
+Ensuite :
+
+npm publish
+
+
+20. COMMENT CHOISIR LE NUMERO DE VERSION
+----------------------------------------
+
+Regle simple pour debuter :
+
+- 0.1.1 = petite correction
+- 0.2.0 = ajout de fonctionnalites
+- 1.0.0 = version stable importante
+
+Exemples :
+
+- correction d'un bug IRQ : 0.1.1
+- ajout d'un nouveau helper important : 0.2.0
+- premiere version vraiment stable et documentee : 1.0.0
+
+
+21. UTILISER NPM VERSION POUR AIDER
+-----------------------------------
+
+Vous pouvez aussi demander a npm de changer la version pour vous.
+
+Exemple :
+
+npm version patch
+
+Cela passe en general de :
+
+0.1.0 -> 0.1.1
+
+Autres commandes utiles :
+
+npm version minor
+npm version major
+
+
+22. PUBLIER APRES UNE MISE A JOUR
+---------------------------------
+
+Sequence simple :
+
+1. modifier le code
+2. mettre a jour CHANGELOG.md
+3. changer la version
+4. lancer les tests
+5. verifier avec npm pack --dry-run
+6. publier avec npm publish
+
+
+23. ERREURS COURANTES
+---------------------
+
+Erreur : "You cannot publish over the previously published versions"
+
+Cause :
+
+- vous essayez de republier la meme version
+
+Solution :
+
+- augmentez la version dans package.json
+
+
+Erreur : "402 Payment Required" ou package scope prive
+
+Cause possible :
+
+- probleme de scope ou de visibilite
+
+Solution :
+
+- si vous utilisez un scope public, essayez :
+
+npm publish --access public
+
+
+Erreur : "name already exists"
+
+Cause :
+
+- le nom du package est deja pris
+
+Solution :
+
+- changez le champ "name"
+
+
+Erreur : certains fichiers manquent apres installation
+
+Cause possible :
+
+- champ "files" incomplet
+- .npmignore trop agressif
+
+Solution :
+
+- testez avec :
+
+npm pack --dry-run
+
+
+24. CHECKLIST SIMPLE AVANT PUBLICATION
+--------------------------------------
+
+Avant de publier, verifiez ceci :
+
+[ ] package.json a le bon nom
+[ ] la version est nouvelle
+[ ] le repository pointe vers le bon GitHub
+[ ] npm test passe
+[ ] README.md est lisible
+[ ] LICENSE est present
+[ ] CHANGELOG.md est a jour
+[ ] npm pack --dry-run montre les bons fichiers
+[ ] npm whoami fonctionne
+
+
+25. CHECKLIST SIMPLE APRES PUBLICATION
+--------------------------------------
+
+Apres publication, verifiez ceci :
+
+[ ] npm install js-c64 fonctionne dans un autre dossier
+[ ] npx c64js build examples/hello.js -o hello.prg fonctionne
+[ ] le README s'affiche bien sur npm
+[ ] la commande CLI est disponible
+
+
+26. EXEMPLE DE FLUX COMPLET
+---------------------------
+
+Voici un exemple simple de sequence de commandes :
+
+npm test
+npm whoami
+npm pack --dry-run
+npm publish
+
+Puis dans un autre dossier :
+
+mkdir test-publication
+cd test-publication
+npm init -y
+npm install js-c64
+
+
+27. DANS CE PROJET, QUOI VERIFIER EN PRIORITE
+---------------------------------------------
+
+Pour ce depot precis, avant publication je vous conseille de verifier surtout :
+
+1. le vrai nom du package
+2. le champ repository
+3. le champ author
+4. que les badges README pointent vers les bons liens
+5. que le nom js-c64 est bien libre
+
+
+28. RESUME ULTRA COURT
+----------------------
+
+1. npm login
+2. npm test
+3. npm pack --dry-run
+4. verifier package.json
+5. npm publish
+
+
+29. FICHIERS A LIRE EN PLUS
+---------------------------
+
+Pour completer ce guide, vous pouvez aussi lire :
+
+- package.json
+- README.md
+- CHANGELOG.md
+- .npmignore
+- MODE_EMPLOI_NPM.txt
+

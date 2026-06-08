@@ -1,0 +1,80 @@
+0810  A9 93       LDA #$93
+0812  20 D2 FF    JSR $FFD2
+0815  A9 00       LDA #$00
+0817  8D 20 D0    STA $D020
+081A  A9 00       LDA #$00
+081C  8D 21 D0    STA $D021
+081F  78          SEI
+0820  A9 7F       LDA #$7F
+0822  8D 0D DC    STA $DC0D
+0825  8D 0D DD    STA $DD0D
+0828  AD 0D DC    LDA $DC0D
+082B  AD 0D DD    LDA $DD0D
+082E  A9 00       LDA #$00
+0830  85 FB       STA $FB
+0832  A9 01       LDA #$01
+0834  8D 1A D0    STA $D01A
+0837  A9 01       LDA #$01
+0839  8D 19 D0    STA $D019
+083C  A9 32       LDA #$32
+083E  8D 12 D0    STA $D012
+0841  AD 11 D0    LDA $D011
+0844  29 7F       AND #$7F
+0846  8D 11 D0    STA $D011
+0849  A9 57       LDA #<irq_dispatch
+084B  8D 14 03    STA $0314
+084E  A9 08       LDA #>irq_dispatch
+0850  8D 15 03    STA $0315
+0853  58          CLI
+0854  4C AB 08    JMP program_end
+            ; Raster IRQ dispatcher
+0857        irq_dispatch:
+0857  48          PHA
+0858  8A          TXA
+0859  48          PHA
+085A  98          TYA
+085B  48          PHA
+085C  A5 FB       LDA $FB
+085E  C9 00       CMP #$00
+0860  F0 07       BEQ irq_handler_0
+0862  C9 01       CMP #$01
+0864  F0 24       BEQ irq_handler_1
+0866  4C 69 08    JMP irq_handler_0
+0869        irq_handler_0:
+0869  A9 02       LDA #$02
+086B  8D 20 D0    STA $D020
+086E  A9 01       LDA #$01
+0870  85 FB       STA $FB
+0872  A9 96       LDA #$96
+0874  8D 12 D0    STA $D012
+0877  AD 11 D0    LDA $D011
+087A  29 7F       AND #$7F
+087C  8D 11 D0    STA $D011
+087F  A9 01       LDA #$01
+0881  8D 19 D0    STA $D019
+0884  68          PLA
+0885  A8          TAY
+0886  68          PLA
+0887  AA          TAX
+0888  68          PLA
+0889  40          RTI
+088A        irq_handler_1:
+088A  A9 06       LDA #$06
+088C  8D 20 D0    STA $D020
+088F  A9 00       LDA #$00
+0891  85 FB       STA $FB
+0893  A9 32       LDA #$32
+0895  8D 12 D0    STA $D012
+0898  AD 11 D0    LDA $D011
+089B  29 7F       AND #$7F
+089D  8D 11 D0    STA $D011
+08A0  A9 01       LDA #$01
+08A2  8D 19 D0    STA $D019
+08A5  68          PLA
+08A6  A8          TAY
+08A7  68          PLA
+08A8  AA          TAX
+08A9  68          PLA
+08AA  40          RTI
+08AB        program_end:
+08AB  60          RTS

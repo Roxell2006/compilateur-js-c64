@@ -1,0 +1,630 @@
+MODE D'EMPLOI DEBUTANT - JS-C64
+================================
+
+1. A QUOI SERT JS-C64 ?
+-----------------------
+
+js-c64 permet d'ecrire un petit programme en JavaScript qui sera transforme
+en code machine 6502 pour Commodore 64.
+
+On n'ecrit pas un vrai programme JavaScript "normal".
+On ecrit surtout une suite d'appels a l'objet c64.
+
+Exemple tres simple :
+
+import { c64 } from "js-c64";
+
+c64.clearScreen();
+c64.borderColor(c64.COLOR_BLUE);
+c64.backgroundColor(c64.COLOR_BLUE);
+c64.textColor(c64.COLOR_WHITE);
+c64.printAt(0, 0, "HELLO C64");
+
+
+2. COMMENT COMPILER UN PROGRAMME
+--------------------------------
+
+Exemple pour produire un fichier PRG :
+
+c64js build examples/hello.js -o hello.prg
+
+Exemple pour produire de l'assembleur lisible :
+
+c64js build examples/hello.js -o hello.asm --format asm
+
+Exemple pour produire un listing :
+
+c64js build examples/hello.js -o hello.lst --format lst
+
+Exemple pour produire un programme BASIC DATA :
+
+c64js build examples/hello.js -o hello.bas --format data
+
+
+3. STRUCTURE MINIMALE D'UN FICHIER
+----------------------------------
+
+Le plus simple est :
+
+import { c64 } from "js-c64";
+
+c64.clearScreen();
+c64.printAt(0, 0, "BONJOUR");
+
+
+4. LES FONCTIONS C64 DE BASE
+----------------------------
+
+4.1 c64.clearScreen()
+---------------------
+
+Efface l'ecran du Commodore 64.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.clearScreen();
+
+
+4.2 c64.borderColor(couleur)
+----------------------------
+
+Change la couleur du cadre de l'ecran.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.borderColor(c64.COLOR_RED);
+
+
+4.3 c64.backgroundColor(couleur)
+--------------------------------
+
+Change la couleur du fond.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.backgroundColor(c64.COLOR_BLUE);
+
+
+4.4 c64.textColor(couleur)
+--------------------------
+
+Definit la couleur du texte pour les prochains printAt().
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.textColor(c64.COLOR_WHITE);
+c64.printAt(0, 0, "TEXTE BLANC");
+
+
+4.5 c64.print(texte)
+--------------------
+
+Affiche du texte en utilisant la routine KERNAL CHROUT.
+Pratique pour un affichage simple.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.clearScreen();
+c64.print("BONJOUR");
+
+
+4.6 c64.printAt(x, y, texte)
+----------------------------
+
+Affiche un texte a la position x, y.
+
+x = colonne
+y = ligne
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.printAt(10, 5, "AU MILIEU");
+
+
+4.7 c64.poke(adresse, valeur)
+-----------------------------
+
+Ecrit une valeur dans une adresse memoire du C64.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.poke(c64.VIC_BORDER_COLOR, c64.COLOR_GREEN);
+
+
+4.8 c64.peek(adresse)
+---------------------
+
+Lit une adresse memoire.
+Dans la version actuelle, c'est surtout utile avec c64.poke() ou avec
+de l'assembleur bas niveau.
+
+Exemple simple :
+
+import { c64 } from "js-c64";
+
+c64.poke(0x0400, c64.peek(0xD020));
+
+Cet exemple copie la couleur du border dans le premier caractere ecran.
+
+
+4.9 c64.memset(adresse, valeur, longueur)
+-----------------------------------------
+
+Remplit une zone memoire avec la meme valeur.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.memset(c64.SCREEN_RAM, 81, 40);
+
+Ici on remplit 40 cases ecran avec le code 81.
+
+
+4.10 c64.memcpy(destination, source, longueur)
+----------------------------------------------
+
+Copie un bloc memoire vers une autre zone memoire.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.memcpy(0x0428, 0x0400, 40);
+
+Ici on copie 40 octets de la premiere ligne vers la deuxieme.
+
+
+4.11 c64.screen(adresse)
+------------------------
+
+Change l'adresse de base utilisee par printAt() pour l'ecran.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.screen(0x0400);
+c64.printAt(0, 0, "LIGNE 1");
+
+
+4.12 c64.colorRam(adresse)
+--------------------------
+
+Change l'adresse de base utilisee pour les couleurs texte.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.colorRam(0xD800);
+c64.textColor(c64.COLOR_YELLOW);
+c64.printAt(0, 0, "JAUNE");
+
+
+4.13 c64.sys(adresse)
+---------------------
+
+Fait un JSR vers une routine machine.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.sys(c64.KERNAL_CHROUT);
+
+Remarque : pour CHROUT seul, il faut en pratique charger A avant si on veut
+envoyer un caractere utile.
+
+
+4.14 c64.label(nom)
+-------------------
+
+Ajoute un label dans le code genere.
+C'est utile surtout avec l'assembleur bas niveau.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.label("debut");
+
+
+4.15 c64.comment(texte)
+-----------------------
+
+Ajoute un commentaire dans la sortie assembleur/listing.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.comment("Preparation de l'ecran");
+c64.clearScreen();
+
+
+5. LES COULEURS DISPONIBLES
+---------------------------
+
+Les constantes de couleur disponibles sont :
+
+c64.COLOR_BLACK
+c64.COLOR_WHITE
+c64.COLOR_RED
+c64.COLOR_CYAN
+c64.COLOR_VIOLET
+c64.COLOR_GREEN
+c64.COLOR_BLUE
+c64.COLOR_YELLOW
+c64.COLOR_ORANGE
+c64.COLOR_BROWN
+c64.COLOR_LIGHTRED
+c64.COLOR_GRAY1
+c64.COLOR_GRAY2
+c64.COLOR_LIGHTGREEN
+c64.COLOR_LIGHTBLUE
+c64.COLOR_GRAY3
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.borderColor(c64.COLOR_ORANGE);
+c64.backgroundColor(c64.COLOR_BROWN);
+c64.textColor(c64.COLOR_WHITE);
+
+
+6. CONSTANTES UTILES
+--------------------
+
+Quelques constantes pratiques :
+
+c64.SCREEN_RAM
+c64.COLOR_RAM
+c64.VIC_BORDER_COLOR
+c64.VIC_BACKGROUND_COLOR
+c64.KERNAL_CHROUT
+c64.KERNAL_GETIN
+c64.KERNAL_SCNKEY
+c64.KERNAL_PLOT
+c64.JOYSTICK_PORT_1
+c64.JOYSTICK_PORT_2
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.poke(c64.VIC_BACKGROUND_COLOR, c64.COLOR_CYAN);
+
+
+7. GESTION DES IRQ RASTER
+-------------------------
+
+Les IRQ raster permettent de faire un effet visuel pendant que le C64 tourne.
+
+7.1 c64.irq.raster(ligne, fonction)
+-----------------------------------
+
+Ajoute un handler appele a une ligne raster donnee.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.irq.raster(50, () => {
+  c64.borderColor(c64.COLOR_RED);
+});
+
+
+7.2 c64.irq.install()
+---------------------
+
+Installe les IRQ que vous avez definies.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.irq.raster(50, () => {
+  c64.borderColor(c64.COLOR_RED);
+});
+
+c64.irq.install();
+
+
+7.3 c64.irq.chainToKernal()
+---------------------------
+
+Apres votre IRQ, le programme saute vers l'IRQ KERNAL standard.
+C'est utile pour garder BASIC vivant et conserver un READY. reactif.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.irq.raster(250, () => {
+  c64.borderColor(c64.COLOR_GREEN);
+});
+
+c64.irq.chainToKernal();
+c64.irq.install();
+
+
+7.4 c64.irq.disableKernalTimer()
+--------------------------------
+
+Desactive les interruptions timer CIA du KERNAL.
+A utiliser seulement si vous savez pourquoi.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.irq.disableKernalTimer();
+c64.irq.raster(50, () => {
+  c64.borderColor(c64.COLOR_RED);
+});
+c64.irq.install();
+
+
+7.5 c64.irq.enableKernalTimer()
+-------------------------------
+
+Reactive le mode normal des timers KERNAL dans l'etat interne du compilateur.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.irq.disableKernalTimer();
+c64.irq.enableKernalTimer();
+
+
+7.6 c64.irq.ack()
+-----------------
+
+Ajoute un acquittement IRQ.
+En pratique, l'outil le gere deja dans les handlers raster generes.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.irq.ack();
+
+
+7.7 c64.irq.rasterLoop(ligne, fonction, options)
+------------------------------------------------
+
+Version simplifiee pour un effet raster en boucle.
+Par defaut :
+
+- elle enregistre le handler
+- elle chaine vers le KERNAL
+- elle installe l'IRQ
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.irq.rasterLoop(245, () => {
+  c64.asm.lda(c64.abs("color_state"));
+  c64.asm.clc();
+  c64.asm.adc(c64.imm(1));
+  c64.asm.and(c64.imm(0x0f));
+  c64.asm.sta(c64.abs("color_state"));
+  c64.asm.sta(c64.abs(c64.VIC_BORDER_COLOR));
+});
+
+c64.asm.label("color_state");
+c64.asm.byte(0);
+
+Exemple avec options :
+
+c64.irq.rasterLoop(245, () => {
+  c64.borderColor(c64.COLOR_RED);
+}, {
+  chainToKernal: true,
+  install: true,
+  disableKernalTimer: false
+});
+
+
+8. ASSEMBLEUR BAS NIVEAU : c64.asm
+----------------------------------
+
+Si vous voulez faire du code plus avance, vous pouvez utiliser c64.asm.
+
+Exemple de base :
+
+import { c64 } from "js-c64";
+
+c64.asm.lda(c64.imm(6));
+c64.asm.sta(c64.abs(c64.VIC_BORDER_COLOR));
+
+Les instructions disponibles incluent notamment :
+
+adc and asl bcc bcs beq bit bmi bne bpl brk bvc bvs
+clc cld cli clv cmp cpx cpy dec dex dey eor inc inx iny
+jmp jsr lda ldx ldy lsr nop ora pha php pla plp
+rol ror rti rts sbc sec sed sei sta stx sty tax tay
+tsx txa txs tya
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.asm.sei();
+c64.asm.lda(c64.imm(0));
+c64.asm.sta(c64.abs(c64.VIC_BORDER_COLOR));
+c64.asm.cli();
+
+
+9. LES MODES D'ADRESSAGE
+------------------------
+
+Pour les instructions assembleur, on utilise des helpers :
+
+c64.imm(valeur)    immediate
+c64.zp(adresse)    zero page
+c64.zpx(adresse)   zero page,X
+c64.zpy(adresse)   zero page,Y
+c64.abs(adresse)   absolute
+c64.absx(adresse)  absolute,X
+c64.absy(adresse)  absolute,Y
+c64.ind(adresse)   indirect
+c64.indx(adresse)  indexed indirect
+c64.indy(adresse)  indirect indexed
+c64.rel(label)     branche relative
+c64.acc()          accumulateur
+c64.impl()         sans operande
+c64.immLo(label)   octet bas d'un label
+c64.immHi(label)   octet haut d'un label
+
+Exemples :
+
+c64.asm.lda(c64.imm(10));
+c64.asm.sta(c64.abs(0xD020));
+c64.asm.lda(c64.zp(0xFB));
+c64.asm.bne(c64.rel("boucle"));
+
+
+10. LABELS ET DONNEES EN ASSEMBLEUR
+-----------------------------------
+
+10.1 c64.asm.label(nom)
+-----------------------
+
+Place un label pour pouvoir y sauter.
+
+Exemple :
+
+c64.asm.label("boucle");
+c64.asm.inx();
+c64.asm.bne(c64.rel("boucle"));
+
+
+10.2 c64.asm.comment(texte)
+---------------------------
+
+Ajoute un commentaire dans l'assembleur.
+
+Exemple :
+
+c64.asm.comment("Debut de la routine");
+
+
+10.3 c64.asm.byte(valeur1, valeur2, ...)
+----------------------------------------
+
+Ajoute directement des octets.
+
+Exemple :
+
+c64.asm.label("sprite_data");
+c64.asm.byte(0, 24, 60, 126, 255);
+
+
+11. EXEMPLES TRES COURTS
+------------------------
+
+11.1 Ecran bleu avec texte blanc
+--------------------------------
+
+import { c64 } from "js-c64";
+
+c64.clearScreen();
+c64.borderColor(c64.COLOR_BLUE);
+c64.backgroundColor(c64.COLOR_BLUE);
+c64.textColor(c64.COLOR_WHITE);
+c64.printAt(0, 0, "HELLO");
+
+
+11.2 Copier une ligne ecran
+---------------------------
+
+import { c64 } from "js-c64";
+
+c64.printAt(0, 0, "BONJOUR");
+c64.memcpy(0x0428, 0x0400, 7);
+
+
+11.3 Faire clignoter le border avec rasterLoop
+----------------------------------------------
+
+import { c64 } from "js-c64";
+
+c64.irq.rasterLoop(245, () => {
+  c64.asm.lda(c64.abs("etat"));
+  c64.asm.eor(c64.imm(1));
+  c64.asm.sta(c64.abs("etat"));
+  c64.asm.sta(c64.abs(c64.VIC_BORDER_COLOR));
+});
+
+c64.asm.label("etat");
+c64.asm.byte(0);
+
+
+12. LIMITES IMPORTANTES
+-----------------------
+
+- Ce n'est pas un compilateur JavaScript complet.
+- Le fichier source est execute par Node.js.
+- Il ne faut pas compiler un fichier .js non fiable.
+- Certaines fonctions sont surtout la pour aider a generer du code simple
+  et direct.
+- Pour des effets tres avances, il faut souvent utiliser c64.asm.
+
+
+13. CONSEIL POUR BIEN COMMENCER
+-------------------------------
+
+Pour debuter, apprenez d'abord ces 6 fonctions :
+
+- c64.clearScreen()
+- c64.borderColor()
+- c64.backgroundColor()
+- c64.textColor()
+- c64.printAt()
+- c64.poke()
+
+Puis essayez ensuite :
+
+- c64.memset()
+- c64.memcpy()
+- c64.irq.rasterLoop()
+- c64.asm.lda(), c64.asm.sta(), c64.asm.jmp()
+
+
+14. FICHIERS D'EXEMPLE A REGARDER
+---------------------------------
+
+examples/hello.js
+examples/colors.js
+examples/screen-fill.js
+examples/raster-bars.js
+examples/raster-ready-border-cycle.js
+examples/vice-showcase.js
+
+Le plus simple pour commencer :
+
+examples/hello.js
+
+Le plus interessant pour voir un effet qui continue pendant READY. :
+
+examples/raster-ready-border-cycle.js
+

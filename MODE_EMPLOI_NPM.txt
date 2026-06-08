@@ -1,0 +1,482 @@
+MODE D'EMPLOI NPM - JS-C64
+==========================
+
+But de ce guide
+---------------
+
+Ce document explique, pas a pas, comment utiliser ce projet comme un package npm.
+
+Vous allez apprendre :
+
+1. ce qu'il faut installer
+2. comment creer un nouveau projet
+3. comment installer js-c64 avec npm
+4. comment ecrire un premier programme
+5. comment generer un fichier .prg
+6. comment tester le programme dans un emulateur Commodore 64
+
+
+1. CE QU'IL FAUT AVOIR AVANT DE COMMENCER
+-----------------------------------------
+
+Vous avez besoin de :
+
+- Node.js installe sur votre machine
+- npm
+- un terminal
+- un editeur de code comme VS Code
+- idealement l'emulateur VICE pour tester les fichiers .prg
+
+
+2. VERIFIER QUE NODE.JS ET NPM SONT INSTALLES
+---------------------------------------------
+
+Ouvrez un terminal, puis tapez :
+
+node -v
+
+Puis :
+
+npm -v
+
+Si tout va bien, vous verrez un numero de version.
+
+Exemple :
+
+v22.0.0
+10.8.1
+
+Si ces commandes ne marchent pas, il faut installer Node.js avant d'aller plus loin.
+
+
+3. CREER UN NOUVEAU DOSSIER DE PROJET
+-------------------------------------
+
+Dans votre terminal :
+
+mkdir mon-projet-c64
+cd mon-projet-c64
+
+Cela cree un nouveau dossier vide pour votre projet.
+
+
+4. INITIALISER LE PROJET NPM
+----------------------------
+
+Toujours dans le terminal :
+
+npm init -y
+
+Cette commande cree un fichier package.json.
+
+Ce fichier sert a decrire votre projet Node.js.
+
+
+5. INSTALLER JS-C64 DEPUIS NPM
+------------------------------
+
+Quand le package sera publie sur npm, la commande normale sera :
+
+npm install js-c64
+
+Cela ajoute js-c64 dans votre projet.
+
+Apres installation, votre dossier contiendra en general :
+
+- package.json
+- package-lock.json
+- node_modules/
+
+
+6. SI VOUS TRAVAILLEZ EN LOCAL AVANT PUBLICATION NPM
+----------------------------------------------------
+
+Si vous avez le projet sur votre machine mais qu'il n'est pas encore publie sur npm,
+vous pouvez quand meme l'utiliser localement.
+
+Il y a plusieurs methodes.
+
+La plus simple pour un debutant est :
+
+1. ouvrir le dossier du projet js-c64
+2. relever son chemin
+3. depuis votre nouveau projet, faire une installation locale
+
+Exemple :
+
+npm install "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64"
+
+Cela installera le package depuis votre dossier local.
+
+
+7. CREER UN DOSSIER POUR VOS EXEMPLES
+-------------------------------------
+
+Dans votre nouveau projet :
+
+mkdir examples
+
+
+8. CREER VOTRE PREMIER FICHIER
+------------------------------
+
+Creez le fichier :
+
+examples/hello.js
+
+Puis mettez ce code dedans :
+
+import { c64 } from "js-c64";
+
+c64.clearScreen();
+c64.borderColor(c64.COLOR_BLUE);
+c64.backgroundColor(c64.COLOR_BLUE);
+c64.textColor(c64.COLOR_WHITE);
+c64.printAt(0, 0, "HELLO C64");
+
+
+9. GENERER UN FICHIER PRG
+-------------------------
+
+Dans le terminal, lancez :
+
+npx c64js build examples/hello.js -o hello.prg
+
+Explication :
+
+- npx lance la commande du package npm
+- c64js est l'outil fourni par js-c64
+- build veut dire "compiler/generer"
+- examples/hello.js est votre fichier source
+- -o hello.prg est le fichier de sortie
+
+Si tout se passe bien, vous obtenez :
+
+hello.prg
+
+
+10. GENERER D'AUTRES FORMATS
+----------------------------
+
+Vous pouvez aussi generer :
+
+Assembleur lisible :
+
+npx c64js build examples/hello.js -o hello.asm --format asm
+
+Listing :
+
+npx c64js build examples/hello.js -o hello.lst --format lst
+
+Programme BASIC DATA :
+
+npx c64js build examples/hello.js -o hello.bas --format data
+
+Binaire brut :
+
+npx c64js build examples/hello.js -o hello.bin --format bin
+
+
+11. AJOUTER DES SCRIPTS NPM POUR EVITER DE TOUT RETAPER
+-------------------------------------------------------
+
+Ouvrez votre fichier package.json.
+
+Vous pouvez y ajouter une section scripts comme ceci :
+
+{
+  "name": "mon-projet-c64",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "c64js build examples/hello.js -o build/hello.prg",
+    "build:asm": "c64js build examples/hello.js -o build/hello.asm --format asm",
+    "build:lst": "c64js build examples/hello.js -o build/hello.lst --format lst"
+  },
+  "dependencies": {
+    "js-c64": "^0.1.0"
+  }
+}
+
+Ensuite vous pouvez taper :
+
+npm run build
+
+ou :
+
+npm run build:asm
+
+
+12. EXEMPLE COMPLET DE PACKAGE.JSON POUR DEBUTER
+------------------------------------------------
+
+Voici un package.json tres simple :
+
+{
+  "name": "mon-projet-c64",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "c64js build examples/hello.js -o build/hello.prg",
+    "build:asm": "c64js build examples/hello.js -o build/hello.asm --format asm",
+    "build:lst": "c64js build examples/hello.js -o build/hello.lst --format lst",
+    "build:data": "c64js build examples/hello.js -o build/hello.bas --format data"
+  },
+  "dependencies": {
+    "js-c64": "^0.1.0"
+  }
+}
+
+
+13. TESTER LE FICHIER PRG DANS VICE
+-----------------------------------
+
+Une fois le fichier hello.prg genere, ouvrez VICE.
+
+Ensuite :
+
+1. chargez le fichier .prg
+2. lancez-le
+
+Le programme est prevu pour utiliser un stub BASIC avec :
+
+10 SYS 2064
+
+Donc normalement il demarre directement comme un programme C64 classique.
+
+Vous devriez voir :
+
+- fond bleu
+- cadre bleu
+- texte blanc
+- message en haut a gauche
+
+
+14. UTILISER LA COMMANDE INIT
+-----------------------------
+
+js-c64 fournit aussi une commande pour creer une base de projet.
+
+Dans un terminal :
+
+npx c64js init mon-demo-c64
+
+Puis :
+
+cd mon-demo-c64
+npm install
+
+Cette commande cree un petit projet de depart avec :
+
+- un package.json
+- un dossier examples/
+- un fichier hello.js
+
+
+15. STRUCTURE SIMPLE D'UN PROJET JS-C64
+---------------------------------------
+
+Un petit projet peut ressembler a ceci :
+
+mon-projet-c64/
+  package.json
+  node_modules/
+  examples/
+    hello.js
+    colors.js
+  build/
+    hello.prg
+    hello.asm
+    hello.lst
+
+
+16. PREMIER EXEMPLE UN PEU PLUS JOLI
+-----------------------------------
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.clearScreen();
+c64.borderColor(c64.COLOR_CYAN);
+c64.backgroundColor(c64.COLOR_BLUE);
+c64.textColor(c64.COLOR_WHITE);
+c64.printAt(0, 0, "BONJOUR");
+c64.printAt(0, 2, "MON PREMIER PROJET C64");
+
+Pour le compiler :
+
+npx c64js build examples/hello.js -o hello.prg
+
+
+17. UTILISER LES EXEMPLES FOURNIS PAR LE PROJET
+-----------------------------------------------
+
+Dans ce projet, vous avez deja plusieurs exemples utiles :
+
+- examples/hello.js
+- examples/colors.js
+- examples/screen-fill.js
+- examples/raster-bars.js
+- examples/raster-ready-border-cycle.js
+- examples/vice-showcase.js
+- examples/sprite-basic.js
+
+Si vous etes debutant, commencez par :
+
+- hello.js
+- colors.js
+- screen-fill.js
+
+Puis ensuite :
+
+- raster-ready-border-cycle.js
+- vice-showcase.js
+- sprite-basic.js
+
+
+18. DIFFERENCE ENTRE IMPORT LOCAL ET IMPORT NPM
+-----------------------------------------------
+
+Quand vous utilisez le package comme vraie librairie npm, on ecrit :
+
+import { c64 } from "js-c64";
+
+Quand vous travaillez a l'interieur du depot lui-meme, on peut aussi voir :
+
+import { c64 } from "./c64.js";
+
+ou
+
+import { c64 } from "../src/index.js";
+
+Pour un utilisateur normal du package npm, la forme a retenir est :
+
+import { c64 } from "js-c64";
+
+
+19. ERREURS COURANTES
+---------------------
+
+Erreur : "c64js n'est pas reconnu"
+
+Solution :
+
+- utilisez npx :
+
+npx c64js build examples/hello.js -o hello.prg
+
+ou bien
+
+- assurez-vous que le package est bien installe
+
+
+Erreur : "Cannot use import statement outside a module"
+
+Solution :
+
+Dans package.json, ajoutez :
+
+"type": "module"
+
+
+Erreur : le fichier .prg n'apparait pas
+
+Solution :
+
+- verifiez le chemin du fichier source
+- verifiez le nom du fichier de sortie
+- regardez les messages d'erreur dans le terminal
+
+
+Erreur : l'emulateur semble bloquer
+
+Solution :
+
+- commencez par tester hello.js
+- ensuite testez colors.js
+- puis seulement les exemples avec IRQ
+- utilisez les versions mises a jour dans dist/
+
+
+20. CONSEIL SIMPLE POUR BIEN COMMENCER
+--------------------------------------
+
+Ne commencez pas par les IRQ ou les sprites.
+
+Ordre conseille :
+
+1. clearScreen()
+2. borderColor()
+3. backgroundColor()
+4. textColor()
+5. printAt()
+6. poke()
+7. memset()
+8. memcpy()
+9. rasterLoop()
+10. asm.*
+
+
+21. RESUME ULTRA SIMPLE
+-----------------------
+
+Etape 1 :
+
+creer un projet
+
+Etape 2 :
+
+installer js-c64
+
+Commande :
+
+npm install js-c64
+
+Etape 3 :
+
+creer un fichier examples/hello.js
+
+Etape 4 :
+
+mettre dedans :
+
+import { c64 } from "js-c64";
+
+c64.clearScreen();
+c64.borderColor(c64.COLOR_BLUE);
+c64.backgroundColor(c64.COLOR_BLUE);
+c64.textColor(c64.COLOR_WHITE);
+c64.printAt(0, 0, "HELLO C64");
+
+Etape 5 :
+
+compiler :
+
+npx c64js build examples/hello.js -o hello.prg
+
+Etape 6 :
+
+ouvrir hello.prg dans VICE
+
+
+22. SI VOUS VOULEZ ALLER PLUS LOIN
+----------------------------------
+
+Ensuite vous pouvez apprendre :
+
+- les couleurs
+- les adresses memoire utiles
+- les sprites
+- les IRQ raster
+- l'assembleur bas niveau avec c64.asm
+
+
+23. FICHIERS A LIRE ENSUITE
+---------------------------
+
+Pour completer ce guide, vous pouvez aussi lire :
+
+- README.md
+- MODE_EMPLOI_DEBUTANT.txt
+
