@@ -20,6 +20,7 @@
 - Added `examples/sprite-animate.js`
 - Added automated tests for sprite animator installation and error handling
 - Added CLI `--sys` support for custom start addresses on data/bin/asm/lst outputs
+- Added `compileJsToC64Outputs(source, options)` for in-memory DSL compilation and direct BASIC text export
 
 ## 0.1.0
 

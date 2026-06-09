@@ -32,6 +32,40 @@ c64js build examples/raster-bars.js -o raster-bars.prg
 
 The generated `.prg` uses a BASIC stub with `10 SYS 2064` and starts machine code at `$0810`.
 
+For AI or emulator integrations, you can also compile a DSL source string directly in memory:
+
+```js
+import { compileJsToC64Outputs } from "js-c64";
+
+const source = `
+  c64.clearScreen();
+  c64.borderColor(c64.COLOR_BLUE);
+  c64.backgroundColor(c64.COLOR_BLUE);
+  c64.textColor(c64.COLOR_WHITE);
+  c64.printAt(0, 0, "Hello, C64!");
+`;
+
+const result = await compileJsToC64Outputs(source, { sysAddress: 49152 });
+console.log(result.basicText);
+```
+
+If you only want the final BASIC text directly, you can use the shortcut helper:
+
+```js
+import { compileJsToBasicData } from "js-c64";
+
+const source = `
+  c64.clearScreen();
+  c64.borderColor(c64.COLOR_BLUE);
+  c64.backgroundColor(c64.COLOR_BLUE);
+  c64.textColor(c64.COLOR_WHITE);
+  c64.printAt(0, 0, "Hello, C64!");
+`;
+
+const basicText = await compileJsToBasicData(source, { sysAddress: 49152 });
+console.log(basicText);
+```
+
 ## Features
 
 - Full internal NMOS 6502 opcode table for the official instructions commonly used on the C64
