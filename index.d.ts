@@ -6,12 +6,18 @@ export type Operand =
 
 export interface CompileResult {
   origin: number;
+  sysAddress: number;
   bytes: Uint8Array;
+  prgBytes: Uint8Array;
   asm: string;
+  asmText: string;
   listing: string;
+  listingText: string;
   symbols: Record<string, number>;
   data: string;
+  dataText: string;
   basicProgram: string;
+  basicText: string;
 }
 
 export declare class Assembler6502 {
@@ -27,6 +33,8 @@ export declare class Assembler6502 {
 
 export declare function compileFile(inputFile: string, options?: { codeStart?: number; sysAddress?: number }): Promise<CompileResult>;
 export declare function compileInstructions(instructions: Array<{ op: string; args?: any[] }>, options?: { codeStart?: number; sysAddress?: number }): CompileResult;
+export declare function compileJsToC64Outputs(source: string, options?: { codeStart?: number; sysAddress?: number }): Promise<CompileResult & { source: string }>;
+export declare function compileJsToBasicData(source: string, options?: { codeStart?: number; sysAddress?: number }): Promise<string>;
 export declare function createPrg(machineCode: Uint8Array, sysAddress?: number): Uint8Array;
 export declare function createBasicSysStub(sysAddress?: number): Uint8Array;
 export declare function exportBasicData(bytes: ArrayLike<number>, startLine?: number, step?: number, chunkSize?: number): string;

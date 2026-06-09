@@ -2,10 +2,11 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Assembler6502, abs, absx, imm, immHi, immLo, rel, zp, exportBasicData } from "./assembler6502.js";
 import { c64, getProgramState, resetRuntime } from "./c64.js";
-import { createBasicDataProgram } from "./prgWriter.js";
+import { createBasicDataProgram, createPrg } from "./prgWriter.js";
 
 const DEFAULT_CODE_START = 0x0810;
 const DEFAULT_SYS_ADDRESS = 2064;
+const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
 function ensureByte(value, label) {
   if (!Number.isInteger(value) || value < 0 || value > 0xff) {
@@ -1064,8 +1065,64 @@ function emitDataPool(asm, state) {
   }
 }
 
+function buildCompileResult(finalBytes, asm, codeStart, sysAddress) {
+  const symbols = asm.getSymbolTable();
+  const asmText = asm.toAsm();
+  const listingText = asm.toListing();
+  const dataText = exportBasicData(finalBytes);
+  const basicText = createBasicDataProgram(finalBytes, sysAddress);
+
+  return {
+    origin: codeStart,
+    sysAddress,
+    bytes: finalBytes,
+    prgBytes: createPrg(finalBytes, sysAddress, 0x0801, codeStart),
+    asm: asmText,
+    asmText,
+    listing: listingText,
+    listingText,
+    symbols,
+    data: dataText,
+    dataText,
+    basicProgram: basicText,
+    basicText
+  };
+}
+
+function sanitizeInlineSource(source) {
+  if (typeof source !== "string") {
+    throw new Error("compileJsToC64Outputs(source) expects source to be a string");
+  }
+
+  const withoutC64Imports = source
+    .replace(/^\s*import\s+\{\s*c64\s*\}\s+from\s+["'][^"']+["'];?\s*$/gm, "")
+    .replace(/^\s*import\s+\{\s*c64\s*,[\s\S]*?\}\s+from\s+["'][^"']+["'];?\s*$/gm, "")
+    .trim();
+
+  if (/\bimport\s+/.test(withoutC64Imports) || /\bexport\s+/.test(withoutC64Imports)) {
+    throw new Error("compileJsToC64Outputs() currently accepts DSL source without ESM import/export statements, except a simple `import { c64 } ...` line which is optional");
+  }
+
+  return withoutC64Imports;
+}
+
+async function executeInlineSource(source) {
+  const sanitizedSource = sanitizeInlineSource(source);
+  const runner = new AsyncFunction("c64", sanitizedSource);
+  await runner(c64);
+}
+
+function normalizeCompileOptions(options = {}, forInlineSource = false) {
+  const normalized = { ...options };
+  if (forInlineSource && normalized.codeStart === undefined && normalized.sysAddress !== undefined) {
+    normalized.codeStart = normalized.sysAddress;
+  }
+  return normalized;
+}
+
 export function compileInstructions(instructions, options = {}) {
   const codeStart = options.codeStart ?? DEFAULT_CODE_START;
+  const sysAddress = options.sysAddress ?? DEFAULT_SYS_ADDRESS;
   const asm = new Assembler6502(codeStart);
   const state = {
     currentTextColor: 1,
@@ -1135,30 +1192,39 @@ export function compileInstructions(instructions, options = {}) {
   emitStringPool(asm, state);
   emitDataPool(asm, state);
 
-  const bytes = Array.from(asm.toBytes());
-  const symbols = asm.getSymbolTable();
-  const finalBytes = Uint8Array.from(bytes);
-
-  return {
-    origin: codeStart,
-    bytes: finalBytes,
-    asm: asm.toAsm(),
-    listing: asm.toListing(),
-    symbols,
-    data: exportBasicData(finalBytes),
-    basicProgram: createBasicDataProgram(finalBytes, options.sysAddress ?? DEFAULT_SYS_ADDRESS)
-  };
+  const finalBytes = Uint8Array.from(Array.from(asm.toBytes()));
+  return buildCompileResult(finalBytes, asm, codeStart, sysAddress);
 }
 
 export async function compileFile(inputFile, options = {}) {
   const absolute = path.resolve(inputFile);
+  const compileOptions = normalizeCompileOptions(options, false);
   resetRuntime();
   const moduleUrl = pathToFileURL(absolute);
   moduleUrl.searchParams.set("ts", String(Date.now()));
   await import(moduleUrl.href);
   const state = getProgramState();
   return compileInstructions(state.instructions, {
-    ...options,
+    ...compileOptions,
     irqHandlers: state.irq.handlers
   });
+}
+
+export async function compileJsToC64Outputs(source, options = {}) {
+  const compileOptions = normalizeCompileOptions(options, true);
+  resetRuntime();
+  await executeInlineSource(source);
+  const state = getProgramState();
+  return {
+    source,
+    ...compileInstructions(state.instructions, {
+      ...compileOptions,
+      irqHandlers: state.irq.handlers
+    })
+  };
+}
+
+export async function compileJsToBasicData(source, options = {}) {
+  const result = await compileJsToC64Outputs(source, options);
+  return result.basicText;
 }

@@ -69,6 +69,80 @@ Pour le format PRG, la version actuelle est prevue surtout pour le cas standard
 SYS 2064.
 
 
+2.1 COMPILER DIRECTEMENT UN TEXTE JS EN MEMOIRE
+-----------------------------------------------
+
+Cette nouvelle possibilite est utile si vous avez :
+
+- un outil IA
+- un emulateur
+- une application Node.js
+
+Dans ce cas, vous n'etes pas oblige d'ecrire un fichier .js sur disque.
+Vous pouvez donner directement au compilateur une chaine de texte contenant
+le programme JS-C64.
+
+Exemple complet :
+
+import { compileJsToC64Outputs } from "js-c64";
+
+const source = `
+  c64.clearScreen();
+  c64.borderColor(c64.COLOR_BLUE);
+  c64.backgroundColor(c64.COLOR_BLUE);
+  c64.textColor(c64.COLOR_WHITE);
+  c64.printAt(0, 0, "Hello, C64!");
+`;
+
+const result = await compileJsToC64Outputs(source, { sysAddress: 49152 });
+console.log(result.basicText);
+
+Ce code fait ceci :
+
+- source contient le programme JS-C64 sous forme de texte
+- compileJsToC64Outputs() compile ce texte
+- sysAddress: 49152 demande un BASIC DATA avec SYS 49152
+- result.basicText contient le programme BASIC final en texte simple
+
+Autrement dit, result.basicText contient un texte du genre :
+
+10 FORI=0TO...:READA:POKE49152+I,A:NEXT
+20 SYS 49152
+100 DATA ...
+
+Important :
+
+- cette fonction execute le texte JS dans Node.js
+- il ne faut donc pas lui donner du code non fiable
+- c'est tres pratique pour une IA qui genere elle-meme le code JS-C64
+
+
+2.2 VERSION ENCORE PLUS SIMPLE : BASIC TEXTE DIRECT
+---------------------------------------------------
+
+Si vous voulez directement recuperer le texte BASIC sans passer par result,
+vous pouvez utiliser :
+
+import { compileJsToBasicData } from "js-c64";
+
+const source = `
+  c64.clearScreen();
+  c64.borderColor(c64.COLOR_BLUE);
+  c64.backgroundColor(c64.COLOR_BLUE);
+  c64.textColor(c64.COLOR_WHITE);
+  c64.printAt(0, 0, "Hello, C64!");
+`;
+
+const basicText = await compileJsToBasicData(source, { sysAddress: 49152 });
+console.log(basicText);
+
+Cette version est ideale si votre but est simplement :
+
+- obtenir le texte BASIC final
+- l'envoyer dans un emulateur
+- ou l'afficher dans votre propre interface
+
+
 3. STRUCTURE MINIMALE D'UN FICHIER
 ----------------------------------
 

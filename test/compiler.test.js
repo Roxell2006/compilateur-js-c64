@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Assembler6502, abs, imm, rel, exportBasicData } from "../src/assembler6502.js";
 import { createBasicDataLoader, createBasicSysStub } from "../src/basicStub.js";
-import { compileFile, compileInstructions } from "../src/compiler.js";
+import { compileFile, compileInstructions, compileJsToC64Outputs, compileJsToBasicData } from "../src/compiler.js";
 import { createBasicDataProgram, createPrg } from "../src/prgWriter.js";
 
 describe("assembler opcodes", () => {
@@ -105,6 +105,55 @@ describe("string-backed text output", () => {
     ]);
 
     expect(result.asm).toMatch(/STA \$04D9,X/);
+  });
+});
+
+describe("inline JS source compilation", () => {
+  it("compiles DSL source text and returns BASIC text", async () => {
+    const result = await compileJsToC64Outputs(`
+      c64.clearScreen();
+      c64.borderColor(c64.COLOR_BLUE);
+      c64.backgroundColor(c64.COLOR_BLUE);
+      c64.textColor(c64.COLOR_WHITE);
+      c64.printAt(0, 0, "Hello, C64!");
+    `, {
+      sysAddress: 49152
+    });
+
+    expect(result.origin).toBe(49152);
+    expect(result.sysAddress).toBe(49152);
+    expect(result.basicText).toMatch(/POKE49152\+I,A/);
+    expect(result.basicText).toMatch(/20 SYS 49152/);
+    expect(result.asmText).toMatch(/STA \$D020/);
+    expect(result.prgBytes).toBeInstanceOf(Uint8Array);
+  });
+
+  it("accepts an optional import line in inline source", async () => {
+    const result = await compileJsToC64Outputs(`
+      import { c64 } from "js-c64";
+
+      c64.borderColor(c64.COLOR_RED);
+    `);
+
+    expect(result.asmText).toMatch(/STA \$D020/);
+  });
+
+  it("rejects unsupported ESM source in inline compilation", async () => {
+    await expect(compileJsToC64Outputs(`
+      import { somethingElse } from "./other.js";
+      c64.borderColor(c64.COLOR_RED);
+    `)).rejects.toThrow(/without ESM import\/export statements/i);
+  });
+
+  it("returns BASIC text directly with compileJsToBasicData()", async () => {
+    const basicText = await compileJsToBasicData(`
+      c64.borderColor(c64.COLOR_BLUE);
+    `, {
+      sysAddress: 49152
+    });
+
+    expect(basicText).toMatch(/POKE49152\+I,A/);
+    expect(basicText).toMatch(/20 SYS 49152/);
   });
 });
 
