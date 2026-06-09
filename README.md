@@ -26,6 +26,7 @@ c64.printAt(0, 0, "Hello, C64!");
 c64js build examples/hello.js -o hello.prg
 c64js build examples/hello.js -o hello.asm --format asm
 c64js build examples/hello.js -o hello.bas --format data
+c64js build examples/hello.js -o hello.bas --format data --sys 49152
 c64js build examples/raster-bars.js -o raster-bars.prg
 ```
 
@@ -79,6 +80,27 @@ The generated `.prg` uses a BASIC stub with `10 SYS 2064` and starts machine cod
 - `c64.var.word(name, address, initialValue)`
 - `c64.varRef(name)`
 - `c64.dataRef(name, length?)`
+
+### Sprite API
+
+- `c64.sprite.enable(n)`
+- `c64.sprite.disable(n)`
+- `c64.sprite.show(n, x, y, color)`
+- `c64.sprite.hide(n)`
+- `c64.sprite.position(n, x, y)`
+- `c64.sprite.setX(n, x)`
+- `c64.sprite.setY(n, y)`
+- `c64.sprite.moveX(n, dx)`
+- `c64.sprite.moveY(n, dy)`
+- `c64.sprite.color(n, color)`
+- `c64.sprite.data(n, bytesOrLabel, address?)`
+- `c64.sprite.pointer(n, blockIndex)`
+- `c64.sprite.multicolor(n, enabled)`
+- `c64.sprite.expandX(n, enabled)`
+- `c64.sprite.expandY(n, enabled)`
+- `c64.sprite.priority(n, behindBackground)`
+- `c64.sprite.sharedColor1(color)`
+- `c64.sprite.sharedColor2(color)`
 
 ### Low-level assembler helpers
 
@@ -151,10 +173,10 @@ This emits IRQ setup code including:
 
 ```bash
 c64js build examples/hello.js -o hello.prg
-c64js build examples/hello.js -o hello.bin --format bin
-c64js build examples/hello.js -o hello.asm --format asm
-c64js build examples/hello.js -o hello.lst --format lst --map symbols.json
-c64js build examples/hello.js -o hello.bas --format data
+c64js build examples/hello.js -o hello.bin --format bin --sys 8192
+c64js build examples/hello.js -o hello.asm --format asm --sys 8192
+c64js build examples/hello.js -o hello.lst --format lst --sys 8192 --map symbols.json
+c64js build examples/hello.js -o hello.bas --format data --sys 49152
 c64js init my-c64-demo
 ```
 
@@ -178,6 +200,7 @@ c64js init my-c64-demo
 - [examples/raster-bars.js](./examples/raster-bars.js)
 - [examples/raster-ready-border-cycle.js](./examples/raster-ready-border-cycle.js)
 - [examples/vice-showcase.js](./examples/vice-showcase.js)
+- [examples/sprite-api.js](./examples/sprite-api.js)
 - [examples/sid-beep.js](./examples/sid-beep.js)
 - [examples/sprite-basic.js](./examples/sprite-basic.js)
 

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { Assembler6502, abs, imm, rel, exportBasicData } from "../src/assembler6502.js";
-import { createBasicSysStub } from "../src/basicStub.js";
+import { createBasicDataLoader, createBasicSysStub } from "../src/basicStub.js";
 import { compileFile, compileInstructions } from "../src/compiler.js";
-import { createPrg } from "../src/prgWriter.js";
+import { createBasicDataProgram, createPrg } from "../src/prgWriter.js";
 
 describe("assembler opcodes", () => {
   it("emits key opcodes correctly", () => {
@@ -61,6 +61,17 @@ describe("writers", () => {
   it("exports BASIC DATA lines", () => {
     expect(exportBasicData(Uint8Array.from([169, 1, 141, 32, 208, 96]), 100, 10, 8))
       .toBe("100 DATA 169,1,141,32,208,96");
+  });
+
+  it("creates BASIC DATA loader with a custom SYS address", () => {
+    expect(createBasicDataLoader(Uint8Array.from([1, 2, 3]), 49152))
+      .toBe("10 FORI=0TO2:READA:POKE49152+I,A:NEXT\n20 SYS 49152\n");
+  });
+
+  it("creates a full BASIC DATA program with a custom SYS address", () => {
+    const program = createBasicDataProgram(Uint8Array.from([169, 0, 96]), 8192);
+    expect(program).toMatch(/POKE8192\+I,A/);
+    expect(program).toMatch(/20 SYS 8192/);
   });
 });
 
@@ -165,6 +176,43 @@ describe("v0.2 comfort helpers", () => {
   });
 });
 
+describe("v0.3 sprite helpers", () => {
+  it("emits sprite position and high X bit handling", () => {
+    const result = compileInstructions([
+      { op: "spriteSetX", args: [0, 300] },
+      { op: "spriteSetY", args: [0, 120] }
+    ]);
+
+    expect(result.asm).toMatch(/STA \$D000/);
+    expect(result.asm).toMatch(/ORA #\$01/);
+    expect(result.asm).toMatch(/STA \$D001/);
+  });
+
+  it("emits sprite data copy and pointer setup", () => {
+    const result = compileInstructions([
+      { op: "spriteData", args: [0, [1, 2, 3, 4], 0x2000] }
+    ]);
+
+    expect(result.asm).toMatch(/LDA sprite_data_0_0,X/);
+    expect(result.asm).toMatch(/STA \$2000,X/);
+    expect(result.asm).toMatch(/STA \$07F8/);
+  });
+
+  it("supports sprite enable, color and expansion flags", () => {
+    const result = compileInstructions([
+      { op: "spriteColor", args: [0, 2] },
+      { op: "spriteExpandX", args: [0, true] },
+      { op: "spriteExpandY", args: [0, true] },
+      { op: "spriteEnable", args: [0] }
+    ]);
+
+    expect(result.asm).toMatch(/STA \$D027/);
+    expect(result.asm).toMatch(/STA \$D01D/);
+    expect(result.asm).toMatch(/STA \$D017/);
+    expect(result.asm).toMatch(/STA \$D015/);
+  });
+});
+
 describe("irq raster", () => {
   it("generates raster vector writes", () => {
     const result = compileInstructions([
@@ -210,10 +258,9 @@ describe("irq raster", () => {
   it("compiles sprite-basic with balloon sprite data", async () => {
     const result = await compileFile("examples/sprite-basic.js");
     expect(result.bytes.length).toBeGreaterThan(0);
-    expect(result.symbols.balloon_sprite_data).toBeDefined();
-    expect(result.asm).toMatch(/LDX #\$00/);
-    expect(result.asm).toMatch(/LDA balloon_sprite_data,X/);
+    expect(result.asm).toMatch(/LDA sprite_data_0_0,X/);
     expect(result.asm).toMatch(/STA \$2000,X/);
+    expect(result.asm).toMatch(/STA \$D015/);
   });
 
   it("compiles comfort-data-vars example without error", async () => {
@@ -221,5 +268,13 @@ describe("irq raster", () => {
     expect(result.bytes.length).toBeGreaterThan(0);
     expect(result.asm).toMatch(/titleText:/);
     expect(result.asm).toMatch(/STA \$C200/);
+  });
+
+  it("compiles sprite-api example without error", async () => {
+    const result = await compileFile("examples/sprite-api.js");
+    expect(result.bytes.length).toBeGreaterThan(0);
+    expect(result.asm).toMatch(/STA \$D015/);
+    expect(result.asm).toMatch(/STA \$D01D/);
+    expect(result.asm).toMatch(/STA \$D017/);
   });
 });

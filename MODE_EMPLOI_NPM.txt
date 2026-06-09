@@ -172,6 +172,33 @@ Programme BASIC DATA :
 
 npx c64js build examples/hello.js -o hello.bas --format data
 
+Programme BASIC DATA avec une autre adresse de depart :
+
+npx c64js build examples/hello.js -o hello.bas --format data --sys 49152
+
+Exemple autre adresse :
+
+npx c64js build examples/hello.js -o hello.bas --format data --sys 8192
+
+Avec cela, le loader BASIC fera un :
+
+SYS 49152
+
+ou :
+
+SYS 8192
+
+Remarque importante :
+
+L'option --sys est surtout faite pour les sorties :
+
+- data
+- asm
+- lst
+- bin
+
+Le format .prg reste principalement pense pour le cas standard SYS 2064.
+
 Binaire brut :
 
 npx c64js build examples/hello.js -o hello.bin --format bin
@@ -479,4 +506,3 @@ Pour completer ce guide, vous pouvez aussi lire :
 
 - README.md
 - MODE_EMPLOI_DEBUTANT.txt
-

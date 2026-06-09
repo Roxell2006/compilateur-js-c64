@@ -40,6 +40,34 @@ Exemple pour produire un programme BASIC DATA :
 
 c64js build examples/hello.js -o hello.bas --format data
 
+Exemple pour produire un BASIC DATA avec une autre adresse de depart :
+
+c64js build examples/hello.js -o hello.bas --format data --sys 49152
+
+ou :
+
+c64js build examples/hello.js -o hello.bas --format data --sys 8192
+
+Dans ce cas, le programme BASIC genere fera :
+
+SYS 49152
+
+ou :
+
+SYS 8192
+
+Important :
+
+L'option --sys est surtout utile pour :
+
+- le format BASIC DATA
+- le format ASM
+- le format LST
+- le format BIN
+
+Pour le format PRG, la version actuelle est prevue surtout pour le cas standard
+SYS 2064.
+
 
 3. STRUCTURE MINIMALE D'UN FICHIER
 ----------------------------------

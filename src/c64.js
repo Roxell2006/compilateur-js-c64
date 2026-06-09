@@ -26,9 +26,14 @@ export const C64_CONSTANTS = {
   VIC_LIGHTPEN_Y: 0xd014,
   VIC_SPRITE_ENABLE: 0xd015,
   VIC_CONTROL_2: 0xd016,
+  VIC_SPRITE_X_MSB: 0xd010,
+  VIC_SPRITE_EXPAND_Y: 0xd017,
   VIC_MEMORY_POINTERS: 0xd018,
   VIC_IRQ_STATUS: 0xd019,
   VIC_IRQ_ENABLE: 0xd01a,
+  VIC_SPRITE_PRIORITY: 0xd01b,
+  VIC_SPRITE_MULTICOLOR: 0xd01c,
+  VIC_SPRITE_EXPAND_X: 0xd01d,
   VIC_BORDER_COLOR: 0xd020,
   VIC_BACKGROUND_COLOR: 0xd021,
   VIC_BACKGROUND_COLOR_1: 0xd022,
@@ -157,5 +162,62 @@ c64.var = {
 
 c64.varRef = (name) => ({ type: "varRef", name });
 c64.dataRef = (name, length = undefined) => ({ type: "dataRef", name, length });
+
+c64.sprite = {
+  enable(n) {
+    pushInstruction("spriteEnable", n);
+  },
+  disable(n) {
+    pushInstruction("spriteDisable", n);
+  },
+  show(n, x, y, color) {
+    pushInstruction("spriteShow", n, x, y, color);
+  },
+  hide(n) {
+    pushInstruction("spriteHide", n);
+  },
+  position(n, x, y) {
+    pushInstruction("spritePosition", n, x, y);
+  },
+  setX(n, x) {
+    pushInstruction("spriteSetX", n, x);
+  },
+  setY(n, y) {
+    pushInstruction("spriteSetY", n, y);
+  },
+  moveX(n, dx) {
+    pushInstruction("spriteMoveX", n, dx);
+  },
+  moveY(n, dy) {
+    pushInstruction("spriteMoveY", n, dy);
+  },
+  color(n, color) {
+    pushInstruction("spriteColor", n, color);
+  },
+  data(n, bytesOrLabel, address = undefined) {
+    pushInstruction("spriteData", n, bytesOrLabel, address);
+  },
+  pointer(n, blockIndex) {
+    pushInstruction("spritePointer", n, blockIndex);
+  },
+  multicolor(n, enabled) {
+    pushInstruction("spriteMulticolor", n, enabled);
+  },
+  expandX(n, enabled) {
+    pushInstruction("spriteExpandX", n, enabled);
+  },
+  expandY(n, enabled) {
+    pushInstruction("spriteExpandY", n, enabled);
+  },
+  priority(n, behindBackground) {
+    pushInstruction("spritePriority", n, behindBackground);
+  },
+  sharedColor1(color) {
+    pushInstruction("spriteSharedColor1", color);
+  },
+  sharedColor2(color) {
+    pushInstruction("spriteSharedColor2", color);
+  }
+};
 
 export { getProgramState, resetRuntime };

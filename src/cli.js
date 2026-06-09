@@ -7,9 +7,17 @@ import { createBasicDataProgram, createPrg, createRawBinary } from "./prgWriter.
 function usage() {
   return [
     "Usage:",
-    "  c64js build <input.js> -o <output> [--format prg|bin|asm|lst|data] [--map symbols.json]",
+    "  c64js build <input.js> -o <output> [--format prg|bin|asm|lst|data] [--sys address] [--map symbols.json]",
     "  c64js init <folder>"
   ].join("\n");
+}
+
+function parseSysAddress(value) {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0 || parsed > 0xffff) {
+    throw new Error(`Invalid --sys value: ${value}`);
+  }
+  return parsed;
 }
 
 function parseArgs(argv) {
@@ -19,7 +27,7 @@ function parseArgs(argv) {
   }
 
   if (command === "build") {
-    const args = { command, input: null, output: null, format: null, map: null };
+    const args = { command, input: null, output: null, format: null, map: null, sys: null };
     for (let i = 0; i < rest.length; i += 1) {
       const token = rest[i];
       if (!args.input && !token.startsWith("-")) {
@@ -28,6 +36,8 @@ function parseArgs(argv) {
         args.output = rest[++i];
       } else if (token === "--format") {
         args.format = rest[++i];
+      } else if (token === "--sys") {
+        args.sys = parseSysAddress(rest[++i]);
       } else if (token === "--map") {
         args.map = rest[++i];
       } else {
@@ -66,11 +76,22 @@ async function writeFileEnsured(filePath, content, encoding) {
 }
 
 async function handleBuild(args) {
-  const result = await compileFile(args.input);
   const format = inferFormat(args.output, args.format);
+  const compileOptions = {};
+
+  if (args.sys !== null) {
+    if (format === "prg" && args.sys !== 2064) {
+      throw new Error("Custom --sys is currently supported for data/bin/asm/lst outputs, but not for .prg. Use --format data for addresses like 8192 or 49152.");
+    }
+
+    compileOptions.codeStart = args.sys;
+    compileOptions.sysAddress = args.sys;
+  }
+
+  const result = await compileFile(args.input, compileOptions);
 
   if (format === "prg") {
-    await writeFileEnsured(args.output, Buffer.from(createPrg(result.bytes)), undefined);
+    await writeFileEnsured(args.output, Buffer.from(createPrg(result.bytes, args.sys ?? 2064, 0x0801, args.sys ?? 0x0810)), undefined);
   } else if (format === "bin") {
     await writeFileEnsured(args.output, Buffer.from(createRawBinary(result.bytes)), undefined);
   } else if (format === "asm") {
@@ -78,7 +99,7 @@ async function handleBuild(args) {
   } else if (format === "lst") {
     await writeFileEnsured(args.output, `${result.listing}\n`, "utf8");
   } else if (format === "data") {
-    await writeFileEnsured(args.output, createBasicDataProgram(result.bytes), "utf8");
+    await writeFileEnsured(args.output, createBasicDataProgram(result.bytes, args.sys ?? 2064), "utf8");
   } else {
     throw new Error(`Unsupported format: ${format}`);
   }

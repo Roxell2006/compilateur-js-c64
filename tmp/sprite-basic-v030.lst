@@ -1,0 +1,58 @@
+0810  A9 93       LDA #$93
+0812  20 D2 FF    JSR $FFD2
+0815  A9 03       LDA #$03
+0817  8D 20 D0    STA $D020
+081A  A9 06       LDA #$06
+081C  8D 21 D0    STA $D021
+081F  A9 01       LDA #$01
+0821  8D 86 02    STA $0286
+0824  A2 00       LDX #$00
+0826        printat_loop_0:
+0826  BD 7C 08    LDA str_screen_0,X
+0829  F0 0C       BEQ printat_done_1
+082B  9D 0A 04    STA $040A,X
+082E  A9 01       LDA #$01
+0830  9D 0A D8    STA $D80A,X
+0833  E8          INX
+0834  4C 26 08    JMP printat_loop_0
+0837        printat_done_1:
+0837  A2 00       LDX #$00
+0839        printat_loop_2:
+0839  BD 90 08    LDA str_screen_1,X
+083C  F0 0C       BEQ printat_done_3
+083E  9D 55 04    STA $0455,X
+0841  A9 01       LDA #$01
+0843  9D 55 D8    STA $D855,X
+0846  E8          INX
+0847  4C 39 08    JMP printat_loop_2
+084A        printat_done_3:
+084A  A2 00       LDX #$00
+084C        copydata_2000_sprite_data_0_0_63_4:
+084C  BD AE 08    LDA sprite_data_0_0,X
+084F  9D 00 20    STA $2000,X
+0852  E8          INX
+0853  E0 3F       CPX #$3F
+0855  D0 F5       BNE copydata_2000_sprite_data_0_0_63_4
+0857  A9 80       LDA #$80
+0859  8D F8 07    STA $07F8
+085C  A9 02       LDA #$02
+085E  8D 27 D0    STA $D027
+0861  A9 78       LDA #$78
+0863  8D 00 D0    STA $D000
+0866  AD 10 D0    LDA $D010
+0869  29 FE       AND #$FE
+086B  8D 10 D0    STA $D010
+086E  A9 5A       LDA #$5A
+0870  8D 01 D0    STA $D001
+0873  AD 15 D0    LDA $D015
+0876  09 01       ORA #$01
+0878  8D 15 D0    STA $D015
+087B  60          RTS
+            ; String pool
+087C        str_screen_0:
+087C  03 36 34 20 08 0F 14 20 01 09 12 20 02 01 0C 0C 0F 0F 0E 00 .byte $03, $36, $34, $20, $08, $0F, $14, $20, $01, $09, $12, $20, $02, $01, $0C, $0C, $0F, $0F, $0E, $00
+0890        str_screen_1:
+0890  13 10 12 09 14 05 20 30 20 06 12 0F 0D 20 14 08 05 20 15 13 05 12 20 0D 01 0E 15 01 0C 00 .byte $13, $10, $12, $09, $14, $05, $20, $30, $20, $06, $12, $0F, $0D, $20, $14, $08, $05, $20, $15, $13, $05, $12, $20, $0D, $01, $0E, $15, $01, $0C, $00
+            ; User data
+08AE        sprite_data_0_0:
+08AE  00 7F 00 01 FF C0 03 FF E0 03 FF E0 07 FF F0 07 FF F0 07 FF F0 07 FF F0 07 FF F0 03 FF E0 03 FF E0 01 FF C0 00 FF 00 00 7E 00 00 3C 00 00 3C 00 00 18 00 00 24 00 00 7E 00 00 7E 00 00 3C 00 .byte $00, $7F, $00, $01, $FF, $C0, $03, $FF, $E0, $03, $FF, $E0, $07, $FF, $F0, $07, $FF, $F0, $07, $FF, $F0, $07, $FF, $F0, $07, $FF, $F0, $03, $FF, $E0, $03, $FF, $E0, $01, $FF, $C0, $00, $FF, $00, $00, $7E, $00, $00, $3C, $00, $00, $3C, $00, $00, $18, $00, $00, $24, $00, $00, $7E, $00, $00, $7E, $00, $00, $3C, $00
