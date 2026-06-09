@@ -1,0 +1,571 @@
+0810  A9 93       LDA #$93
+0812  20 D2 FF    JSR $FFD2
+0815  A9 0E       LDA #$0E
+0817  8D 20 D0    STA $D020
+081A  A9 06       LDA #$06
+081C  8D 21 D0    STA $D021
+081F  A9 01       LDA #$01
+0821  8D 86 02    STA $0286
+0824  A2 00       LDX #$00
+0826        memset_400_32_40:
+0826  A9 20       LDA #$20
+0828  9D 00 04    STA $0400,X
+082B  E8          INX
+082C  E0 28       CPX #$28
+082E  D0 F6       BNE memset_400_32_40
+0830  A2 00       LDX #$00
+0832        memset_d800_6_40:
+0832  A9 06       LDA #$06
+0834  9D 00 D8    STA $D800,X
+0837  E8          INX
+0838  E0 28       CPX #$28
+083A  D0 F6       BNE memset_d800_6_40
+083C  A2 00       LDX #$00
+083E        memset_428_32_40:
+083E  A9 20       LDA #$20
+0840  9D 28 04    STA $0428,X
+0843  E8          INX
+0844  E0 28       CPX #$28
+0846  D0 F6       BNE memset_428_32_40
+0848  A2 00       LDX #$00
+084A        memset_d828_6_40:
+084A  A9 06       LDA #$06
+084C  9D 28 D8    STA $D828,X
+084F  E8          INX
+0850  E0 28       CPX #$28
+0852  D0 F6       BNE memset_d828_6_40
+0854  A2 00       LDX #$00
+0856        memset_450_32_40:
+0856  A9 20       LDA #$20
+0858  9D 50 04    STA $0450,X
+085B  E8          INX
+085C  E0 28       CPX #$28
+085E  D0 F6       BNE memset_450_32_40
+0860  A2 00       LDX #$00
+0862        memset_d850_6_40:
+0862  A9 06       LDA #$06
+0864  9D 50 D8    STA $D850,X
+0867  E8          INX
+0868  E0 28       CPX #$28
+086A  D0 F6       BNE memset_d850_6_40
+086C  A2 00       LDX #$00
+086E        memset_478_32_40:
+086E  A9 20       LDA #$20
+0870  9D 78 04    STA $0478,X
+0873  E8          INX
+0874  E0 28       CPX #$28
+0876  D0 F6       BNE memset_478_32_40
+0878  A2 00       LDX #$00
+087A        memset_d878_6_40:
+087A  A9 06       LDA #$06
+087C  9D 78 D8    STA $D878,X
+087F  E8          INX
+0880  E0 28       CPX #$28
+0882  D0 F6       BNE memset_d878_6_40
+0884  A2 00       LDX #$00
+0886        memset_4a0_32_40:
+0886  A9 20       LDA #$20
+0888  9D A0 04    STA $04A0,X
+088B  E8          INX
+088C  E0 28       CPX #$28
+088E  D0 F6       BNE memset_4a0_32_40
+0890  A2 00       LDX #$00
+0892        memset_d8a0_6_40:
+0892  A9 06       LDA #$06
+0894  9D A0 D8    STA $D8A0,X
+0897  E8          INX
+0898  E0 28       CPX #$28
+089A  D0 F6       BNE memset_d8a0_6_40
+089C  A2 00       LDX #$00
+089E        memset_4c8_32_40:
+089E  A9 20       LDA #$20
+08A0  9D C8 04    STA $04C8,X
+08A3  E8          INX
+08A4  E0 28       CPX #$28
+08A6  D0 F6       BNE memset_4c8_32_40
+08A8  A2 00       LDX #$00
+08AA        memset_d8c8_6_40:
+08AA  A9 06       LDA #$06
+08AC  9D C8 D8    STA $D8C8,X
+08AF  E8          INX
+08B0  E0 28       CPX #$28
+08B2  D0 F6       BNE memset_d8c8_6_40
+08B4  A2 00       LDX #$00
+08B6        memset_4f0_32_40:
+08B6  A9 20       LDA #$20
+08B8  9D F0 04    STA $04F0,X
+08BB  E8          INX
+08BC  E0 28       CPX #$28
+08BE  D0 F6       BNE memset_4f0_32_40
+08C0  A2 00       LDX #$00
+08C2        memset_d8f0_6_40:
+08C2  A9 06       LDA #$06
+08C4  9D F0 D8    STA $D8F0,X
+08C7  E8          INX
+08C8  E0 28       CPX #$28
+08CA  D0 F6       BNE memset_d8f0_6_40
+08CC  A2 00       LDX #$00
+08CE        memset_518_32_40:
+08CE  A9 20       LDA #$20
+08D0  9D 18 05    STA $0518,X
+08D3  E8          INX
+08D4  E0 28       CPX #$28
+08D6  D0 F6       BNE memset_518_32_40
+08D8  A2 00       LDX #$00
+08DA        memset_d918_6_40:
+08DA  A9 06       LDA #$06
+08DC  9D 18 D9    STA $D918,X
+08DF  E8          INX
+08E0  E0 28       CPX #$28
+08E2  D0 F6       BNE memset_d918_6_40
+08E4  A2 00       LDX #$00
+08E6        memset_540_32_40:
+08E6  A9 20       LDA #$20
+08E8  9D 40 05    STA $0540,X
+08EB  E8          INX
+08EC  E0 28       CPX #$28
+08EE  D0 F6       BNE memset_540_32_40
+08F0  A2 00       LDX #$00
+08F2        memset_d940_6_40:
+08F2  A9 06       LDA #$06
+08F4  9D 40 D9    STA $D940,X
+08F7  E8          INX
+08F8  E0 28       CPX #$28
+08FA  D0 F6       BNE memset_d940_6_40
+08FC  A2 00       LDX #$00
+08FE        memset_568_32_40:
+08FE  A9 20       LDA #$20
+0900  9D 68 05    STA $0568,X
+0903  E8          INX
+0904  E0 28       CPX #$28
+0906  D0 F6       BNE memset_568_32_40
+0908  A2 00       LDX #$00
+090A        memset_d968_6_40:
+090A  A9 06       LDA #$06
+090C  9D 68 D9    STA $D968,X
+090F  E8          INX
+0910  E0 28       CPX #$28
+0912  D0 F6       BNE memset_d968_6_40
+0914  A2 00       LDX #$00
+0916        memset_590_32_40:
+0916  A9 20       LDA #$20
+0918  9D 90 05    STA $0590,X
+091B  E8          INX
+091C  E0 28       CPX #$28
+091E  D0 F6       BNE memset_590_32_40
+0920  A2 00       LDX #$00
+0922        memset_d990_6_40:
+0922  A9 06       LDA #$06
+0924  9D 90 D9    STA $D990,X
+0927  E8          INX
+0928  E0 28       CPX #$28
+092A  D0 F6       BNE memset_d990_6_40
+092C  A2 00       LDX #$00
+092E        memset_5b8_32_40:
+092E  A9 20       LDA #$20
+0930  9D B8 05    STA $05B8,X
+0933  E8          INX
+0934  E0 28       CPX #$28
+0936  D0 F6       BNE memset_5b8_32_40
+0938  A2 00       LDX #$00
+093A        memset_d9b8_6_40:
+093A  A9 06       LDA #$06
+093C  9D B8 D9    STA $D9B8,X
+093F  E8          INX
+0940  E0 28       CPX #$28
+0942  D0 F6       BNE memset_d9b8_6_40
+0944  A2 00       LDX #$00
+0946        memset_5e0_32_40:
+0946  A9 20       LDA #$20
+0948  9D E0 05    STA $05E0,X
+094B  E8          INX
+094C  E0 28       CPX #$28
+094E  D0 F6       BNE memset_5e0_32_40
+0950  A2 00       LDX #$00
+0952        memset_d9e0_6_40:
+0952  A9 06       LDA #$06
+0954  9D E0 D9    STA $D9E0,X
+0957  E8          INX
+0958  E0 28       CPX #$28
+095A  D0 F6       BNE memset_d9e0_6_40
+095C  A2 00       LDX #$00
+095E        memset_608_32_40:
+095E  A9 20       LDA #$20
+0960  9D 08 06    STA $0608,X
+0963  E8          INX
+0964  E0 28       CPX #$28
+0966  D0 F6       BNE memset_608_32_40
+0968  A2 00       LDX #$00
+096A        memset_da08_6_40:
+096A  A9 06       LDA #$06
+096C  9D 08 DA    STA $DA08,X
+096F  E8          INX
+0970  E0 28       CPX #$28
+0972  D0 F6       BNE memset_da08_6_40
+0974  A2 00       LDX #$00
+0976        memset_630_32_40:
+0976  A9 20       LDA #$20
+0978  9D 30 06    STA $0630,X
+097B  E8          INX
+097C  E0 28       CPX #$28
+097E  D0 F6       BNE memset_630_32_40
+0980  A2 00       LDX #$00
+0982        memset_da30_6_40:
+0982  A9 06       LDA #$06
+0984  9D 30 DA    STA $DA30,X
+0987  E8          INX
+0988  E0 28       CPX #$28
+098A  D0 F6       BNE memset_da30_6_40
+098C  A2 00       LDX #$00
+098E        memset_658_32_40:
+098E  A9 20       LDA #$20
+0990  9D 58 06    STA $0658,X
+0993  E8          INX
+0994  E0 28       CPX #$28
+0996  D0 F6       BNE memset_658_32_40
+0998  A2 00       LDX #$00
+099A        memset_da58_6_40:
+099A  A9 06       LDA #$06
+099C  9D 58 DA    STA $DA58,X
+099F  E8          INX
+09A0  E0 28       CPX #$28
+09A2  D0 F6       BNE memset_da58_6_40
+09A4  A2 00       LDX #$00
+09A6        memset_680_32_40:
+09A6  A9 20       LDA #$20
+09A8  9D 80 06    STA $0680,X
+09AB  E8          INX
+09AC  E0 28       CPX #$28
+09AE  D0 F6       BNE memset_680_32_40
+09B0  A2 00       LDX #$00
+09B2        memset_da80_6_40:
+09B2  A9 06       LDA #$06
+09B4  9D 80 DA    STA $DA80,X
+09B7  E8          INX
+09B8  E0 28       CPX #$28
+09BA  D0 F6       BNE memset_da80_6_40
+09BC  A2 00       LDX #$00
+09BE        memset_6a8_32_40:
+09BE  A9 20       LDA #$20
+09C0  9D A8 06    STA $06A8,X
+09C3  E8          INX
+09C4  E0 28       CPX #$28
+09C6  D0 F6       BNE memset_6a8_32_40
+09C8  A2 00       LDX #$00
+09CA        memset_daa8_6_40:
+09CA  A9 06       LDA #$06
+09CC  9D A8 DA    STA $DAA8,X
+09CF  E8          INX
+09D0  E0 28       CPX #$28
+09D2  D0 F6       BNE memset_daa8_6_40
+09D4  A2 00       LDX #$00
+09D6        memset_6d0_32_40:
+09D6  A9 20       LDA #$20
+09D8  9D D0 06    STA $06D0,X
+09DB  E8          INX
+09DC  E0 28       CPX #$28
+09DE  D0 F6       BNE memset_6d0_32_40
+09E0  A2 00       LDX #$00
+09E2        memset_dad0_6_40:
+09E2  A9 06       LDA #$06
+09E4  9D D0 DA    STA $DAD0,X
+09E7  E8          INX
+09E8  E0 28       CPX #$28
+09EA  D0 F6       BNE memset_dad0_6_40
+09EC  A2 00       LDX #$00
+09EE        memset_6f8_32_40:
+09EE  A9 20       LDA #$20
+09F0  9D F8 06    STA $06F8,X
+09F3  E8          INX
+09F4  E0 28       CPX #$28
+09F6  D0 F6       BNE memset_6f8_32_40
+09F8  A2 00       LDX #$00
+09FA        memset_daf8_6_40:
+09FA  A9 06       LDA #$06
+09FC  9D F8 DA    STA $DAF8,X
+09FF  E8          INX
+0A00  E0 28       CPX #$28
+0A02  D0 F6       BNE memset_daf8_6_40
+0A04  A2 00       LDX #$00
+0A06        memset_720_32_40:
+0A06  A9 20       LDA #$20
+0A08  9D 20 07    STA $0720,X
+0A0B  E8          INX
+0A0C  E0 28       CPX #$28
+0A0E  D0 F6       BNE memset_720_32_40
+0A10  A2 00       LDX #$00
+0A12        memset_db20_6_40:
+0A12  A9 06       LDA #$06
+0A14  9D 20 DB    STA $DB20,X
+0A17  E8          INX
+0A18  E0 28       CPX #$28
+0A1A  D0 F6       BNE memset_db20_6_40
+0A1C  A2 00       LDX #$00
+0A1E        memset_748_32_40:
+0A1E  A9 20       LDA #$20
+0A20  9D 48 07    STA $0748,X
+0A23  E8          INX
+0A24  E0 28       CPX #$28
+0A26  D0 F6       BNE memset_748_32_40
+0A28  A2 00       LDX #$00
+0A2A        memset_db48_6_40:
+0A2A  A9 06       LDA #$06
+0A2C  9D 48 DB    STA $DB48,X
+0A2F  E8          INX
+0A30  E0 28       CPX #$28
+0A32  D0 F6       BNE memset_db48_6_40
+0A34  A2 00       LDX #$00
+0A36        memset_770_32_40:
+0A36  A9 20       LDA #$20
+0A38  9D 70 07    STA $0770,X
+0A3B  E8          INX
+0A3C  E0 28       CPX #$28
+0A3E  D0 F6       BNE memset_770_32_40
+0A40  A2 00       LDX #$00
+0A42        memset_db70_6_40:
+0A42  A9 06       LDA #$06
+0A44  9D 70 DB    STA $DB70,X
+0A47  E8          INX
+0A48  E0 28       CPX #$28
+0A4A  D0 F6       BNE memset_db70_6_40
+0A4C  A2 00       LDX #$00
+0A4E        memset_798_32_40:
+0A4E  A9 20       LDA #$20
+0A50  9D 98 07    STA $0798,X
+0A53  E8          INX
+0A54  E0 28       CPX #$28
+0A56  D0 F6       BNE memset_798_32_40
+0A58  A2 00       LDX #$00
+0A5A        memset_db98_6_40:
+0A5A  A9 06       LDA #$06
+0A5C  9D 98 DB    STA $DB98,X
+0A5F  E8          INX
+0A60  E0 28       CPX #$28
+0A62  D0 F6       BNE memset_db98_6_40
+0A64  A2 00       LDX #$00
+0A66        memset_7c0_32_40:
+0A66  A9 20       LDA #$20
+0A68  9D C0 07    STA $07C0,X
+0A6B  E8          INX
+0A6C  E0 28       CPX #$28
+0A6E  D0 F6       BNE memset_7c0_32_40
+0A70  A2 00       LDX #$00
+0A72        memset_dbc0_6_40:
+0A72  A9 06       LDA #$06
+0A74  9D C0 DB    STA $DBC0,X
+0A77  E8          INX
+0A78  E0 28       CPX #$28
+0A7A  D0 F6       BNE memset_dbc0_6_40
+0A7C  A2 00       LDX #$00
+0A7E        printat_loop_0:
+0A7E  BD 35 0C    LDA str_screen_0,X
+0A81  F0 0C       BEQ printat_done_1
+0A83  9D 35 04    STA $0435,X
+0A86  A9 01       LDA #$01
+0A88  9D 35 D8    STA $D835,X
+0A8B  E8          INX
+0A8C  4C 7E 0A    JMP printat_loop_0
+0A8F        printat_done_1:
+0A8F  A2 00       LDX #$00
+0A91        printat_loop_2:
+0A91  BD 44 0C    LDA str_screen_1,X
+0A94  F0 0C       BEQ printat_done_3
+0A96  9D 82 04    STA $0482,X
+0A99  A9 01       LDA #$01
+0A9B  9D 82 D8    STA $D882,X
+0A9E  E8          INX
+0A9F  4C 91 0A    JMP printat_loop_2
+0AA2        printat_done_3:
+0AA2  A2 00       LDX #$00
+0AA4        copydata_2000_sprite_data_0_0_63_4:
+0AA4  BD 59 0C    LDA sprite_data_0_0,X
+0AA7  9D 00 20    STA $2000,X
+0AAA  E8          INX
+0AAB  E0 3F       CPX #$3F
+0AAD  D0 F5       BNE copydata_2000_sprite_data_0_0_63_4
+0AAF  A9 80       LDA #$80
+0AB1  8D F8 07    STA $07F8
+0AB4  A9 02       LDA #$02
+0AB6  8D 27 D0    STA $D027
+0AB9  AD 1D D0    LDA $D01D
+0ABC  09 01       ORA #$01
+0ABE  8D 1D D0    STA $D01D
+0AC1  AD 17 D0    LDA $D017
+0AC4  09 01       ORA #$01
+0AC6  8D 17 D0    STA $D017
+0AC9  A9 20       LDA #$20
+0ACB  8D 00 D0    STA $D000
+0ACE  AD 10 D0    LDA $D010
+0AD1  29 FE       AND #$FE
+0AD3  8D 10 D0    STA $D010
+0AD6  A9 5A       LDA #$5A
+0AD8  8D 01 D0    STA $D001
+0ADB  AD 15 D0    LDA $D015
+0ADE  09 01       ORA #$01
+0AE0  8D 15 D0    STA $D015
+0AE3  A9 20       LDA #$20
+0AE5  8D 00 C3    STA $C300
+0AE8  A9 00       LDA #$00
+0AEA  8D 01 C3    STA $C301
+0AED  A9 F0       LDA #$F0
+0AEF  8D 02 C3    STA $C302
+0AF2  A9 00       LDA #$00
+0AF4  8D 03 C3    STA $C303
+0AF7  A9 02       LDA #$02
+0AF9  8D 04 C3    STA $C304
+0AFC  A9 5A       LDA #$5A
+0AFE  8D 05 C3    STA $C305
+0B01  A9 3C       LDA #$3C
+0B03  8D 06 C3    STA $C306
+0B06  A9 01       LDA #$01
+0B08  8D 07 C3    STA $C307
+0B0B  78          SEI
+0B0C  A9 01       LDA #$01
+0B0E  8D 1A D0    STA $D01A
+0B11  A9 01       LDA #$01
+0B13  8D 19 D0    STA $D019
+0B16  A9 FA       LDA #$FA
+0B18  8D 12 D0    STA $D012
+0B1B  AD 11 D0    LDA $D011
+0B1E  29 7F       AND #$7F
+0B20  8D 11 D0    STA $D011
+0B23  A9 31       LDA #<sprite_animator_irq
+0B25  8D 14 03    STA $0314
+0B28  A9 0B       LDA #>sprite_animator_irq
+0B2A  8D 15 03    STA $0315
+0B2D  58          CLI
+0B2E  4C 34 0C    JMP program_end_after_animator
+            ; Sprite animator IRQ
+0B31        sprite_animator_irq:
+0B31  48          PHA
+0B32  8A          TXA
+0B33  48          PHA
+0B34  98          TYA
+0B35  48          PHA
+0B36  AD 01 C3    LDA $C301
+0B39  CD 03 C3    CMP $C303
+0B3C  F0 05       BEQ sprite_x_check_low_0_x
+0B3E  90 13       BCC sprite_x_inc_0_x
+0B40  4C 86 0B    JMP sprite_x_dec_0_x
+0B43        sprite_x_check_low_0_x:
+0B43  AD 00 C3    LDA $C300
+0B46  CD 02 C3    CMP $C302
+0B49  F0 05       BEQ sprite_x_equal_0_x
+0B4B  90 06       BCC sprite_x_inc_0_x
+0B4D  4C 86 0B    JMP sprite_x_dec_0_x
+0B50        sprite_x_equal_0_x:
+0B50  4C D5 0B    JMP sprite_x_done_0_x
+0B53        sprite_x_inc_0_x:
+0B53  18          CLC
+0B54  AD 00 C3    LDA $C300
+0B57  6D 04 C3    ADC $C304
+0B5A  8D 00 C3    STA $C300
+0B5D  AD 01 C3    LDA $C301
+0B60  69 00       ADC #$00
+0B62  8D 01 C3    STA $C301
+0B65  AD 01 C3    LDA $C301
+0B68  CD 03 C3    CMP $C303
+0B6B  90 49       BCC sprite_x_write_0_x
+0B6D  D0 08       BNE sprite_x_clamp_high_0_x
+0B6F  AD 00 C3    LDA $C300
+0B72  CD 02 C3    CMP $C302
+0B75  90 3F       BCC sprite_x_write_0_x
+0B77        sprite_x_clamp_high_0_x:
+0B77  AD 02 C3    LDA $C302
+0B7A  8D 00 C3    STA $C300
+0B7D  AD 03 C3    LDA $C303
+0B80  8D 01 C3    STA $C301
+0B83  4C B6 0B    JMP sprite_x_write_0_x
+0B86        sprite_x_dec_0_x:
+0B86  38          SEC
+0B87  AD 00 C3    LDA $C300
+0B8A  ED 04 C3    SBC $C304
+0B8D  8D 00 C3    STA $C300
+0B90  AD 01 C3    LDA $C301
+0B93  E9 00       SBC #$00
+0B95  8D 01 C3    STA $C301
+0B98  AD 01 C3    LDA $C301
+0B9B  CD 03 C3    CMP $C303
+0B9E  90 0A       BCC sprite_x_clamp_low_0_x
+0BA0  D0 14       BNE sprite_x_write_0_x
+0BA2  AD 00 C3    LDA $C300
+0BA5  CD 02 C3    CMP $C302
+0BA8  B0 0C       BCS sprite_x_write_0_x
+0BAA        sprite_x_clamp_low_0_x:
+0BAA  AD 02 C3    LDA $C302
+0BAD  8D 00 C3    STA $C300
+0BB0  AD 03 C3    LDA $C303
+0BB3  8D 01 C3    STA $C301
+0BB6        sprite_x_write_0_x:
+0BB6  AD 00 C3    LDA $C300
+0BB9  8D 00 D0    STA $D000
+0BBC  AD 10 D0    LDA $D010
+0BBF  29 FE       AND #$FE
+0BC1  8D 10 D0    STA $D010
+0BC4  AD 01 C3    LDA $C301
+0BC7  F0 0B       BEQ sprite_x_clear_0_49920_49921
+0BC9  AD 10 D0    LDA $D010
+0BCC  09 01       ORA #$01
+0BCE  8D 10 D0    STA $D010
+0BD1  4C D5 0B    JMP sprite_x_end_0_49920_49921
+0BD4        sprite_x_clear_0_49920_49921:
+0BD4  EA          NOP
+0BD5        sprite_x_end_0_49920_49921:
+0BD5        sprite_x_done_0_x:
+0BD5  EA          NOP
+0BD6  AD 05 C3    LDA $C305
+0BD9  CD 06 C3    CMP $C306
+0BDC  F0 05       BEQ sprite_y_equal_0_y
+0BDE  90 06       BCC sprite_y_inc_0_y
+0BE0  4C FE 0B    JMP sprite_y_dec_0_y
+0BE3        sprite_y_equal_0_y:
+0BE3  4C 19 0C    JMP sprite_y_done_0_y
+0BE6        sprite_y_inc_0_y:
+0BE6  18          CLC
+0BE7  AD 05 C3    LDA $C305
+0BEA  6D 07 C3    ADC $C307
+0BED  8D 05 C3    STA $C305
+0BF0  CD 06 C3    CMP $C306
+0BF3  90 1E       BCC sprite_y_write_0_y
+0BF5        sprite_y_clamp_high_0_y:
+0BF5  AD 06 C3    LDA $C306
+0BF8  8D 05 C3    STA $C305
+0BFB  4C 13 0C    JMP sprite_y_write_0_y
+0BFE        sprite_y_dec_0_y:
+0BFE  38          SEC
+0BFF  AD 05 C3    LDA $C305
+0C02  ED 07 C3    SBC $C307
+0C05  8D 05 C3    STA $C305
+0C08  CD 06 C3    CMP $C306
+0C0B  B0 06       BCS sprite_y_write_0_y
+0C0D        sprite_y_clamp_low_0_y:
+0C0D  AD 06 C3    LDA $C306
+0C10  8D 05 C3    STA $C305
+0C13        sprite_y_write_0_y:
+0C13  AD 05 C3    LDA $C305
+0C16  8D 01 D0    STA $D001
+0C19        sprite_y_done_0_y:
+0C19  EA          NOP
+0C1A  A9 FA       LDA #$FA
+0C1C  8D 12 D0    STA $D012
+0C1F  AD 11 D0    LDA $D011
+0C22  29 7F       AND #$7F
+0C24  8D 11 D0    STA $D011
+0C27  A9 01       LDA #$01
+0C29  8D 19 D0    STA $D019
+0C2C  68          PLA
+0C2D  A8          TAY
+0C2E  68          PLA
+0C2F  AA          TAX
+0C30  68          PLA
+0C31  4C 31 EA    JMP $EA31
+0C34        program_end_after_animator:
+0C34  60          RTS
+            ; String pool
+0C35        str_screen_0:
+0C35  13 10 12 09 14 05 20 01 0E 09 0D 01 14 05 00 .byte $13, $10, $12, $09, $14, $05, $20, $01, $0E, $09, $0D, $01, $14, $05, $00
+0C44        str_screen_1:
+0C44  02 01 0C 0C 0F 0F 0E 20 14 0F 20 14 08 05 20 12 09 07 08 14 00 .byte $02, $01, $0C, $0C, $0F, $0F, $0E, $20, $14, $0F, $20, $14, $08, $05, $20, $12, $09, $07, $08, $14, $00
+            ; User data
+0C59        sprite_data_0_0:
+0C59  00 7F 00 01 FF C0 03 FF E0 03 FF E0 07 FF F0 07 FF F0 07 FF F0 07 FF F0 07 FF F0 03 FF E0 03 FF E0 01 FF C0 00 FF 00 00 7E 00 00 3C 00 00 3C 00 00 18 00 00 24 00 00 7E 00 00 7E 00 00 3C 00 .byte $00, $7F, $00, $01, $FF, $C0, $03, $FF, $E0, $03, $FF, $E0, $07, $FF, $F0, $07, $FF, $F0, $07, $FF, $F0, $07, $FF, $F0, $07, $FF, $F0, $03, $FF, $E0, $03, $FF, $E0, $01, $FF, $C0, $00, $FF, $00, $00, $7E, $00, $00, $3C, $00, $00, $3C, $00, $00, $18, $00, $00, $24, $00, $00, $7E, $00, $00, $7E, $00, $00, $3C, $00

@@ -14,6 +14,11 @@
 - Started `v0.3.0` sprite foundations
 - Added `c64.sprite.*` high-level helpers for enable/disable, position, colors, data, priority, multicolor, and expansion
 - Reworked `examples/sprite-basic.js` to use the sprite API
+- Started `v0.4.0` sprite animation foundations
+- Added `c64.sprite.moveToX()`, `moveToY()`, `animateTo()`, `stop()`, `stopX()`, `stopY()`, and `installAnimator()`
+- Added an internal raster IRQ sprite animator that updates X/Y over time and chains to the KERNAL IRQ
+- Added `examples/sprite-animate.js`
+- Added automated tests for sprite animator installation and error handling
 - Added CLI `--sys` support for custom start addresses on data/bin/asm/lst outputs
 
 ## 0.1.0

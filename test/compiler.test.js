@@ -213,6 +213,36 @@ describe("v0.3 sprite helpers", () => {
   });
 });
 
+describe("v0.4 sprite animation", () => {
+  it("installs a sprite animator IRQ and emits sprite motion state", () => {
+    const result = compileInstructions([
+      { op: "spritePosition", args: [0, 32, 90] },
+      { op: "spriteAnimateTo", args: [0, { x: 240, y: 60, speedX: 2, speedY: 1 }] },
+      { op: "spriteInstallAnimator", args: [250] }
+    ]);
+
+    expect(result.asm).toMatch(/sprite_animator_irq:/);
+    expect(result.asm).toMatch(/STA \$0314/);
+    expect(result.asm).toMatch(/STA \$0315/);
+    expect(result.asm).toMatch(/STA \$C300/);
+    expect(result.asm).toMatch(/STA \$D000/);
+    expect(result.asm).toMatch(/STA \$D001/);
+    expect(result.asm).toMatch(/JMP \$EA31/);
+  });
+
+  it("throws when installAnimator() is used without any animation", () => {
+    expect(() => compileInstructions([
+      { op: "spriteInstallAnimator", args: [250] }
+    ])).toThrow(/without any configured sprite animations/i);
+  });
+
+  it("throws when animateTo() is used before setting sprite position", () => {
+    expect(() => compileInstructions([
+      { op: "spriteAnimateTo", args: [0, { x: 240, speedX: 2 }] }
+    ])).toThrow(/position is unknown/i);
+  });
+});
+
 describe("irq raster", () => {
   it("generates raster vector writes", () => {
     const result = compileInstructions([
@@ -276,5 +306,14 @@ describe("irq raster", () => {
     expect(result.asm).toMatch(/STA \$D015/);
     expect(result.asm).toMatch(/STA \$D01D/);
     expect(result.asm).toMatch(/STA \$D017/);
+  });
+
+  it("compiles sprite-animate example without error", async () => {
+    const result = await compileFile("examples/sprite-animate.js");
+    expect(result.bytes.length).toBeGreaterThan(0);
+    expect(result.asm).toMatch(/sprite_animator_irq:/);
+    expect(result.asm).toMatch(/STA \$0314/);
+    expect(result.asm).toMatch(/STA \$D012/);
+    expect(result.asm).toMatch(/JMP \$EA31/);
   });
 });

@@ -120,6 +120,13 @@ function ensureSignedByte(value, label) {
   }
 }
 
+function ensurePositiveByte(value, label) {
+  if (!Number.isInteger(value) || value < 1 || value > 0xff) {
+    throw new Error(`${label} must be between 1 and 255`);
+  }
+  return value;
+}
+
 function getStringBytes(text, encoder) {
   return Array.from(text, encoder);
 }
@@ -355,6 +362,245 @@ function emitSpriteData(asm, compileState, index, dataSource, explicitAddress) {
   compileState.spriteState[index].dataLength = length;
 }
 
+function getOrCreateSpriteAnimation(compileState, index) {
+  let animation = compileState.spriteAnimations[index];
+  if (!animation) {
+    animation = { x: null, y: null };
+    compileState.spriteAnimations[index] = animation;
+  }
+  return animation;
+}
+
+function emitSpriteDynamicXWrite(asm, currentLoAddr, currentHiAddr, spriteIndex) {
+  const spriteBitMask = 1 << spriteIndex;
+  const clearLabel = `sprite_x_clear_${spriteIndex}_${currentLoAddr}_${currentHiAddr}`;
+  const endLabel = `sprite_x_end_${spriteIndex}_${currentLoAddr}_${currentHiAddr}`;
+
+  asm.lda(abs(currentLoAddr));
+  asm.sta(abs(spriteXAddress(spriteIndex)));
+  asm.lda(abs(c64.VIC_SPRITE_X_MSB));
+  asm.and(imm(0xff ^ spriteBitMask));
+  asm.sta(abs(c64.VIC_SPRITE_X_MSB));
+  asm.lda(abs(currentHiAddr));
+  asm.beq(rel(clearLabel));
+  asm.lda(abs(c64.VIC_SPRITE_X_MSB));
+  asm.ora(imm(spriteBitMask));
+  asm.sta(abs(c64.VIC_SPRITE_X_MSB));
+  asm.jmp(abs(endLabel));
+  asm.label(clearLabel);
+  asm.nop();
+  asm.label(endLabel);
+}
+
+function emitSpriteAnimatorInit(asm, state) {
+  for (let index = 0; index < state.spriteAnimations.length; index += 1) {
+    const animation = state.spriteAnimations[index];
+    if (!animation) {
+      continue;
+    }
+
+    const base = state.spriteAnimationBase + index * 8;
+    if (animation.x) {
+      emitStoreImmediate(asm, base + 0, animation.x.current & 0xff);
+      emitStoreImmediate(asm, base + 1, (animation.x.current >> 8) & 0xff);
+      emitStoreImmediate(asm, base + 2, animation.x.target & 0xff);
+      emitStoreImmediate(asm, base + 3, (animation.x.target >> 8) & 0xff);
+      emitStoreImmediate(asm, base + 4, animation.x.speed);
+    }
+    if (animation.y) {
+      emitStoreImmediate(asm, base + 5, animation.y.current);
+      emitStoreImmediate(asm, base + 6, animation.y.target);
+      emitStoreImmediate(asm, base + 7, animation.y.speed);
+    }
+  }
+}
+
+function emitSpriteAnimatorXUpdate(asm, spriteIndex, animation, base, uniqueId) {
+  const xEqualLabel = `sprite_x_equal_${uniqueId}`;
+  const xCheckLowLabel = `sprite_x_check_low_${uniqueId}`;
+  const xIncLabel = `sprite_x_inc_${uniqueId}`;
+  const xDecLabel = `sprite_x_dec_${uniqueId}`;
+  const xClampHighLabel = `sprite_x_clamp_high_${uniqueId}`;
+  const xClampLowLabel = `sprite_x_clamp_low_${uniqueId}`;
+  const xWriteLabel = `sprite_x_write_${uniqueId}`;
+  const xDoneLabel = `sprite_x_done_${uniqueId}`;
+
+  asm.lda(abs(base + 1));
+  asm.cmp(abs(base + 3));
+  asm.beq(rel(xCheckLowLabel));
+  asm.bcc(rel(xIncLabel));
+  asm.jmp(abs(xDecLabel));
+
+  asm.label(xCheckLowLabel);
+  asm.lda(abs(base + 0));
+  asm.cmp(abs(base + 2));
+  asm.beq(rel(xEqualLabel));
+  asm.bcc(rel(xIncLabel));
+  asm.jmp(abs(xDecLabel));
+
+  asm.label(xEqualLabel);
+  asm.jmp(abs(xDoneLabel));
+
+  asm.label(xIncLabel);
+  asm.clc();
+  asm.lda(abs(base + 0));
+  asm.adc(abs(base + 4));
+  asm.sta(abs(base + 0));
+  asm.lda(abs(base + 1));
+  asm.adc(imm(0));
+  asm.sta(abs(base + 1));
+  asm.lda(abs(base + 1));
+  asm.cmp(abs(base + 3));
+  asm.bcc(rel(xWriteLabel));
+  asm.bne(rel(xClampHighLabel));
+  asm.lda(abs(base + 0));
+  asm.cmp(abs(base + 2));
+  asm.bcc(rel(xWriteLabel));
+  asm.label(xClampHighLabel);
+  asm.lda(abs(base + 2));
+  asm.sta(abs(base + 0));
+  asm.lda(abs(base + 3));
+  asm.sta(abs(base + 1));
+  asm.jmp(abs(xWriteLabel));
+
+  asm.label(xDecLabel);
+  asm.sec();
+  asm.lda(abs(base + 0));
+  asm.sbc(abs(base + 4));
+  asm.sta(abs(base + 0));
+  asm.lda(abs(base + 1));
+  asm.sbc(imm(0));
+  asm.sta(abs(base + 1));
+  asm.lda(abs(base + 1));
+  asm.cmp(abs(base + 3));
+  asm.bcc(rel(xClampLowLabel));
+  asm.bne(rel(xWriteLabel));
+  asm.lda(abs(base + 0));
+  asm.cmp(abs(base + 2));
+  asm.bcs(rel(xWriteLabel));
+  asm.label(xClampLowLabel);
+  asm.lda(abs(base + 2));
+  asm.sta(abs(base + 0));
+  asm.lda(abs(base + 3));
+  asm.sta(abs(base + 1));
+
+  asm.label(xWriteLabel);
+  emitSpriteDynamicXWrite(asm, base + 0, base + 1, spriteIndex);
+  asm.label(xDoneLabel);
+  asm.nop();
+}
+
+function emitSpriteAnimatorYUpdate(asm, spriteIndex, animation, base, uniqueId) {
+  const yEqualLabel = `sprite_y_equal_${uniqueId}`;
+  const yIncLabel = `sprite_y_inc_${uniqueId}`;
+  const yDecLabel = `sprite_y_dec_${uniqueId}`;
+  const yClampHighLabel = `sprite_y_clamp_high_${uniqueId}`;
+  const yClampLowLabel = `sprite_y_clamp_low_${uniqueId}`;
+  const yWriteLabel = `sprite_y_write_${uniqueId}`;
+  const yDoneLabel = `sprite_y_done_${uniqueId}`;
+
+  asm.lda(abs(base + 5));
+  asm.cmp(abs(base + 6));
+  asm.beq(rel(yEqualLabel));
+  asm.bcc(rel(yIncLabel));
+  asm.jmp(abs(yDecLabel));
+
+  asm.label(yEqualLabel);
+  asm.jmp(abs(yDoneLabel));
+
+  asm.label(yIncLabel);
+  asm.clc();
+  asm.lda(abs(base + 5));
+  asm.adc(abs(base + 7));
+  asm.sta(abs(base + 5));
+  asm.cmp(abs(base + 6));
+  asm.bcc(rel(yWriteLabel));
+  asm.label(yClampHighLabel);
+  asm.lda(abs(base + 6));
+  asm.sta(abs(base + 5));
+  asm.jmp(abs(yWriteLabel));
+
+  asm.label(yDecLabel);
+  asm.sec();
+  asm.lda(abs(base + 5));
+  asm.sbc(abs(base + 7));
+  asm.sta(abs(base + 5));
+  asm.cmp(abs(base + 6));
+  asm.bcs(rel(yWriteLabel));
+  asm.label(yClampLowLabel);
+  asm.lda(abs(base + 6));
+  asm.sta(abs(base + 5));
+
+  asm.label(yWriteLabel);
+  asm.lda(abs(base + 5));
+  asm.sta(abs(spriteYAddress(spriteIndex)));
+  asm.label(yDoneLabel);
+  asm.nop();
+}
+
+function emitSpriteAnimatorRoutine(asm, state) {
+  if (!state.spriteAnimator.installRequested) {
+    return;
+  }
+
+  asm.comment("Sprite animator IRQ");
+  asm.label("sprite_animator_irq");
+  asm.pha();
+  asm.txa();
+  asm.pha();
+  asm.tya();
+  asm.pha();
+
+  for (let index = 0; index < state.spriteAnimations.length; index += 1) {
+    const animation = state.spriteAnimations[index];
+    if (!animation) {
+      continue;
+    }
+    const base = state.spriteAnimationBase + index * 8;
+    if (animation.x) {
+      emitSpriteAnimatorXUpdate(asm, index, animation.x, base, `${index}_x`);
+    }
+    if (animation.y) {
+      emitSpriteAnimatorYUpdate(asm, index, animation.y, base, `${index}_y`);
+    }
+  }
+
+  setRasterLine(asm, state.spriteAnimator.line);
+  emitIrqAck(asm);
+  asm.pla();
+  asm.tay();
+  asm.pla();
+  asm.tax();
+  asm.pla();
+  asm.jmp(abs(c64.KERNAL_IRQ));
+}
+
+function emitSpriteAnimatorInstall(asm, state) {
+  if (!state.spriteAnimator.installRequested) {
+    return;
+  }
+  if (state.irq.handlers.length > 0) {
+    throw new Error("sprite.installAnimator() cannot yet be combined with custom raster IRQ handlers");
+  }
+
+  const hasAnimations = state.spriteAnimations.some(Boolean);
+  if (!hasAnimations) {
+    throw new Error("sprite.installAnimator() was called without any configured sprite animations");
+  }
+
+  emitSpriteAnimatorInit(asm, state);
+  asm.sei();
+  asm.lda(imm(0x01));
+  asm.sta(abs(c64.VIC_IRQ_ENABLE));
+  emitIrqAck(asm);
+  setRasterLine(asm, state.spriteAnimator.line);
+  asm.lda(immLo("sprite_animator_irq"));
+  asm.sta(abs(c64.IRQ_VECTOR_LO));
+  asm.lda(immHi("sprite_animator_irq"));
+  asm.sta(abs(c64.IRQ_VECTOR_HI));
+  asm.cli();
+}
+
 function setRasterLine(asm, line) {
   ensureWord(line, "raster line");
   const low = line & 0xff;
@@ -416,6 +662,9 @@ function createInstructionCompileState(baseState) {
     dataPool: baseState.dataPool,
     variables: baseState.variables,
     spriteState: baseState.spriteState,
+    spriteAnimations: baseState.spriteAnimations,
+    spriteAnimator: baseState.spriteAnimator,
+    spriteAnimationBase: baseState.spriteAnimationBase,
     spriteDataCounter: baseState.spriteDataCounter,
     stringCounter: baseState.stringCounter,
     loopCounter: baseState.loopCounter
@@ -599,6 +848,100 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
       emitSpriteSetY(asm, compileState, instruction.args[0], current + instruction.args[1]);
       break;
     }
+    case "spriteMoveToX": {
+      ensureSpriteIndex(instruction.args[0]);
+      ensureWord(instruction.args[1], "sprite targetX");
+      ensurePositiveByte(instruction.args[2], "sprite speedX");
+      const current = compileState.spriteState[instruction.args[0]].x;
+      if (current === null) {
+        throw new Error(`sprite ${instruction.args[0]} x position is unknown; call position() or setX() first`);
+      }
+      const animation = getOrCreateSpriteAnimation(compileState, instruction.args[0]);
+      animation.x = {
+        current,
+        target: instruction.args[1],
+        speed: instruction.args[2]
+      };
+      break;
+    }
+    case "spriteMoveToY": {
+      ensureSpriteIndex(instruction.args[0]);
+      ensureByte(instruction.args[1], "sprite targetY");
+      ensurePositiveByte(instruction.args[2], "sprite speedY");
+      const current = compileState.spriteState[instruction.args[0]].y;
+      if (current === null) {
+        throw new Error(`sprite ${instruction.args[0]} y position is unknown; call position() or setY() first`);
+      }
+      const animation = getOrCreateSpriteAnimation(compileState, instruction.args[0]);
+      animation.y = {
+        current,
+        target: instruction.args[1],
+        speed: instruction.args[2]
+      };
+      break;
+    }
+    case "spriteAnimateTo": {
+      ensureSpriteIndex(instruction.args[0]);
+      const animationArgs = instruction.args[1] ?? {};
+      const animation = getOrCreateSpriteAnimation(compileState, instruction.args[0]);
+
+      if (animationArgs.x !== undefined) {
+        ensureWord(animationArgs.x, "sprite targetX");
+        const current = compileState.spriteState[instruction.args[0]].x;
+        if (current === null) {
+          throw new Error(`sprite ${instruction.args[0]} x position is unknown; call position() or setX() first`);
+        }
+        animation.x = {
+          current,
+          target: animationArgs.x,
+          speed: ensurePositiveByte(animationArgs.speedX ?? 1, "sprite speedX")
+        };
+      }
+
+      if (animationArgs.y !== undefined) {
+        ensureByte(animationArgs.y, "sprite targetY");
+        const current = compileState.spriteState[instruction.args[0]].y;
+        if (current === null) {
+          throw new Error(`sprite ${instruction.args[0]} y position is unknown; call position() or setY() first`);
+        }
+        animation.y = {
+          current,
+          target: animationArgs.y,
+          speed: ensurePositiveByte(animationArgs.speedY ?? 1, "sprite speedY")
+        };
+      }
+
+      if (!animation.x && !animation.y) {
+        throw new Error("sprite.animateTo() needs at least x or y");
+      }
+      break;
+    }
+    case "spriteStop":
+      ensureSpriteIndex(instruction.args[0]);
+      compileState.spriteAnimations[instruction.args[0]] = null;
+      break;
+    case "spriteStopX": {
+      ensureSpriteIndex(instruction.args[0]);
+      const animation = compileState.spriteAnimations[instruction.args[0]];
+      if (animation) {
+        animation.x = null;
+        if (!animation.y) {
+          compileState.spriteAnimations[instruction.args[0]] = null;
+        }
+      }
+      break;
+    }
+    case "spriteStopY": {
+      ensureSpriteIndex(instruction.args[0]);
+      const animation = compileState.spriteAnimations[instruction.args[0]];
+      if (animation) {
+        animation.y = null;
+        if (!animation.x) {
+          compileState.spriteAnimations[instruction.args[0]] = null;
+        }
+      }
+      break;
+    }
     case "spriteColor":
       emitStoreImmediate(asm, spriteColorAddress(instruction.args[0]), instruction.args[1]);
       break;
@@ -625,6 +968,11 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
       break;
     case "spriteSharedColor2":
       emitStoreImmediate(asm, 0xd026, instruction.args[0]);
+      break;
+    case "spriteInstallAnimator":
+      ensureWord(instruction.args[0], "sprite animator raster line");
+      compileState.spriteAnimator.installRequested = true;
+      compileState.spriteAnimator.line = instruction.args[0];
       break;
     case "asm":
       asm.emit(instruction.args[0], instruction.args[1]);
@@ -727,6 +1075,12 @@ export function compileInstructions(instructions, options = {}) {
     dataPool: new Map(),
     variables: new Map(),
     spriteState: Array.from({ length: 8 }, () => ({ x: null, y: null, dataAddress: null, dataLength: null })),
+    spriteAnimations: Array.from({ length: 8 }, () => null),
+    spriteAnimator: {
+      installRequested: false,
+      line: 250
+    },
+    spriteAnimationBase: 0xc300,
     spriteDataCounter: 0,
     stringCounter: 0,
     loopCounter: 0,
@@ -761,11 +1115,22 @@ export function compileInstructions(instructions, options = {}) {
     compileHighLevelInstruction(asm, instruction, state);
   }
 
+  if (state.spriteAnimator.installRequested) {
+    emitSpriteAnimatorInstall(asm, state);
+  }
+
   if (state.irq.handlers.length > 0) {
     asm.jmp(abs("program_end"));
     emitRasterHandlers(asm, state);
     asm.label("program_end");
   }
+
+  if (state.spriteAnimator.installRequested) {
+    asm.jmp(abs("program_end_after_animator"));
+    emitSpriteAnimatorRoutine(asm, state);
+    asm.label("program_end_after_animator");
+  }
+
   asm.rts();
   emitStringPool(asm, state);
   emitDataPool(asm, state);
