@@ -191,6 +191,24 @@ c64.sprite = {
   moveY(n, dy) {
     pushInstruction("spriteMoveY", n, dy);
   },
+  moveToX(n, targetX, speed) {
+    pushInstruction("spriteMoveToX", n, targetX, speed);
+  },
+  moveToY(n, targetY, speed) {
+    pushInstruction("spriteMoveToY", n, targetY, speed);
+  },
+  animateTo(n, { x, y, speedX, speedY }) {
+    pushInstruction("spriteAnimateTo", n, { x, y, speedX, speedY });
+  },
+  stop(n) {
+    pushInstruction("spriteStop", n);
+  },
+  stopX(n) {
+    pushInstruction("spriteStopX", n);
+  },
+  stopY(n) {
+    pushInstruction("spriteStopY", n);
+  },
   color(n, color) {
     pushInstruction("spriteColor", n, color);
   },
@@ -217,6 +235,9 @@ c64.sprite = {
   },
   sharedColor2(color) {
     pushInstruction("spriteSharedColor2", color);
+  },
+  installAnimator(line = 250) {
+    pushInstruction("spriteInstallAnimator", line);
   }
 };
 

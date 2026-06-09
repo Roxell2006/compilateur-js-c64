@@ -92,6 +92,12 @@ The generated `.prg` uses a BASIC stub with `10 SYS 2064` and starts machine cod
 - `c64.sprite.setY(n, y)`
 - `c64.sprite.moveX(n, dx)`
 - `c64.sprite.moveY(n, dy)`
+- `c64.sprite.moveToX(n, targetX, speed)`
+- `c64.sprite.moveToY(n, targetY, speed)`
+- `c64.sprite.animateTo(n, { x?, y?, speedX?, speedY? })`
+- `c64.sprite.stop(n)`
+- `c64.sprite.stopX(n)`
+- `c64.sprite.stopY(n)`
 - `c64.sprite.color(n, color)`
 - `c64.sprite.data(n, bytesOrLabel, address?)`
 - `c64.sprite.pointer(n, blockIndex)`
@@ -101,6 +107,24 @@ The generated `.prg` uses a BASIC stub with `10 SYS 2064` and starts machine cod
 - `c64.sprite.priority(n, behindBackground)`
 - `c64.sprite.sharedColor1(color)`
 - `c64.sprite.sharedColor2(color)`
+- `c64.sprite.installAnimator(line = 250)`
+
+Example:
+
+```js
+import { c64 } from "js-c64";
+
+c64.sprite.position(0, 32, 90);
+c64.sprite.animateTo(0, {
+  x: 240,
+  y: 60,
+  speedX: 2,
+  speedY: 1
+});
+c64.sprite.installAnimator(250);
+```
+
+The sprite animator installs a small raster IRQ update loop that keeps the BASIC environment responsive by chaining back to the KERNAL IRQ when the frame update is done.
 
 ### Low-level assembler helpers
 
@@ -201,12 +225,14 @@ c64js init my-c64-demo
 - [examples/raster-ready-border-cycle.js](./examples/raster-ready-border-cycle.js)
 - [examples/vice-showcase.js](./examples/vice-showcase.js)
 - [examples/sprite-api.js](./examples/sprite-api.js)
+- [examples/sprite-animate.js](./examples/sprite-animate.js)
 - [examples/sid-beep.js](./examples/sid-beep.js)
 - [examples/sprite-basic.js](./examples/sprite-basic.js)
 
 `examples/raster-bars.js` is the reference IRQ demo to try in VICE first.
 `examples/raster-ready-border-cycle.js` shows a single raster IRQ that cycles the border color from `0` to `15` forever while chaining back to the KERNAL IRQ so the `READY.` prompt remains responsive.
 `examples/vice-showcase.js` is the more presentation-oriented demo for VICE with animated border and background colors.
+`examples/sprite-animate.js` shows the new `v0.4.0` sprite animator moving a balloon smoothly with an internal raster IRQ updater.
 
 ## Keeping READY Alive
 
@@ -242,4 +268,5 @@ Known limits in `0.1.0`:
 - high-level operations are intentionally small and direct
 - `peek()` is mainly useful together with `poke()` or custom low-level assembly flows
 - IRQ helpers focus on raster setup and dispatch, not full interrupt framework abstraction
+- the current sprite animator focuses on `moveTo`-style motion and does not yet include paths, bounce helpers, or callbacks on arrival
 - screen text conversion is intentionally simple
