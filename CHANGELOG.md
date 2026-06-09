@@ -11,6 +11,10 @@
 - Added screen helpers including `printCentered`, `writeChar`, `fillRect`, `drawFrame`, and `clearLine`
 - Added comfort-focused examples for frames, data, and variables
 - Updated `examples/screen-fill.js` to use the new comfort API
+- Started `v0.3.0` sprite foundations
+- Added `c64.sprite.*` high-level helpers for enable/disable, position, colors, data, priority, multicolor, and expansion
+- Reworked `examples/sprite-basic.js` to use the sprite API
+- Added CLI `--sys` support for custom start addresses on data/bin/asm/lst outputs
 
 ## 0.1.0
 

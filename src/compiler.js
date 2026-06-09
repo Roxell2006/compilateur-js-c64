@@ -108,6 +108,18 @@ function resolveByteValue(value, label = "value") {
   return value;
 }
 
+function ensureSpriteIndex(value) {
+  if (!Number.isInteger(value) || value < 0 || value > 7) {
+    throw new Error("sprite index must be between 0 and 7");
+  }
+}
+
+function ensureSignedByte(value, label) {
+  if (!Number.isInteger(value) || value < -128 || value > 127) {
+    throw new Error(`${label} must be a signed byte`);
+  }
+}
+
 function getStringBytes(text, encoder) {
   return Array.from(text, encoder);
 }
@@ -265,6 +277,84 @@ function emitCopyDataTo(asm, compileState, dest, dataRefOrName, explicitLength) 
   asm.bne(rel(loop));
 }
 
+function spriteXAddress(index) {
+  return 0xd000 + index * 2;
+}
+
+function spriteYAddress(index) {
+  return 0xd001 + index * 2;
+}
+
+function spriteColorAddress(index) {
+  return 0xd027 + index;
+}
+
+function spritePointerAddress(index) {
+  return 0x07f8 + index;
+}
+
+function spriteDataAddress(index, explicitAddress) {
+  if (explicitAddress !== undefined) {
+    return explicitAddress;
+  }
+  return 0x2000 + index * 64;
+}
+
+function emitSetBitState(asm, address, bitIndex, enabled) {
+  const mask = 1 << bitIndex;
+  asm.lda(abs(address));
+  if (enabled) {
+    asm.ora(imm(mask));
+  } else {
+    asm.and(imm(0xff ^ mask));
+  }
+  asm.sta(abs(address));
+}
+
+function emitSpriteSetX(asm, compileState, index, x) {
+  ensureSpriteIndex(index);
+  ensureWord(x, "sprite x");
+  emitStoreImmediate(asm, spriteXAddress(index), x & 0xff);
+  emitSetBitState(asm, c64.VIC_SPRITE_X_MSB, index, x > 255);
+  compileState.spriteState[index].x = x;
+}
+
+function emitSpriteSetY(asm, compileState, index, y) {
+  ensureSpriteIndex(index);
+  ensureByte(y, "sprite y");
+  emitStoreImmediate(asm, spriteYAddress(index), y);
+  compileState.spriteState[index].y = y;
+}
+
+function emitSpritePointer(asm, index, blockIndex) {
+  ensureSpriteIndex(index);
+  ensureByte(blockIndex, "sprite block index");
+  emitStoreImmediate(asm, spritePointerAddress(index), blockIndex);
+}
+
+function emitSpriteData(asm, compileState, index, dataSource, explicitAddress) {
+  ensureSpriteIndex(index);
+  const targetAddress = spriteDataAddress(index, explicitAddress);
+  let length = 63;
+
+  if (Array.isArray(dataSource)) {
+    const label = `sprite_data_${index}_${compileState.spriteDataCounter++}`;
+    registerData(compileState, label, dataSource.map((value) => value & 0xff));
+    emitCopyDataTo(asm, compileState, targetAddress, label, dataSource.length);
+    length = dataSource.length;
+  } else if (isDataRef(dataSource) || typeof dataSource === "string") {
+    const data = resolveDataRef(compileState, dataSource);
+    length = data.declaredLength ?? data.bytes?.length ?? 63;
+    emitCopyDataTo(asm, compileState, targetAddress, dataSource, length);
+  } else {
+    throw new Error("sprite data must be an array, dataRef, or label name");
+  }
+
+  emitSpritePointer(asm, index, Math.floor(targetAddress / 64));
+  compileState.spriteState[index].dataAddress = targetAddress;
+  compileState.spriteState[index].dataLength = length;
+}
+
 function setRasterLine(asm, line) {
   ensureWord(line, "raster line");
   const low = line & 0xff;
@@ -325,6 +415,8 @@ function createInstructionCompileState(baseState) {
     stringPool: baseState.stringPool,
     dataPool: baseState.dataPool,
     variables: baseState.variables,
+    spriteState: baseState.spriteState,
+    spriteDataCounter: baseState.spriteDataCounter,
     stringCounter: baseState.stringCounter,
     loopCounter: baseState.loopCounter
   };
@@ -334,6 +426,7 @@ function syncInstructionCompileState(baseState, localState) {
   baseState.currentTextColor = localState.currentTextColor;
   baseState.screenBase = localState.screenBase;
   baseState.colorBase = localState.colorBase;
+  baseState.spriteDataCounter = localState.spriteDataCounter;
   baseState.stringCounter = localState.stringCounter;
   baseState.loopCounter = localState.loopCounter;
 }
@@ -459,6 +552,80 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
       emitStoreImmediate(asm, instruction.args[1], instruction.args[2] & 0xff);
       emitStoreImmediate(asm, instruction.args[1] + 1, (instruction.args[2] >> 8) & 0xff);
       break;
+    case "spriteEnable":
+      emitSetBitState(asm, c64.VIC_SPRITE_ENABLE, instruction.args[0], true);
+      break;
+    case "spriteDisable":
+      emitSetBitState(asm, c64.VIC_SPRITE_ENABLE, instruction.args[0], false);
+      break;
+    case "spriteShow":
+      emitSpriteSetX(asm, compileState, instruction.args[0], instruction.args[1]);
+      emitSpriteSetY(asm, compileState, instruction.args[0], instruction.args[2]);
+      if (instruction.args[3] !== undefined) {
+        emitStoreImmediate(asm, spriteColorAddress(instruction.args[0]), instruction.args[3]);
+      }
+      emitSetBitState(asm, c64.VIC_SPRITE_ENABLE, instruction.args[0], true);
+      break;
+    case "spriteHide":
+      emitSetBitState(asm, c64.VIC_SPRITE_ENABLE, instruction.args[0], false);
+      break;
+    case "spritePosition":
+      emitSpriteSetX(asm, compileState, instruction.args[0], instruction.args[1]);
+      emitSpriteSetY(asm, compileState, instruction.args[0], instruction.args[2]);
+      break;
+    case "spriteSetX":
+      emitSpriteSetX(asm, compileState, instruction.args[0], instruction.args[1]);
+      break;
+    case "spriteSetY":
+      emitSpriteSetY(asm, compileState, instruction.args[0], instruction.args[1]);
+      break;
+    case "spriteMoveX": {
+      ensureSpriteIndex(instruction.args[0]);
+      ensureSignedByte(instruction.args[1], "sprite dx");
+      const current = compileState.spriteState[instruction.args[0]].x;
+      if (current === null) {
+        throw new Error(`sprite ${instruction.args[0]} x position is unknown; call position() or setX() first`);
+      }
+      emitSpriteSetX(asm, compileState, instruction.args[0], current + instruction.args[1]);
+      break;
+    }
+    case "spriteMoveY": {
+      ensureSpriteIndex(instruction.args[0]);
+      ensureSignedByte(instruction.args[1], "sprite dy");
+      const current = compileState.spriteState[instruction.args[0]].y;
+      if (current === null) {
+        throw new Error(`sprite ${instruction.args[0]} y position is unknown; call position() or setY() first`);
+      }
+      emitSpriteSetY(asm, compileState, instruction.args[0], current + instruction.args[1]);
+      break;
+    }
+    case "spriteColor":
+      emitStoreImmediate(asm, spriteColorAddress(instruction.args[0]), instruction.args[1]);
+      break;
+    case "spriteData":
+      emitSpriteData(asm, compileState, instruction.args[0], instruction.args[1], instruction.args[2]);
+      break;
+    case "spritePointer":
+      emitSpritePointer(asm, instruction.args[0], instruction.args[1]);
+      break;
+    case "spriteMulticolor":
+      emitSetBitState(asm, c64.VIC_SPRITE_MULTICOLOR, instruction.args[0], Boolean(instruction.args[1]));
+      break;
+    case "spriteExpandX":
+      emitSetBitState(asm, c64.VIC_SPRITE_EXPAND_X, instruction.args[0], Boolean(instruction.args[1]));
+      break;
+    case "spriteExpandY":
+      emitSetBitState(asm, c64.VIC_SPRITE_EXPAND_Y, instruction.args[0], Boolean(instruction.args[1]));
+      break;
+    case "spritePriority":
+      emitSetBitState(asm, c64.VIC_SPRITE_PRIORITY, instruction.args[0], Boolean(instruction.args[1]));
+      break;
+    case "spriteSharedColor1":
+      emitStoreImmediate(asm, 0xd025, instruction.args[0]);
+      break;
+    case "spriteSharedColor2":
+      emitStoreImmediate(asm, 0xd026, instruction.args[0]);
+      break;
     case "asm":
       asm.emit(instruction.args[0], instruction.args[1]);
       break;
@@ -559,6 +726,8 @@ export function compileInstructions(instructions, options = {}) {
     stringPool: new Map(),
     dataPool: new Map(),
     variables: new Map(),
+    spriteState: Array.from({ length: 8 }, () => ({ x: null, y: null, dataAddress: null, dataLength: null })),
+    spriteDataCounter: 0,
     stringCounter: 0,
     loopCounter: 0,
     irq: {

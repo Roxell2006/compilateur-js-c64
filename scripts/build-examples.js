@@ -14,6 +14,7 @@ const EXAMPLES = [
   "raster-bars",
   "raster-ready-border-cycle",
   "vice-showcase",
+  "sprite-api",
   "sid-beep",
   "sprite-basic"
 ];
