@@ -158,7 +158,7 @@ function emitPrint(asm, text, compileState) {
   asm.beq(rel(doneLabel));
   asm.jsr(abs(c64.KERNAL_CHROUT));
   asm.inx();
-  asm.jmp(abs(loopLabel));
+  asm.bne(rel(loopLabel));
   asm.label(doneLabel);
 }
 
@@ -181,7 +181,7 @@ function emitPrintAt(asm, x, y, text, color, screenBase, colorBase, compileState
   asm.lda(imm(color));
   asm.sta(absx(colors));
   asm.inx();
-  asm.jmp(abs(loopLabel));
+  asm.bne(rel(loopLabel));
   asm.label(doneLabel);
 }
 
@@ -198,7 +198,7 @@ function emitWriteChar(asm, x, y, char, color, screenBase, colorBase) {
   emitStoreImmediate(asm, colors, color);
 }
 
-function emitFillRect(asm, x, y, w, h, char, color, screenBase, colorBase) {
+function emitFillRect(asm, x, y, w, h, char, color, screenBase, colorBase, currentTextColor = color) {
   ensureByte(x, "x");
   ensureByte(y, "y");
   ensureByte(w, "w");
@@ -211,6 +211,26 @@ function emitFillRect(asm, x, y, w, h, char, color, screenBase, colorBase) {
   ensureByte(screenCode, "char");
   ensureByte(color, "color");
 
+  if (x === 0 && y === 0 && w === 40 && h === 25 && screenCode === 32 && screenBase === 0x0400 && colorBase === 0xd800) {
+    if (currentTextColor !== color) {
+      emitStoreImmediate(asm, 0x0286, color);
+    }
+    asm.lda(imm(147));
+    asm.jsr(abs(c64.KERNAL_CHROUT));
+    if (currentTextColor !== color) {
+      emitStoreImmediate(asm, 0x0286, currentTextColor);
+    }
+    return;
+  }
+
+  if (x === 0 && w === 40) {
+    const start = y * 40;
+    const total = h * 40;
+    emitMemsetRange(asm, screenBase + start, screenCode, total);
+    emitMemsetRange(asm, colorBase + start, color, total);
+    return;
+  }
+
   for (let row = 0; row < h; row += 1) {
     const rowOffset = (y + row) * 40 + x;
     emitMemset(asm, screenBase + rowOffset, screenCode, w);
@@ -218,7 +238,7 @@ function emitFillRect(asm, x, y, w, h, char, color, screenBase, colorBase) {
   }
 }
 
-function emitDrawFrame(asm, x, y, w, h, char, color, screenBase, colorBase) {
+function emitDrawFrame(asm, x, y, w, h, char, color, screenBase, colorBase, currentTextColor = color) {
   ensureByte(x, "x");
   ensureByte(y, "y");
   ensureByte(w, "w");
@@ -227,9 +247,9 @@ function emitDrawFrame(asm, x, y, w, h, char, color, screenBase, colorBase) {
     return;
   }
 
-  emitFillRect(asm, x, y, w, 1, char, color, screenBase, colorBase);
+  emitFillRect(asm, x, y, w, 1, char, color, screenBase, colorBase, currentTextColor);
   if (h > 1) {
-    emitFillRect(asm, x, y + h - 1, w, 1, char, color, screenBase, colorBase);
+    emitFillRect(asm, x, y + h - 1, w, 1, char, color, screenBase, colorBase, currentTextColor);
   }
   for (let row = 1; row < h - 1; row += 1) {
     emitWriteChar(asm, x, y + row, char, color, screenBase, colorBase);
@@ -243,14 +263,32 @@ function emitMemset(asm, address, value, length) {
   ensureWord(address, "address");
   ensureByte(value, "value");
   ensureByte(length, "length");
+  if (length === 1) {
+    emitStoreImmediate(asm, address, value);
+    return;
+  }
   const loop = `memset_${address.toString(16)}_${value}_${length}`;
+  asm.lda(imm(value));
   asm.ldx(imm(0));
   asm.label(loop);
-  asm.lda(imm(value));
   asm.sta(addressModeX(address));
   asm.inx();
   asm.cpx(imm(length));
   asm.bne(rel(loop));
+}
+
+function emitMemsetRange(asm, address, value, length) {
+  ensureWord(address, "address");
+  ensureByte(value, "value");
+  ensureWord(length, "length");
+  let offset = 0;
+  let remaining = length;
+  while (remaining > 0) {
+    const chunk = Math.min(remaining, 255);
+    emitMemset(asm, address + offset, value, chunk);
+    offset += chunk;
+    remaining -= chunk;
+  }
 }
 
 function emitMemcpy(asm, dest, src, length) {
@@ -275,6 +313,11 @@ function emitCopyDataTo(asm, compileState, dest, dataRefOrName, explicitLength) 
   }
   ensureWord(dest, "dest");
   ensureByte(length, "length");
+  if (length === 1) {
+    asm.lda(abs(data.name));
+    asm.sta(addressMode(dest));
+    return;
+  }
   const loop = `copydata_${dest.toString(16)}_${data.name}_${length}_${compileState.loopCounter++}`;
   asm.ldx(imm(0));
   asm.label(loop);
@@ -401,18 +444,22 @@ function emitSpriteAnimatorInit(asm, state) {
     }
 
     const base = state.spriteAnimationBase + index * 8;
+    const initBytes = new Array(8).fill(0);
     if (animation.x) {
-      emitStoreImmediate(asm, base + 0, animation.x.current & 0xff);
-      emitStoreImmediate(asm, base + 1, (animation.x.current >> 8) & 0xff);
-      emitStoreImmediate(asm, base + 2, animation.x.target & 0xff);
-      emitStoreImmediate(asm, base + 3, (animation.x.target >> 8) & 0xff);
-      emitStoreImmediate(asm, base + 4, animation.x.speed);
+      initBytes[0] = animation.x.current & 0xff;
+      initBytes[1] = (animation.x.current >> 8) & 0xff;
+      initBytes[2] = animation.x.target & 0xff;
+      initBytes[3] = (animation.x.target >> 8) & 0xff;
+      initBytes[4] = animation.x.speed;
     }
     if (animation.y) {
-      emitStoreImmediate(asm, base + 5, animation.y.current);
-      emitStoreImmediate(asm, base + 6, animation.y.target);
-      emitStoreImmediate(asm, base + 7, animation.y.speed);
+      initBytes[5] = animation.y.current;
+      initBytes[6] = animation.y.target;
+      initBytes[7] = animation.y.speed;
     }
+    const label = `sprite_anim_init_${index}_${state.spriteDataCounter++}`;
+    registerData(state, label, initBytes);
+    emitCopyDataTo(asm, state, base, label, initBytes.length);
   }
 }
 
@@ -751,13 +798,13 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
       emitWriteChar(asm, instruction.args[0], instruction.args[1], instruction.args[2], instruction.args[3], compileState.screenBase, compileState.colorBase);
       break;
     case "fillRect":
-      emitFillRect(asm, instruction.args[0], instruction.args[1], instruction.args[2], instruction.args[3], instruction.args[4], instruction.args[5], compileState.screenBase, compileState.colorBase);
+      emitFillRect(asm, instruction.args[0], instruction.args[1], instruction.args[2], instruction.args[3], instruction.args[4], instruction.args[5], compileState.screenBase, compileState.colorBase, compileState.currentTextColor);
       break;
     case "drawFrame":
-      emitDrawFrame(asm, instruction.args[0], instruction.args[1], instruction.args[2], instruction.args[3], instruction.args[4], instruction.args[5], compileState.screenBase, compileState.colorBase);
+      emitDrawFrame(asm, instruction.args[0], instruction.args[1], instruction.args[2], instruction.args[3], instruction.args[4], instruction.args[5], compileState.screenBase, compileState.colorBase, compileState.currentTextColor);
       break;
     case "clearLine":
-      emitFillRect(asm, 0, instruction.args[0], 40, 1, instruction.args[1], instruction.args[2], compileState.screenBase, compileState.colorBase);
+      emitFillRect(asm, 0, instruction.args[0], 40, 1, instruction.args[1], instruction.args[2], compileState.screenBase, compileState.colorBase, compileState.currentTextColor);
       break;
     case "screen":
       compileState.screenBase = instruction.args[0];
