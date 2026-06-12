@@ -250,7 +250,30 @@ import { c64 } from "js-c64";
 c64.printCentered(10, "TEXTE AU CENTRE");
 
 
-4.8 c64.poke(adresse, valeur)
+4.8 c64.waitKey()
+-----------------
+
+Attend qu'une touche du clavier soit appuyee.
+
+Le programme reste bloque tant qu'aucune touche n'est detectee.
+Ensuite il continue.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.printAt(0, 0, "APPUYEZ SUR UNE TOUCHE");
+c64.waitKey();
+c64.clearScreen();
+
+Cette fonction est pratique pour :
+
+- attendre que le joueur lise un message
+- attendre avant de quitter un ecran
+- faire une pause entre deux parties d'un programme
+
+
+4.9 c64.poke(adresse, valeur)
 -----------------------------
 
 Ecrit une valeur dans une adresse memoire du C64.
@@ -262,8 +285,8 @@ import { c64 } from "js-c64";
 c64.poke(c64.VIC_BORDER_COLOR, c64.COLOR_GREEN);
 
 
-4.9 c64.peek(adresse)
----------------------
+4.10 c64.peek(adresse)
+----------------------
 
 Lit une adresse memoire.
 Dans la version actuelle, c'est surtout utile avec c64.poke() ou avec
@@ -951,6 +974,85 @@ c64.drawFrame(2, 2, 20, 8, 81, c64.COLOR_WHITE);
 c64.printCentered(5, "MENU");
 
 
+12.6 Mode hires bitmap
+----------------------
+
+La version actuelle ajoute un premier support du mode bitmap hires du C64.
+
+Fonctions disponibles :
+
+- c64.hires.screen(adresse)
+- c64.hires.bitmap(adresse)
+- c64.hires.enabled()
+- c64.hires.disabled()
+- c64.hires.clear(couleur)
+- c64.hires.point(x, y, couleur)
+- c64.hires.line(x1, y1, x2, y2, couleur)
+- c64.hires.rect(x, y, largeur, hauteur, couleur)
+- c64.hires.fillRect(x, y, largeur, hauteur, couleur)
+- c64.hires.circle(x, y, rayon, couleur)
+- c64.hires.fillCircle(x, y, rayon, couleur)
+
+Exemple simple :
+
+import { c64 } from "js-c64";
+
+c64.hires.screen(0x0400);
+c64.hires.bitmap(0x2000);
+c64.hires.enabled();
+c64.hires.clear(c64.COLOR_WHITE);
+c64.hires.line(10, 10, 310, 190, c64.COLOR_BLACK);
+c64.hires.rect(60, 50, 200, 90, c64.COLOR_RED);
+c64.hires.fillRect(90, 70, 40, 20, c64.COLOR_CYAN);
+c64.hires.circle(180, 80, 24, c64.COLOR_ORANGE);
+c64.hires.fillCircle(260, 140, 20, c64.COLOR_GREEN);
+c64.waitKey();
+c64.hires.disabled();
+c64.clearScreen();
+
+Adresses par defaut :
+
+- memoire ecran hires : $5C00
+- memoire bitmap hires : $6000
+
+Vous pouvez les changer si besoin :
+
+c64.hires.screen(0x5c00);
+c64.hires.bitmap(0x6000);
+
+Explication des nouvelles fonctions :
+
+- c64.hires.enabled() active le mode hires bitmap
+- c64.hires.disabled() quitte le mode hires et remet le VIC en mode texte
+- c64.waitKey() attend qu'une touche soit appuyee avant de continuer
+
+Exemple typique :
+
+c64.hires.screen(0x0400);
+c64.hires.bitmap(0x2000);
+c64.hires.enabled();
+c64.hires.clear(c64.COLOR_BLACK);
+c64.hires.line(20, 20, 300, 180, c64.COLOR_WHITE);
+c64.waitKey();
+c64.hires.disabled();
+c64.clearScreen();
+
+Le c64.clearScreen() final est souvent utile pour retrouver un ecran BASIC propre.
+
+Important a comprendre :
+
+En hires C64 standard, la couleur n'est pas vraiment definie pour chaque pixel.
+Elle est definie par bloc de 8x8 pixels.
+
+Cela veut dire que :
+
+- deux lignes de couleurs differentes dans le meme bloc 8x8 peuvent partager
+  la meme couleur visible
+- une couleur peut sembler changer par petits morceaux
+- ce n'est pas forcement un bug du compilateur, c'est souvent une limite
+  normale du hardware du Commodore 64
+
+
 13. LIMITES IMPORTANTES
 -----------------------
 
@@ -960,6 +1062,8 @@ c64.printCentered(5, "MENU");
 - Certaines fonctions sont surtout la pour aider a generer du code simple
   et direct.
 - Pour des effets tres avances, il faut souvent utiliser c64.asm.
+- En hires standard, la couleur est limitee par bloc de 8x8 pixels.
+- waitKey() attend maintenant une vraie touche du clavier C64, pas seulement Return.
 
 
 14. CONSEIL POUR BIEN COMMENCER

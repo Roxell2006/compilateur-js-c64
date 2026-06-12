@@ -160,6 +160,65 @@ c64.sprite.installAnimator(250);
 
 The sprite animator installs a small raster IRQ update loop that keeps the BASIC environment responsive by chaining back to the KERNAL IRQ when the frame update is done.
 
+### Hires bitmap API
+
+- `c64.hires.screen(address = 0x5C00)`
+- `c64.hires.bitmap(address = 0x6000)`
+- `c64.hires.enabled()`
+- `c64.hires.disabled()`
+- `c64.hires.clear(color = c64.COLOR_WHITE)`
+- `c64.hires.point(x, y, color = c64.COLOR_WHITE)`
+- `c64.hires.line(x1, y1, x2, y2, color = c64.COLOR_WHITE)`
+- `c64.hires.rect(x, y, width, height, color = c64.COLOR_WHITE)`
+- `c64.hires.fillRect(x, y, width, height, color = c64.COLOR_WHITE)`
+- `c64.hires.circle(x, y, radius, color = c64.COLOR_WHITE)`
+- `c64.hires.fillCircle(x, y, radius, color = c64.COLOR_WHITE)`
+
+Example:
+
+```js
+import { c64 } from "js-c64";
+
+c64.hires.screen(0x0400);
+c64.hires.bitmap(0x2000);
+c64.hires.enabled();
+c64.hires.clear(c64.COLOR_WHITE);
+c64.hires.line(10, 10, 310, 190, c64.COLOR_BLACK);
+c64.hires.rect(60, 50, 200, 90, c64.COLOR_RED);
+c64.hires.fillRect(90, 70, 40, 20, c64.COLOR_CYAN);
+c64.hires.circle(180, 80, 24, c64.COLOR_ORANGE);
+c64.hires.fillCircle(260, 140, 20, c64.COLOR_GREEN);
+c64.waitKey();
+c64.hires.disabled();
+c64.clearScreen();
+```
+
+Current implementation notes:
+
+- `enabled()` activates bitmap hires mode using the current `screen()` and `bitmap()` addresses
+- `disabled()` switches the VIC back to standard text mode
+- `point`, `line`, `rect` and `fillRect` use shared runtime routines to keep PRG size compact
+- default hires screen RAM is `$5C00`
+- default hires bitmap RAM is `$6000`
+- hires color is limited by the C64 hardware to one foreground/background pair per `8x8` cell
+- this means two differently colored lines crossing the same `8x8` block may visually share or overwrite the block color
+
+### Keyboard wait helper
+
+- `c64.waitKey()`
+
+Example:
+
+```js
+import { c64 } from "js-c64";
+
+c64.printAt(0, 0, "PRESS ANY KEY");
+c64.waitKey();
+c64.clearScreen();
+```
+
+`waitKey()` blocks the generated program until the user presses and releases a key on the C64 keyboard matrix.
+
 ### Low-level assembler helpers
 
 ```js
@@ -304,3 +363,4 @@ Known limits in `0.1.0`:
 - IRQ helpers focus on raster setup and dispatch, not full interrupt framework abstraction
 - the current sprite animator focuses on `moveTo`-style motion and does not yet include paths, bounce helpers, or callbacks on arrival
 - screen text conversion is intentionally simple
+- hires bitmap support is currently focused on the standard monochrome `320x200` mode with per-cell `8x8` color limits
