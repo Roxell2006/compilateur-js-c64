@@ -1,5 +1,9 @@
 import { createRuntimeFacade, defineRuntimeData, getProgramState, getRuntimeDataLength, pushInstruction, resetRuntime, setColorBase, setScreenBase, setTextColor } from "./runtime.js";
 
+// This file exposes the public DSL used by end users.
+// Important idea: calling c64.printAt(), c64.sprite.show(), etc. does not
+// execute anything on a real C64 immediately. Each call only records a high
+// level instruction that the compiler will translate to 6502 machine code.
 export const C64_CONSTANTS = {
   COLOR_BLACK: 0,
   COLOR_WHITE: 1,
@@ -84,18 +88,26 @@ export const C64_CONSTANTS = {
   JOY_DOWN: 0x02,
   JOY_LEFT: 0x04,
   JOY_RIGHT: 0x08,
-  JOY_FIRE: 0x10
+  JOY_FIRE: 0x10,
+  HIRES_SCREEN_RAM: 0x5c00,
+  HIRES_BITMAP_RAM: 0x6000
 };
 
 export const c64 = createRuntimeFacade(C64_CONSTANTS);
 
+// High level screen helpers. These functions append DSL instructions to the
+// runtime instruction list. The real conversion to assembly happens later in
+// src/compiler.js.
 c64.borderColor = (color) => pushInstruction("borderColor", color);
 c64.backgroundColor = (color) => pushInstruction("backgroundColor", color);
 c64.textColor = (color) => {
+  // We keep track of the current text color in the runtime state so later
+  // calls like printAt() can reuse it automatically.
   setTextColor(color);
   pushInstruction("textColor", color);
 };
 c64.clearScreen = () => pushInstruction("clearScreen");
+c64.waitKey = () => pushInstruction("waitKey");
 c64.print = (text) => pushInstruction("print", String(text));
 c64.printAt = (x, y, text) => pushInstruction("printAt", x, y, String(text), getProgramState().currentTextColor);
 c64.printCentered = (y, text) => pushInstruction("printCentered", y, String(text), getProgramState().currentTextColor);
@@ -121,6 +133,48 @@ c64.sys = (address) => pushInstruction("sys", address);
 c64.label = (name) => pushInstruction("label", name);
 c64.comment = (text) => pushInstruction("comment", text);
 
+// Minimal hires API for bitmap mode.
+// The defaults match the working manual setup from examples/hires-test.js:
+// - screen RAM at $5C00
+// - bitmap RAM at $6000
+c64.hires = {
+  screen(address = c64.HIRES_SCREEN_RAM) {
+    pushInstruction("hiresScreen", address);
+  },
+  bitmap(address = c64.HIRES_BITMAP_RAM) {
+    pushInstruction("hiresBitmap", address);
+  },
+  enabled() {
+    pushInstruction("hiresEnabled");
+  },
+  disabled() {
+    pushInstruction("hiresDisabled");
+  },
+  clear(color = c64.COLOR_WHITE) {
+    pushInstruction("hiresClear", color);
+  },
+  point(x, y, color = c64.COLOR_WHITE) {
+    pushInstruction("hiresPoint", x, y, color);
+  },
+  line(x1, y1, x2, y2, color = c64.COLOR_WHITE) {
+    pushInstruction("hiresLine", x1, y1, x2, y2, color);
+  },
+  rect(x, y, width, height, color = c64.COLOR_WHITE) {
+    pushInstruction("hiresRect", x, y, width, height, color);
+  },
+  fillRect(x, y, width, height, color = c64.COLOR_WHITE) {
+    pushInstruction("hiresFillRect", x, y, width, height, color);
+  },
+  circle(x, y, radius, color = c64.COLOR_WHITE) {
+    pushInstruction("hiresCircle", x, y, radius, color);
+  },
+  fillCircle(x, y, radius, color = c64.COLOR_WHITE) {
+    pushInstruction("hiresFillCircle", x, y, radius, color);
+  }
+};
+
+// User data declared here is stored in the compiled program and can later be
+// copied to RAM or referenced by generated assembly.
 c64.data = {
   byte(name, values) {
     const bytes = Array.from(values);
@@ -151,6 +205,8 @@ c64.data = {
   }
 };
 
+// Variables are explicit RAM locations chosen by the user. The compiler will
+// emit initialization code for them at program start.
 c64.var = {
   byte(name, address, initialValue = 0) {
     pushInstruction("varByte", name, address, initialValue);
@@ -160,9 +216,14 @@ c64.var = {
   }
 };
 
+// varRef() and dataRef() are lightweight descriptors used by the compiler to
+// know "this argument is not a literal value, it is a reference".
 c64.varRef = (name) => ({ type: "varRef", name });
 c64.dataRef = (name, length = undefined) => ({ type: "dataRef", name, length });
 
+// Sprite helpers follow the same pattern as the screen API: each call stores a
+// semantic instruction that the compiler later expands into VIC-II register
+// writes or IRQ-based animation code.
 c64.sprite = {
   enable(n) {
     pushInstruction("spriteEnable", n);
