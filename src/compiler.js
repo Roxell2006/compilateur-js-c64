@@ -60,6 +60,34 @@ const WAITKEY_SAVE_PRA = 0xc75f;
 const WAITKEY_SAVE_DDRA = 0xc760;
 const WAITKEY_SAVE_DDRB = 0xc761;
 const WAITKEY_ROW_INDEX = 0xc762;
+const SID_PLAYER_STEP_INDEX = 0xc763;
+const SID_PLAYER_TICK_COUNT = 0xc764;
+const SID_PLAYER_PLAYING = 0xc765;
+
+// The compiler uses a fixed internal RAM layout for long-running systems such
+// as waitKey, hires helpers and the SID player. Keeping these addresses grouped
+// and documented makes it easier to audit future features for overlap risks.
+const RUNTIME_RAM_LAYOUT = Object.freeze({
+  irqStateIndex: c64.IRQ_STATE_INDEX,
+  waitKey: {
+    savePra: WAITKEY_SAVE_PRA,
+    saveDdra: WAITKEY_SAVE_DDRA,
+    saveDdrb: WAITKEY_SAVE_DDRB,
+    rowIndex: WAITKEY_ROW_INDEX
+  },
+  sidPlayer: {
+    stepIndex: SID_PLAYER_STEP_INDEX,
+    tickCount: SID_PLAYER_TICK_COUNT,
+    playing: SID_PLAYER_PLAYING
+  },
+  spriteAnimatorBase: 0xc300,
+  hires: {
+    pointXLo: HIRES_POINT_X_LO,
+    pointXHi: HIRES_POINT_X_HI,
+    pointY: HIRES_POINT_Y,
+    pointColor: HIRES_POINT_COLOR
+  }
+});
 
 function ensureByte(value, label) {
   if (!Number.isInteger(value) || value < 0 || value > 0xff) {
@@ -197,6 +225,662 @@ function ensureHiresRadius(value) {
   if (!Number.isInteger(value) || value < 0 || value > 199) {
     throw new Error("hires radius must be between 0 and 199");
   }
+}
+
+function ensureSidVoice(voice) {
+  if (!Number.isInteger(voice) || voice < 1 || voice > 3) {
+    throw new Error("SID voice must be 1, 2 or 3");
+  }
+}
+
+function ensureSidPulseWidth(value) {
+  if (!Number.isInteger(value) || value < 0 || value > 0x0fff) {
+    throw new Error("SID pulse width must be between 0 and 4095");
+  }
+}
+
+function ensureSidDuration(value) {
+  if (!Number.isInteger(value) || value < 0 || value > 0xff) {
+    throw new Error("SID duration must be between 0 and 255");
+  }
+}
+
+function sidVoiceBase(voice) {
+  ensureSidVoice(voice);
+  return c64.SID_BASE + ((voice - 1) * 7);
+}
+
+function sidWaveformToControl(type) {
+  const normalized = String(type).trim().toLowerCase();
+  if (normalized === "triangle") {
+    return 0x10;
+  }
+  if (normalized === "saw") {
+    return 0x20;
+  }
+  if (normalized === "pulse") {
+    return 0x40;
+  }
+  if (normalized === "noise") {
+    return 0x80;
+  }
+  throw new Error(`Unsupported SID waveform: ${type}`);
+}
+
+function noteNameToMidi(noteName) {
+  const normalized = String(noteName).trim().toUpperCase();
+  const match = normalized.match(/^([A-G])([#B]?)(-?\d)$/);
+  if (!match) {
+    throw new Error(`Unsupported SID note name: ${noteName}`);
+  }
+
+  const [, letter, accidental, octaveText] = match;
+  const octave = Number(octaveText);
+  const baseSemitone = {
+    C: 0,
+    D: 2,
+    E: 4,
+    F: 5,
+    G: 7,
+    A: 9,
+    B: 11
+  }[letter];
+  const accidentalOffset = accidental === "#" ? 1 : accidental === "B" ? -1 : 0;
+  return ((octave + 1) * 12) + baseSemitone + accidentalOffset;
+}
+
+function sidNoteNameToRaw(noteName) {
+  const normalized = String(noteName).trim().toUpperCase();
+  if (normalized === "R" || normalized === "REST") {
+    return null;
+  }
+
+  const midi = noteNameToMidi(normalized);
+  const hz = 440 * (2 ** ((midi - 69) / 12));
+  return sidFrequencyToRaw(hz);
+}
+
+function normalizeSidSongEntry(entry) {
+  if (typeof entry === "string") {
+    return { note: entry, duration: 1 };
+  }
+
+  if (entry && typeof entry === "object") {
+    if (entry.rest === true) {
+      return { note: "R", duration: entry.duration ?? 1 };
+    }
+    if (typeof entry.note === "string") {
+      return { note: entry.note, duration: entry.duration ?? 1 };
+    }
+  }
+
+  throw new Error(`Unsupported SID song entry: ${JSON.stringify(entry)}`);
+}
+
+function buildSidSongSteps(songDefinition) {
+  if (!songDefinition || typeof songDefinition !== "object") {
+    throw new Error("c64.sid.playSong() expects a song object");
+  }
+
+  const tempo = songDefinition.tempo ?? 6;
+  ensurePositiveByte(tempo, "SID song tempo");
+  if (!Array.isArray(songDefinition.voices) || songDefinition.voices.length !== 3) {
+    throw new Error("c64.sid.playSong() expects exactly 3 voices");
+  }
+
+  const voices = songDefinition.voices.map((voiceEntries) => {
+    if (!Array.isArray(voiceEntries)) {
+      throw new Error("Each SID song voice must be an array");
+    }
+
+    const steps = [];
+    for (const rawEntry of voiceEntries) {
+      const entry = normalizeSidSongEntry(rawEntry);
+      ensurePositiveByte(entry.duration, "SID song entry duration");
+      const raw = sidNoteNameToRaw(entry.note);
+      if (raw === null) {
+        for (let i = 0; i < entry.duration; i += 1) {
+          steps.push({ action: 0, raw: 0 });
+        }
+      } else {
+        steps.push({ action: 2, raw });
+        for (let i = 1; i < entry.duration; i += 1) {
+          steps.push({ action: 1, raw });
+        }
+      }
+    }
+
+    return steps;
+  });
+
+  const length = Math.max(...voices.map((voice) => voice.length), 0);
+  if (length === 0) {
+    throw new Error("c64.sid.playSong() cannot play an empty song");
+  }
+  if (length > 255) {
+    throw new Error("c64.sid.playSong() currently supports up to 255 expanded steps");
+  }
+
+  const expandedVoices = voices.map((voice) => {
+    const padded = voice.slice();
+    while (padded.length < length) {
+      padded.push({ action: 0, raw: 0 });
+    }
+    return {
+      actionBytes: padded.map((step) => step.action & 0xff),
+      freqLoBytes: padded.map((step) => step.raw & 0xff),
+      freqHiBytes: padded.map((step) => (step.raw >> 8) & 0xff)
+    };
+  });
+
+  return { tempo, length, voices: expandedVoices };
+}
+
+function sidFrequencyToRaw(value) {
+  if (typeof value !== "number" || Number.isNaN(value) || value < 0) {
+    throw new Error(`Invalid SID frequency value: ${value}`);
+  }
+
+  // If the value looks like a register value, keep it as-is. Otherwise,
+  // interpret it as Hertz using the PAL C64 clock.
+  if (Number.isInteger(value) && value > 2048 && value <= 0xffff) {
+    return value;
+  }
+
+  const raw = Math.round((value * 16777216) / 985248);
+  if (raw < 0 || raw > 0xffff) {
+    throw new Error(`SID frequency is out of range: ${value}`);
+  }
+  return raw;
+}
+
+function emitSidSetControl(asm, compileState, voice, control) {
+  ensureSidVoice(voice);
+  ensureByte(control, "SID control");
+  compileState.sid.voiceControls[voice - 1] = control & 0xff;
+  emitStoreImmediate(asm, sidVoiceBase(voice) + 4, control & 0xff);
+}
+
+function emitSidEnsureWaveform(asm, compileState, voice) {
+  const control = compileState.sid.voiceControls[voice - 1] & 0xff;
+  if ((control & 0xf0) === 0) {
+    emitSidSetControl(asm, compileState, voice, (control & 0x0f) | 0x10);
+  }
+}
+
+function emitSidSetFrequencyRaw(asm, voice, rawValue) {
+  ensureSidVoice(voice);
+  ensureWord(rawValue, "SID frequency");
+  const base = sidVoiceBase(voice);
+  emitStoreImmediate(asm, base, rawValue & 0xff);
+  emitStoreImmediate(asm, base + 1, (rawValue >> 8) & 0xff);
+}
+
+function emitSidDelay(asm, compileState, duration) {
+  ensureSidDuration(duration);
+  if (duration === 0) {
+    return;
+  }
+
+  const outerLabel = `sid_delay_outer_${compileState.loopCounter++}`;
+  const middleLabel = `sid_delay_middle_${compileState.loopCounter++}`;
+  const innerLabel = `sid_delay_inner_${compileState.loopCounter++}`;
+  asm.ldy(imm(duration));
+  asm.label(outerLabel);
+  asm.ldx(imm(0x20));
+  asm.label(middleLabel);
+  asm.lda(imm(0xff));
+  asm.label(innerLabel);
+  asm.sec();
+  asm.sbc(imm(0x01));
+  asm.bne(rel(innerLabel));
+  asm.dex();
+  asm.bne(rel(middleLabel));
+  asm.dey();
+  asm.bne(rel(outerLabel));
+}
+
+function emitSidReleaseDelay(asm, compileState, duration) {
+  const tail = Math.max(2, Math.min(24, Math.ceil(duration / 2)));
+  emitSidDelay(asm, compileState, tail);
+}
+
+function emitSidVolume(asm, compileState, value) {
+  ensureByte(value, "SID volume");
+  compileState.sid.filterModeVol = (compileState.sid.filterModeVol & 0xf0) | (value & 0x0f);
+  emitStoreImmediate(asm, c64.SID_FILTER_MODE_VOL, compileState.sid.filterModeVol);
+}
+
+function sidFilterModeToNibble(mode) {
+  if (mode === undefined || mode === null) {
+    throw new Error("SID filter mode is required");
+  }
+
+  if (mode === "off") {
+    return 0x00;
+  }
+
+  const tokens = Array.isArray(mode)
+    ? mode
+    : String(mode)
+      .split(/[+,|]/)
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+  if (tokens.length === 0) {
+    throw new Error("SID filter mode is required");
+  }
+
+  let nibble = 0x00;
+  for (const token of tokens) {
+    switch (token) {
+      case "off":
+        break;
+      case "lowpass":
+      case "low":
+      case "lp":
+        nibble |= 0x10;
+        break;
+      case "bandpass":
+      case "band":
+      case "bp":
+        nibble |= 0x20;
+        break;
+      case "highpass":
+      case "high":
+      case "hp":
+        nibble |= 0x40;
+        break;
+      default:
+        throw new Error(`Unsupported SID filter mode: ${token}`);
+    }
+  }
+
+  return nibble & 0x70;
+}
+
+function emitSidFilter(asm, compileState, mode, cutoff, resonance) {
+  ensureWord(cutoff, "SID filter cutoff");
+  if (cutoff < 0 || cutoff > 0x07ff) {
+    throw new Error("SID filter cutoff must be between 0 and 2047");
+  }
+  ensureByte(resonance, "SID filter resonance");
+  if (resonance > 0x0f) {
+    throw new Error("SID filter resonance must be between 0 and 15");
+  }
+
+  const modeNibble = sidFilterModeToNibble(mode);
+  const routeMask = modeNibble === 0x00 ? 0x00 : 0x07;
+
+  compileState.sid.filterResonanceRoute = ((resonance & 0x0f) << 4) | routeMask;
+  compileState.sid.filterModeVol = (compileState.sid.filterModeVol & 0x8f) | modeNibble;
+
+  emitStoreImmediate(asm, c64.SID_FILTER_CUTOFF_LO, cutoff & 0x07);
+  emitStoreImmediate(asm, c64.SID_FILTER_CUTOFF_HI, (cutoff >> 3) & 0xff);
+  emitStoreImmediate(asm, c64.SID_FILTER_RESONANCE_ROUTE, compileState.sid.filterResonanceRoute);
+  emitStoreImmediate(asm, c64.SID_FILTER_MODE_VOL, compileState.sid.filterModeVol);
+}
+
+function emitSidVoiceFrequency(asm, voice, value) {
+  emitSidSetFrequencyRaw(asm, voice, sidFrequencyToRaw(value));
+}
+
+function emitSidVoicePulseWidth(asm, voice, value) {
+  ensureSidVoice(voice);
+  ensureSidPulseWidth(value);
+  const base = sidVoiceBase(voice);
+  emitStoreImmediate(asm, base + 2, value & 0xff);
+  emitStoreImmediate(asm, base + 3, (value >> 8) & 0x0f);
+}
+
+function emitSidVoiceWaveform(asm, compileState, voice, waveform) {
+  const control = compileState.sid.voiceControls[voice - 1] & 0x0f;
+  emitSidSetControl(asm, compileState, voice, control | sidWaveformToControl(waveform));
+}
+
+function emitSidVoiceGate(asm, compileState, voice, enabled) {
+  let control = compileState.sid.voiceControls[voice - 1] & 0xff;
+  control = enabled ? (control | 0x01) : (control & 0xfe);
+  emitSidSetControl(asm, compileState, voice, control);
+}
+
+function emitSidVoiceAttackDecay(asm, voice, value) {
+  ensureSidVoice(voice);
+  ensureByte(value, "SID attack/decay");
+  emitStoreImmediate(asm, sidVoiceBase(voice) + 5, value);
+}
+
+function emitSidVoiceSustainRelease(asm, voice, value) {
+  ensureSidVoice(voice);
+  ensureByte(value, "SID sustain/release");
+  emitStoreImmediate(asm, sidVoiceBase(voice) + 6, value);
+}
+
+function emitSidNote(asm, compileState, voice, noteName, duration = 0) {
+  ensureSidVoice(voice);
+  ensureSidDuration(duration);
+  const raw = sidNoteNameToRaw(noteName);
+  emitSidEnsureWaveform(asm, compileState, voice);
+
+  if (raw === null) {
+    emitSidVoiceGate(asm, compileState, voice, false);
+    emitSidDelay(asm, compileState, duration);
+    return;
+  }
+
+  emitSidSetFrequencyRaw(asm, voice, raw);
+  emitSidVoiceGate(asm, compileState, voice, true);
+  if (duration > 0) {
+    emitSidDelay(asm, compileState, duration);
+    emitSidVoiceGate(asm, compileState, voice, false);
+    emitSidReleaseDelay(asm, compileState, duration);
+  }
+}
+
+function emitSidRest(asm, compileState, voice, duration = 0) {
+  ensureSidVoice(voice);
+  ensureSidDuration(duration);
+  emitSidVoiceGate(asm, compileState, voice, false);
+  emitSidDelay(asm, compileState, duration);
+}
+
+function emitSidBeep(asm, compileState) {
+  emitSidVolume(asm, compileState, 15);
+  emitSidVoiceWaveform(asm, compileState, 1, "pulse");
+  emitSidVoicePulseWidth(asm, 1, 0x0800);
+  emitSidVoiceAttackDecay(asm, 1, 0x11);
+  emitSidVoiceSustainRelease(asm, 1, 0xf0);
+  emitSidNote(asm, compileState, 1, "C5", 10);
+}
+
+function emitSidClick(asm, compileState) {
+  emitSidVolume(asm, compileState, 15);
+  emitSidVoiceWaveform(asm, compileState, 1, "triangle");
+  emitSidVoiceAttackDecay(asm, 1, 0x00);
+  emitSidVoiceSustainRelease(asm, 1, 0x00);
+  emitSidNote(asm, compileState, 1, "C7", 3);
+}
+
+function emitSidNoise(asm, compileState, duration = 12) {
+  ensureSidDuration(duration);
+  emitSidVolume(asm, compileState, 15);
+  emitSidVoiceWaveform(asm, compileState, 1, "noise");
+  emitSidVoiceAttackDecay(asm, 1, 0x24);
+  emitSidVoiceSustainRelease(asm, 1, 0xf4);
+  emitSidVoiceFrequency(asm, 1, 0x1800);
+  emitSidVoiceGate(asm, compileState, 1, true);
+  emitSidDelay(asm, compileState, duration);
+  emitSidVoiceGate(asm, compileState, 1, false);
+  emitSidReleaseDelay(asm, compileState, duration);
+}
+
+function emitSidExplosion(asm, compileState) {
+  emitSidNoise(asm, compileState, 20);
+}
+
+function emitSidLaser(asm, compileState) {
+  emitSidVolume(asm, compileState, 15);
+  emitSidVoiceWaveform(asm, compileState, 1, "saw");
+  emitSidVoiceAttackDecay(asm, 1, 0x01);
+  emitSidVoiceSustainRelease(asm, 1, 0x82);
+  emitSidNote(asm, compileState, 1, "C6", 6);
+  emitSidNote(asm, compileState, 1, "G5", 8);
+}
+
+function emitSidPickup(asm, compileState) {
+  emitSidVolume(asm, compileState, 15);
+  emitSidVoiceWaveform(asm, compileState, 1, "triangle");
+  emitSidVoiceAttackDecay(asm, 1, 0x11);
+  emitSidVoiceSustainRelease(asm, 1, 0xb2);
+  emitSidNote(asm, compileState, 1, "C5", 5);
+  emitSidNote(asm, compileState, 1, "G5", 5);
+}
+
+function emitSidSongPlayer(asm, compileState, songDefinition) {
+  const song = buildSidSongSteps(songDefinition);
+  const songId = compileState.stringCounter++;
+  const loopLabel = `sid_song_loop_${songId}`;
+  const doneLabel = `sid_song_done_${songId}`;
+  const continueLabel = `sid_song_continue_${songId}`;
+  const voiceDoneLabels = [1, 2, 3].map((voice) => `sid_song_voice${voice}_done_${songId}`);
+  const voiceRestLabels = [1, 2, 3].map((voice) => `sid_song_voice${voice}_rest_${songId}`);
+  const voiceHoldLabels = [1, 2, 3].map((voice) => `sid_song_voice${voice}_hold_${songId}`);
+
+  const baseControls = [1, 2, 3].map((voice) => {
+    let control = compileState.sid.voiceControls[voice - 1] & 0xfe;
+    if ((control & 0xf0) === 0) {
+      control |= 0x10;
+    }
+    return control & 0xff;
+  });
+
+  const labelBase = `sid_song_${songId}`;
+  const voiceLabels = song.voices.map((voice, index) => ({
+    action: `${labelBase}_v${index + 1}_action`,
+    lo: `${labelBase}_v${index + 1}_lo`,
+    hi: `${labelBase}_v${index + 1}_hi`,
+    bytes: voice
+  }));
+
+  asm.ldx(imm(0x00));
+  asm.label(loopLabel);
+
+  for (let voice = 1; voice <= 3; voice += 1) {
+    const base = sidVoiceBase(voice);
+    const labels = voiceLabels[voice - 1];
+
+    asm.lda(absx(labels.action));
+    asm.beq(rel(voiceRestLabels[voice - 1]));
+    asm.cmp(imm(0x01));
+    asm.beq(rel(voiceHoldLabels[voice - 1]));
+    asm.lda(absx(labels.lo));
+    asm.sta(abs(base));
+    asm.lda(absx(labels.hi));
+    asm.sta(abs(base + 1));
+    emitStoreImmediate(asm, base + 4, baseControls[voice - 1]);
+    emitStoreImmediate(asm, base + 4, baseControls[voice - 1] | 0x01);
+    asm.jmp(abs(voiceDoneLabels[voice - 1]));
+
+    asm.label(voiceRestLabels[voice - 1]);
+    emitStoreImmediate(asm, base + 4, baseControls[voice - 1]);
+    asm.jmp(abs(voiceDoneLabels[voice - 1]));
+
+    asm.label(voiceHoldLabels[voice - 1]);
+    asm.comment(`hold voice ${voice}`);
+    asm.label(voiceDoneLabels[voice - 1]);
+  }
+
+  emitSidDelay(asm, compileState, song.tempo);
+  asm.inx();
+  asm.cpx(imm(song.length));
+  asm.beq(rel(continueLabel));
+  asm.jmp(abs(loopLabel));
+  asm.label(continueLabel);
+
+  for (let voice = 1; voice <= 3; voice += 1) {
+    emitStoreImmediate(asm, sidVoiceBase(voice) + 4, baseControls[voice - 1]);
+  }
+  asm.label(doneLabel);
+
+  for (const labels of voiceLabels) {
+    registerData(compileState, labels.action, labels.bytes.actionBytes);
+    registerData(compileState, labels.lo, labels.bytes.freqLoBytes);
+    registerData(compileState, labels.hi, labels.bytes.freqHiBytes);
+  }
+}
+
+function configureSidSongPlayer(compileState, songDefinition) {
+  compileState.sid.player.song = buildSidSongSteps(songDefinition);
+  compileState.sid.player.installRequested = true;
+}
+
+function emitSidPlayerStop(asm, compileState) {
+  emitStoreImmediate(asm, SID_PLAYER_PLAYING, 0x00);
+  for (let voice = 1; voice <= 3; voice += 1) {
+    const control = compileState.sid.voiceControls[voice - 1] & 0xfe;
+    emitStoreImmediate(asm, sidVoiceBase(voice) + 4, control);
+  }
+}
+
+function emitSidPlayerInitState(asm, state) {
+  if (!state.sid.player.installRequested || !state.sid.player.song) {
+    return;
+  }
+
+  emitStoreImmediate(asm, SID_PLAYER_STEP_INDEX, 0x00);
+  emitStoreImmediate(asm, SID_PLAYER_TICK_COUNT, 0x00);
+  emitStoreImmediate(asm, SID_PLAYER_PLAYING, 0x01);
+}
+
+function createSidPlayerRuntime(state, prefix) {
+  const song = state.sid.player.song;
+  if (!state.sid.player.installRequested || !song) {
+    return null;
+  }
+
+  const songId = state.stringCounter++;
+  const voiceDoneLabels = [1, 2, 3].map((voice) => `${prefix}_voice${voice}_done_${songId}`);
+  const voiceRestLabels = [1, 2, 3].map((voice) => `${prefix}_voice${voice}_rest_${songId}`);
+  const voiceHoldLabels = [1, 2, 3].map((voice) => `${prefix}_voice${voice}_hold_${songId}`);
+
+  const baseControls = [1, 2, 3].map((voice) => {
+    let control = state.sid.voiceControls[voice - 1] & 0xfe;
+    if ((control & 0xf0) === 0) {
+      control |= 0x10;
+    }
+    return control & 0xff;
+  });
+
+  const dataPrefix = prefix.startsWith("sid_") ? prefix.slice(4) : prefix;
+  const labelBase = `sid_song_${dataPrefix}_${songId}`;
+  const voiceLabels = song.voices.map((voice, index) => ({
+    action: `${labelBase}_v${index + 1}_action`,
+    lo: `${labelBase}_v${index + 1}_lo`,
+    hi: `${labelBase}_v${index + 1}_hi`,
+    bytes: voice
+  }));
+
+  return {
+    song,
+    songId,
+    processLabel: `${prefix}_process_${songId}`,
+    stopLabel: `${prefix}_stop_${songId}`,
+    doneLabel: `${prefix}_done_${songId}`,
+    doneJumpLabel: `${prefix}_done_jump_${songId}`,
+    processJumpLabel: `${prefix}_process_jump_${songId}`,
+    stopContinueLabel: `${prefix}_stop_continue_${songId}`,
+    voiceDoneLabels,
+    voiceRestLabels,
+    voiceHoldLabels,
+    baseControls,
+    voiceLabels
+  };
+}
+
+function registerSidPlayerData(state, runtime) {
+  for (const labels of runtime.voiceLabels) {
+    registerData(state, labels.action, labels.bytes.actionBytes);
+    registerData(state, labels.lo, labels.bytes.freqLoBytes);
+    registerData(state, labels.hi, labels.bytes.freqHiBytes);
+  }
+}
+
+function emitSidPlayerCore(asm, runtime) {
+  asm.lda(abs(SID_PLAYER_PLAYING));
+  asm.beq(rel(runtime.doneJumpLabel));
+  asm.lda(abs(SID_PLAYER_TICK_COUNT));
+  asm.beq(rel(runtime.processJumpLabel));
+  asm.dec(abs(SID_PLAYER_TICK_COUNT));
+  asm.jmp(abs(runtime.doneLabel));
+  asm.label(runtime.doneJumpLabel);
+  asm.jmp(abs(runtime.doneLabel));
+  asm.label(runtime.processJumpLabel);
+  asm.jmp(abs(runtime.processLabel));
+
+  asm.label(runtime.processLabel);
+  asm.ldx(abs(SID_PLAYER_STEP_INDEX));
+  asm.cpx(imm(runtime.song.length));
+  asm.bne(rel(runtime.stopContinueLabel));
+  asm.jmp(abs(runtime.stopLabel));
+  asm.label(runtime.stopContinueLabel);
+
+  for (let voice = 1; voice <= 3; voice += 1) {
+    const base = sidVoiceBase(voice);
+    const labels = runtime.voiceLabels[voice - 1];
+    asm.lda(absx(labels.action));
+    asm.beq(rel(runtime.voiceRestLabels[voice - 1]));
+    asm.cmp(imm(0x01));
+    asm.beq(rel(runtime.voiceHoldLabels[voice - 1]));
+    asm.lda(absx(labels.lo));
+    asm.sta(abs(base));
+    asm.lda(absx(labels.hi));
+    asm.sta(abs(base + 1));
+    emitStoreImmediate(asm, base + 4, runtime.baseControls[voice - 1]);
+    emitStoreImmediate(asm, base + 4, runtime.baseControls[voice - 1] | 0x01);
+    asm.jmp(abs(runtime.voiceDoneLabels[voice - 1]));
+
+    asm.label(runtime.voiceRestLabels[voice - 1]);
+    emitStoreImmediate(asm, base + 4, runtime.baseControls[voice - 1]);
+    asm.jmp(abs(runtime.voiceDoneLabels[voice - 1]));
+
+    asm.label(runtime.voiceHoldLabels[voice - 1]);
+    asm.comment(`hold sid voice ${voice}`);
+    asm.label(runtime.voiceDoneLabels[voice - 1]);
+  }
+
+  asm.inc(abs(SID_PLAYER_STEP_INDEX));
+  emitStoreImmediate(asm, SID_PLAYER_TICK_COUNT, runtime.song.tempo);
+  asm.jmp(abs(runtime.doneLabel));
+
+  asm.label(runtime.stopLabel);
+  emitStoreImmediate(asm, SID_PLAYER_PLAYING, 0x00);
+  for (let voice = 1; voice <= 3; voice += 1) {
+    emitStoreImmediate(asm, sidVoiceBase(voice) + 4, runtime.baseControls[voice - 1]);
+  }
+}
+
+function emitSidPlayerInstall(asm, state) {
+  if (!state.sid.player.installRequested || !state.sid.player.song) {
+    return;
+  }
+  if (state.irq.handlers.length > 0) {
+    return;
+  }
+  if (state.spriteAnimator.installRequested) {
+    return;
+  }
+
+  emitSidPlayerInitState(asm, state);
+  emitInstallRasterIrq(asm, state.sid.player.line, "sid_player_irq");
+}
+
+function emitSidPlayerRoutine(asm, state) {
+  const runtime = createSidPlayerRuntime(state, "sid_irq");
+  if (!runtime) {
+    return;
+  }
+
+  asm.comment("SID player IRQ");
+  asm.label("sid_player_irq");
+  emitIrqPrologue(asm);
+
+  emitSidPlayerCore(asm, runtime);
+  asm.jmp(abs(runtime.doneLabel));
+  asm.label(runtime.doneLabel);
+  setRasterLine(asm, state.sid.player.line);
+  emitIrqAck(asm);
+  emitIrqExit(asm, true);
+  registerSidPlayerData(state, runtime);
+}
+
+function emitSidPlayerBody(asm, state) {
+  const runtime = createSidPlayerRuntime(state, "sid_irq_body");
+  if (!runtime) {
+    return;
+  }
+  emitSidPlayerCore(asm, runtime);
+  asm.label(runtime.doneLabel);
+  registerSidPlayerData(state, runtime);
 }
 
 function buildHiresLayout(screenBase, bitmapBase) {
@@ -1690,11 +2374,7 @@ function emitSpriteAnimatorRoutine(asm, state) {
 
   asm.comment("Sprite animator IRQ");
   asm.label("sprite_animator_irq");
-  asm.pha();
-  asm.txa();
-  asm.pha();
-  asm.tya();
-  asm.pha();
+  emitIrqPrologue(asm);
 
   for (let index = 0; index < state.spriteAnimations.length; index += 1) {
     const animation = state.spriteAnimations[index];
@@ -1712,12 +2392,23 @@ function emitSpriteAnimatorRoutine(asm, state) {
 
   setRasterLine(asm, state.spriteAnimator.line);
   emitIrqAck(asm);
-  asm.pla();
-  asm.tay();
-  asm.pla();
-  asm.tax();
-  asm.pla();
-  asm.jmp(abs(c64.KERNAL_IRQ));
+  emitIrqExit(asm, true);
+}
+
+function emitSpriteAnimatorBody(asm, state) {
+  for (let index = 0; index < state.spriteAnimations.length; index += 1) {
+    const animation = state.spriteAnimations[index];
+    if (!animation) {
+      continue;
+    }
+    const base = state.spriteAnimationBase + index * 8;
+    if (animation.x) {
+      emitSpriteAnimatorXUpdate(asm, index, animation.x, base, `${index}_x`);
+    }
+    if (animation.y) {
+      emitSpriteAnimatorYUpdate(asm, index, animation.y, base, `${index}_y`);
+    }
+  }
 }
 
 function emitSpriteAnimatorInstall(asm, state) {
@@ -1725,7 +2416,10 @@ function emitSpriteAnimatorInstall(asm, state) {
     return;
   }
   if (state.irq.handlers.length > 0) {
-    throw new Error("sprite.installAnimator() cannot yet be combined with custom raster IRQ handlers");
+    return;
+  }
+  if (state.sid.player.installRequested) {
+    return;
   }
 
   const hasAnimations = state.spriteAnimations.some(Boolean);
@@ -1734,16 +2428,28 @@ function emitSpriteAnimatorInstall(asm, state) {
   }
 
   emitSpriteAnimatorInit(asm, state);
-  asm.sei();
-  asm.lda(imm(0x01));
-  asm.sta(abs(c64.VIC_IRQ_ENABLE));
+  emitInstallRasterIrq(asm, state.spriteAnimator.line, "sprite_animator_irq");
+}
+
+function emitCombinedRuntimeInstall(asm, state) {
+  const combinedLine = Math.min(state.sid.player.line, state.spriteAnimator.line);
+  emitSidPlayerInitState(asm, state);
+  emitInstallRasterIrq(asm, combinedLine, "runtime_combo_irq");
+}
+
+function emitCombinedRuntimeRoutine(asm, state) {
+  const combinedLine = Math.min(state.sid.player.line, state.spriteAnimator.line);
+
+  asm.comment("Combined runtime IRQ");
+  asm.label("runtime_combo_irq");
+  emitIrqPrologue(asm);
+
+  emitSidPlayerBody(asm, state);
+  emitSpriteAnimatorBody(asm, state);
+
+  setRasterLine(asm, combinedLine);
   emitIrqAck(asm);
-  setRasterLine(asm, state.spriteAnimator.line);
-  asm.lda(immLo("sprite_animator_irq"));
-  asm.sta(abs(c64.IRQ_VECTOR_LO));
-  asm.lda(immHi("sprite_animator_irq"));
-  asm.sta(abs(c64.IRQ_VECTOR_HI));
-  asm.cli();
+  emitIrqExit(asm, true);
 }
 
 function setRasterLine(asm, line) {
@@ -1765,15 +2471,49 @@ function emitIrqAck(asm) {
   asm.sta(abs(c64.VIC_IRQ_STATUS));
 }
 
+function emitIrqPrologue(asm) {
+  asm.pha();
+  asm.txa();
+  asm.pha();
+  asm.tya();
+  asm.pha();
+}
+
+function emitIrqExit(asm, chainToKernal) {
+  asm.pla();
+  asm.tay();
+  asm.pla();
+  asm.tax();
+  asm.pla();
+
+  if (chainToKernal) {
+    asm.jmp(abs(c64.KERNAL_IRQ));
+  } else {
+    asm.rti();
+  }
+}
+
+function emitInstallRasterIrq(asm, line, vectorLabel) {
+  asm.sei();
+  asm.lda(imm(0x01));
+  asm.sta(abs(c64.VIC_IRQ_ENABLE));
+  emitIrqAck(asm);
+  setRasterLine(asm, line);
+  asm.lda(immLo(vectorLabel));
+  asm.sta(abs(c64.IRQ_VECTOR_LO));
+  asm.lda(immHi(vectorLabel));
+  asm.sta(abs(c64.IRQ_VECTOR_HI));
+  asm.cli();
+}
+
 function emitIrqInstall(asm, state) {
   const handlers = state.irq.handlers;
   if (handlers.length === 0) {
     throw new Error("c64.irq.install() was called without any raster handlers");
   }
 
-  asm.sei();
-
   if (state.irq.disableKernalTimer) {
+    asm.sei();
     asm.lda(imm(0x7f));
     asm.sta(abs(c64.CIA1_IRQ_CONTROL));
     asm.sta(abs(c64.CIA2_IRQ_CONTROL));
@@ -1784,18 +2524,19 @@ function emitIrqInstall(asm, state) {
   asm.lda(imm(0x00));
   asm.sta(abs(c64.IRQ_STATE_INDEX));
 
-  asm.lda(imm(0x01));
-  asm.sta(abs(c64.VIC_IRQ_ENABLE));
-  emitIrqAck(asm);
+  if (state.sid.player.installRequested) {
+    emitSidPlayerInitState(asm, state);
+  }
 
-  setRasterLine(asm, handlers[0].line);
+  if (state.spriteAnimator.installRequested) {
+    const hasAnimations = state.spriteAnimations.some(Boolean);
+    if (!hasAnimations) {
+      throw new Error("sprite.installAnimator() was called without any configured sprite animations");
+    }
+    emitSpriteAnimatorInit(asm, state);
+  }
 
-  asm.lda(immLo("irq_dispatch"));
-  asm.sta(abs(c64.IRQ_VECTOR_LO));
-  asm.lda(immHi("irq_dispatch"));
-  asm.sta(abs(c64.IRQ_VECTOR_HI));
-
-  asm.cli();
+  emitInstallRasterIrq(asm, handlers[0].line, "irq_dispatch");
 }
 
 function createInstructionCompileState(baseState) {
@@ -1813,7 +2554,17 @@ function createInstructionCompileState(baseState) {
     spriteDataCounter: baseState.spriteDataCounter,
     stringCounter: baseState.stringCounter,
     loopCounter: baseState.loopCounter,
-    hires: { ...baseState.hires }
+    hires: { ...baseState.hires },
+    sid: {
+      voiceControls: [...baseState.sid.voiceControls],
+      filterModeVol: baseState.sid.filterModeVol,
+      filterResonanceRoute: baseState.sid.filterResonanceRoute,
+      player: {
+        installRequested: baseState.sid.player.installRequested,
+        line: baseState.sid.player.line,
+        song: baseState.sid.player.song
+      }
+    }
   };
 }
 
@@ -1825,6 +2576,16 @@ function syncInstructionCompileState(baseState, localState) {
   baseState.stringCounter = localState.stringCounter;
   baseState.loopCounter = localState.loopCounter;
   baseState.hires = { ...localState.hires };
+  baseState.sid = {
+    voiceControls: [...localState.sid.voiceControls],
+    filterModeVol: localState.sid.filterModeVol,
+    filterResonanceRoute: localState.sid.filterResonanceRoute,
+    player: {
+      installRequested: localState.sid.player.installRequested,
+      line: localState.sid.player.line,
+      song: localState.sid.player.song
+    }
+  };
 }
 
 function registerData(compileState, name, bytes) {
@@ -1950,6 +2711,68 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
       break;
     case "hiresFillCircle":
       emitHiresFillCircle(asm, compileState, instruction.args[0], instruction.args[1], instruction.args[2], instruction.args[3]);
+      break;
+    case "sidVolume":
+      emitSidVolume(asm, compileState, instruction.args[0]);
+      break;
+    case "sidFilter":
+      emitSidFilter(asm, compileState, instruction.args[0], instruction.args[1], instruction.args[2]);
+      break;
+    case "sidVoiceFrequency":
+      emitSidVoiceFrequency(asm, instruction.args[0], instruction.args[1]);
+      break;
+    case "sidVoicePulseWidth":
+      emitSidVoicePulseWidth(asm, instruction.args[0], instruction.args[1]);
+      break;
+    case "sidVoiceWaveform":
+      emitSidVoiceWaveform(asm, compileState, instruction.args[0], instruction.args[1]);
+      break;
+    case "sidVoiceGate":
+      emitSidVoiceGate(asm, compileState, instruction.args[0], instruction.args[1]);
+      break;
+    case "sidVoiceAttackDecay":
+      emitSidVoiceAttackDecay(asm, instruction.args[0], instruction.args[1]);
+      break;
+    case "sidVoiceSustainRelease":
+      emitSidVoiceSustainRelease(asm, instruction.args[0], instruction.args[1]);
+      break;
+    case "sidNote":
+      emitSidNote(asm, compileState, instruction.args[0], instruction.args[1], instruction.args[2]);
+      break;
+    case "sidFreq":
+      emitSidVoiceFrequency(asm, instruction.args[0], instruction.args[1]);
+      break;
+    case "sidRest":
+      emitSidRest(asm, compileState, instruction.args[0], instruction.args[1]);
+      break;
+    case "sidPlaySong":
+      configureSidSongPlayer(compileState, instruction.args[0]);
+      break;
+    case "sidInstallPlayer":
+      ensureWord(instruction.args[0], "SID player raster line");
+      compileState.sid.player.installRequested = true;
+      compileState.sid.player.line = instruction.args[0];
+      break;
+    case "sidStopSong":
+      emitSidPlayerStop(asm, compileState);
+      break;
+    case "sidBeep":
+      emitSidBeep(asm, compileState);
+      break;
+    case "sidNoise":
+      emitSidNoise(asm, compileState, instruction.args[0]);
+      break;
+    case "sidClick":
+      emitSidClick(asm, compileState);
+      break;
+    case "sidExplosion":
+      emitSidExplosion(asm, compileState);
+      break;
+    case "sidLaser":
+      emitSidLaser(asm, compileState);
+      break;
+    case "sidPickup":
+      emitSidPickup(asm, compileState);
       break;
     case "sys":
       asm.jsr(abs(instruction.args[0]));
@@ -2183,17 +3006,19 @@ function emitRasterHandlers(asm, state) {
 
   asm.comment("Raster IRQ dispatcher");
   asm.label("irq_dispatch");
-  asm.pha();
-  asm.txa();
-  asm.pha();
-  asm.tya();
-  asm.pha();
+  emitIrqPrologue(asm);
 
   asm.lda(abs(c64.IRQ_STATE_INDEX));
 
   for (let index = 0; index < handlers.length; index += 1) {
+    const matchLabel = `irq_dispatch_match_${index}`;
+    const nextLabel = `irq_dispatch_next_${index}`;
     asm.cmp(imm(index));
-    asm.beq(rel(`irq_handler_${index}`));
+    asm.beq(rel(matchLabel));
+    asm.jmp(abs(nextLabel));
+    asm.label(matchLabel);
+    asm.jmp(abs(`irq_handler_${index}`));
+    asm.label(nextLabel);
   }
 
   asm.jmp(abs("irq_handler_0"));
@@ -2201,6 +3026,17 @@ function emitRasterHandlers(asm, state) {
   handlers.forEach((handler, index) => {
     asm.label(`irq_handler_${index}`);
     const handlerState = createInstructionCompileState(state);
+
+    // Background runtimes piggyback on the first raster hit so they still run
+    // once per frame even when several raster handlers are installed.
+    if (index === 0) {
+      if (state.sid.player.installRequested) {
+        emitSidPlayerBody(asm, state);
+      }
+      if (state.spriteAnimator.installRequested) {
+        emitSpriteAnimatorBody(asm, state);
+      }
+    }
 
     for (const instruction of handler.instructions) {
       compileHighLevelInstruction(asm, instruction, handlerState);
@@ -2213,17 +3049,7 @@ function emitRasterHandlers(asm, state) {
     asm.sta(abs(c64.IRQ_STATE_INDEX));
     setRasterLine(asm, nextLine);
     emitIrqAck(asm);
-    asm.pla();
-    asm.tay();
-    asm.pla();
-    asm.tax();
-    asm.pla();
-
-    if (state.irq.chainToKernal) {
-      asm.jmp(abs(c64.KERNAL_IRQ));
-    } else {
-      asm.rti();
-    }
+    emitIrqExit(asm, state.irq.chainToKernal);
   });
 }
 
@@ -2333,7 +3159,7 @@ export function compileInstructions(instructions, options = {}) {
       installRequested: false,
       line: 250
     },
-    spriteAnimationBase: 0xc300,
+    spriteAnimationBase: RUNTIME_RAM_LAYOUT.spriteAnimatorBase,
     spriteDataCounter: 0,
     stringCounter: 0,
     loopCounter: 0,
@@ -2348,6 +3174,16 @@ export function compileInstructions(instructions, options = {}) {
       fillRectRuntimeNeeded: false,
       circleRuntimeNeeded: false,
       backgroundColor: c64.COLOR_WHITE
+    },
+    sid: {
+      voiceControls: [0x00, 0x00, 0x00],
+      filterModeVol: 0x00,
+      filterResonanceRoute: 0x00,
+      player: {
+        installRequested: false,
+        line: 250,
+        song: null
+      }
     },
     irq: {
       handlers: options.irqHandlers ?? [],
@@ -2380,6 +3216,21 @@ export function compileInstructions(instructions, options = {}) {
     compileHighLevelInstruction(asm, instruction, state);
   }
 
+  if (state.sid.player.installRequested && !state.sid.player.song) {
+    throw new Error("sid.installPlayer()/playSong() was requested without a configured song");
+  }
+
+  const useCombinedRuntimeIrq = state.sid.player.installRequested && state.spriteAnimator.installRequested;
+
+  if (useCombinedRuntimeIrq) {
+    emitSpriteAnimatorInit(asm, state);
+    emitCombinedRuntimeInstall(asm, state);
+  }
+
+  if (state.sid.player.installRequested) {
+    emitSidPlayerInstall(asm, state);
+  }
+
   if (state.spriteAnimator.installRequested) {
     emitSpriteAnimatorInstall(asm, state);
   }
@@ -2390,10 +3241,20 @@ export function compileInstructions(instructions, options = {}) {
     asm.label("program_end");
   }
 
-  if (state.spriteAnimator.installRequested) {
+  if (state.spriteAnimator.installRequested && state.irq.handlers.length === 0) {
     asm.jmp(abs("program_end_after_animator"));
-    emitSpriteAnimatorRoutine(asm, state);
+    if (useCombinedRuntimeIrq) {
+      emitCombinedRuntimeRoutine(asm, state);
+    } else {
+      emitSpriteAnimatorRoutine(asm, state);
+    }
     asm.label("program_end_after_animator");
+  }
+
+  if (state.sid.player.installRequested && !useCombinedRuntimeIrq && state.irq.handlers.length === 0) {
+    asm.jmp(abs("program_end_after_sid_player"));
+    emitSidPlayerRoutine(asm, state);
+    asm.label("program_end_after_sid_player");
   }
 
   asm.rts();

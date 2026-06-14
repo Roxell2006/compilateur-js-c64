@@ -46,9 +46,28 @@ export const C64_CONSTANTS = {
   SID_BASE: 0xd400,
   SID_VOICE1_FREQ_LO: 0xd400,
   SID_VOICE1_FREQ_HI: 0xd401,
+  SID_VOICE1_PW_LO: 0xd402,
+  SID_VOICE1_PW_HI: 0xd403,
   SID_VOICE1_CONTROL: 0xd404,
   SID_VOICE1_ATTACK_DECAY: 0xd405,
   SID_VOICE1_SUSTAIN_RELEASE: 0xd406,
+  SID_VOICE2_FREQ_LO: 0xd407,
+  SID_VOICE2_FREQ_HI: 0xd408,
+  SID_VOICE2_PW_LO: 0xd409,
+  SID_VOICE2_PW_HI: 0xd40a,
+  SID_VOICE2_CONTROL: 0xd40b,
+  SID_VOICE2_ATTACK_DECAY: 0xd40c,
+  SID_VOICE2_SUSTAIN_RELEASE: 0xd40d,
+  SID_VOICE3_FREQ_LO: 0xd40e,
+  SID_VOICE3_FREQ_HI: 0xd40f,
+  SID_VOICE3_PW_LO: 0xd410,
+  SID_VOICE3_PW_HI: 0xd411,
+  SID_VOICE3_CONTROL: 0xd412,
+  SID_VOICE3_ATTACK_DECAY: 0xd413,
+  SID_VOICE3_SUSTAIN_RELEASE: 0xd414,
+  SID_FILTER_CUTOFF_LO: 0xd415,
+  SID_FILTER_CUTOFF_HI: 0xd416,
+  SID_FILTER_RESONANCE_ROUTE: 0xd417,
   SID_FILTER_MODE_VOL: 0xd418,
   CIA1_BASE: 0xdc00,
   CIA1_PRA: 0xdc00,
@@ -170,6 +189,77 @@ c64.hires = {
   },
   fillCircle(x, y, radius, color = c64.COLOR_WHITE) {
     pushInstruction("hiresFillCircle", x, y, radius, color);
+  }
+};
+
+function createSidVoiceApi(voice) {
+  return {
+    frequency(value) {
+      pushInstruction("sidVoiceFrequency", voice, value);
+    },
+    pulseWidth(value) {
+      pushInstruction("sidVoicePulseWidth", voice, value);
+    },
+    waveform(type) {
+      pushInstruction("sidVoiceWaveform", voice, String(type));
+    },
+    gate(on = true) {
+      pushInstruction("sidVoiceGate", voice, Boolean(on));
+    },
+    attackDecay(value) {
+      pushInstruction("sidVoiceAttackDecay", voice, value);
+    },
+    sustainRelease(value) {
+      pushInstruction("sidVoiceSustainRelease", voice, value);
+    }
+  };
+}
+
+c64.sid = {
+  volume(value) {
+    pushInstruction("sidVolume", value);
+  },
+  filter(mode, cutoff, resonance) {
+    pushInstruction("sidFilter", mode, cutoff, resonance);
+  },
+  voice(voice) {
+    return createSidVoiceApi(voice);
+  },
+  note(voice, noteName, duration = 0) {
+    pushInstruction("sidNote", voice, String(noteName), duration);
+  },
+  freq(voice, hzOrRawValue) {
+    pushInstruction("sidFreq", voice, hzOrRawValue);
+  },
+  rest(voice, duration = 0) {
+    pushInstruction("sidRest", voice, duration);
+  },
+  playSong(songDefinition) {
+    pushInstruction("sidPlaySong", songDefinition);
+  },
+  installPlayer(line = 250) {
+    pushInstruction("sidInstallPlayer", line);
+  },
+  stopSong() {
+    pushInstruction("sidStopSong");
+  },
+  beep() {
+    pushInstruction("sidBeep");
+  },
+  noise(duration = 12) {
+    pushInstruction("sidNoise", duration);
+  },
+  click() {
+    pushInstruction("sidClick");
+  },
+  explosion() {
+    pushInstruction("sidExplosion");
+  },
+  laser() {
+    pushInstruction("sidLaser");
+  },
+  pickup() {
+    pushInstruction("sidPickup");
   }
 };
 

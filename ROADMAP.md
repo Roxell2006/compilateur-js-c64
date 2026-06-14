@@ -1,447 +1,434 @@
 # ROADMAP
 
-This roadmap gives `js-c64` a clear progression from a practical DSL into a more complete creative toolkit for Commodore 64 graphics, sprites, animation, and SID audio.
+This roadmap repositions `js-c64` as a practical game creation toolkit for Commodore 64.
 
-## Guiding Direction
+The goal is no longer only to generate small assembly programs, but to help build:
 
-The long-term goal is to make `js-c64`:
+- playable arcade-style games
+- scrolling action scenes
+- sprite-based demos with music
+- structured retro game prototypes
 
-- easy enough for beginners to get visible results quickly
-- powerful enough for small demos, intros, toys, and games
-- structured enough to stay pleasant as projects grow
+The long-term direction is:
 
-The recommended order is:
-
-- `v0.2.0` = comfort
-- `v0.3.0` = sprites
-- `v0.4.0` = animation
-- `v0.5.0` = bitmap graphics
-- `v0.6.0` = SID audio and music
+- keep the DSL beginner-friendly
+- keep generated machine code compact
+- make subsystems coexist cleanly
+- progressively add the classic building blocks of a C64 game engine
 
 ---
 
-## v0.2.0 - Comfort
+## Core Direction
 
-### Goal
+`js-c64` should evolve into a layered tool:
 
-Make the library nicer to write with every day.
+1. machine-code generator
+2. practical C64 API
+3. runtime helpers for animation, audio and IRQ
+4. game-oriented systems for input, collisions, maps and scenes
 
-### Main Priorities
+To stay healthy as the project grows, every new subsystem should respect these rules:
 
-- add a proper data API
-- add symbolic variables instead of hard-coded RAM everywhere
-- add practical screen/text helpers
-- reduce the need for low-level `poke()` in common situations
-
-### Recommended Features
-
-#### Data and variables
-
-- `c64.data.byte(name, values)`
-- `c64.data.word(name, values)`
-- `c64.data.string(name, text)`
-- `c64.data.screenString(name, text)`
-- `c64.var.byte(name, address, initialValue = 0)`
-- `c64.var.word(name, address, initialValue = 0)`
-- `c64.varRef(name)`
-
-#### Text/screen helpers
-
-- `c64.printCentered(y, text)`
-- `c64.clearLine(y, char = 32, color = currentColor)`
-- `c64.fillRect(x, y, w, h, char, color)`
-- `c64.drawFrame(x, y, w, h, char, color)`
-- `c64.writeChar(x, y, char, color)`
-
-#### Memory helpers
-
-- `c64.copyDataTo(address, label, length)`
-- `c64.memsetColor(address, color, length)`
-
-### Why This Version Matters
-
-- it removes a lot of friction
-- it prepares the engine for more ambitious systems later
-- it makes examples shorter and easier to understand
-
-### Example Target
-
-```js
-c64.fillRect(0, 0, 40, 25, 32, c64.COLOR_BLUE);
-c64.drawFrame(2, 2, 36, 20, 81, c64.COLOR_WHITE);
-c64.printCentered(10, "JS-C64");
-```
-
-### Technical Notes
-
-- data must be emitted safely without ever falling into executable code
-- variables should be declarative and exportable in symbols/listings
-- screen helpers should reuse compact loops where possible
+- no fragile IRQ conflicts
+- safe RAM usage
+- compact emitted code
+- readable generated ASM
+- examples and docs updated whenever a feature lands
 
 ---
 
-## v0.3.0 - Sprites
+## Current State
 
-### Goal
+Already in place today:
 
-Provide a full high-level sprite layer that feels natural to use.
+- screen and text helpers
+- data and variable helpers
+- raster IRQ helpers
+- sprite setup and animation
+- hires bitmap layer
+- SID sound effects
+- non-blocking 3-voice SID song playback
+- coexistence between SID music, raster IRQ and sprite animation
 
-### Main Priorities
+This is a strong base.
 
-- make sprite setup easy
-- hide the common VIC-II sprite register boilerplate
-- support single-color and multicolor workflows
-
-### Recommended Features
-
-#### Basic sprite control
-
-- `c64.sprite.enable(n)`
-- `c64.sprite.disable(n)`
-- `c64.sprite.position(n, x, y)`
-- `c64.sprite.setX(n, x)`
-- `c64.sprite.setY(n, y)`
-- `c64.sprite.color(n, color)`
-- `c64.sprite.priority(n, behindBackground)`
-
-#### Sprite data and display options
-
-- `c64.sprite.data(n, bytesOrLabel)`
-- `c64.sprite.pointer(n, blockIndex)`
-- `c64.sprite.multicolor(n, enabled)`
-- `c64.sprite.expandX(n, enabled)`
-- `c64.sprite.expandY(n, enabled)`
-- `c64.sprite.sharedColor1(color)`
-- `c64.sprite.sharedColor2(color)`
-
-#### Convenience helpers
-
-- `c64.sprite.show(n, x, y, color)`
-- `c64.sprite.hide(n)`
-- `c64.sprite.moveX(n, dx)`
-- `c64.sprite.moveY(n, dy)`
-
-### Why This Version Matters
-
-- sprites are one of the most iconic parts of the C64
-- the library becomes immediately more fun
-- this creates the base required for animation in the next version
-
-### Example Target
-
-```js
-c64.sprite.enable(0);
-c64.sprite.position(0, 120, 80);
-c64.sprite.color(0, c64.COLOR_RED);
-c64.sprite.data(0, "balloonSprite");
-```
-
-### Technical Notes
-
-- sprite X high-bit handling must be robust
-- memory pointers for sprite data should be easy to manage
-- future animation systems should build on this API, not bypass it
+The next roadmap focuses on turning that base into a real game-oriented toolkit.
 
 ---
 
-## v0.4.0 - Animation
+## v0.7.0 - Gameplay Foundations
 
 ### Goal
 
-Move from static visuals to live, time-based behavior.
+Add the missing building blocks needed for interactive programs and small games.
 
 ### Main Priorities
 
-- animate sprites without manual per-frame assembly
-- provide a small internal timing/update engine
-- keep compatibility with IRQ-driven and BASIC-friendly workflows
+- read player inputs cleanly
+- add predictable frame/timer helpers
+- provide a simple structured game loop
+- reduce the amount of manual polling code users need to write
 
 ### Recommended Features
 
-#### Sprite animation primitives
+#### Keyboard input
 
-- `c64.sprite.moveToX(n, targetX, speed)`
-- `c64.sprite.moveToY(n, targetY, speed)`
-- `c64.sprite.animateTo(n, { x, y, speedX, speedY })`
-- `c64.sprite.stop(n)`
-- `c64.sprite.stopX(n)`
-- `c64.sprite.stopY(n)`
-- `c64.sprite.onReached(n, callbackOrLabel)`
+- `c64.input.keyPressed(key)`
+- `c64.input.keyReleased(key)`
+- `c64.input.anyKeyPressed()`
+- `c64.input.readMatrix()` or equivalent internal helper
 
-#### Motion patterns
+#### Joystick input
 
-- `c64.sprite.bounceX(n, minX, maxX, speed)`
-- `c64.sprite.bounceY(n, minY, maxY, speed)`
-- `c64.sprite.path(n, points, speed)`
-- `c64.sprite.follow(n, targetXRef, targetYRef, speed)`
+- `c64.joystick.read(port)`
+- `c64.joystick.up(port)`
+- `c64.joystick.down(port)`
+- `c64.joystick.left(port)`
+- `c64.joystick.right(port)`
+- `c64.joystick.fire(port)`
 
-#### Runtime/update helpers
+#### Timing helpers
 
-- `c64.sprite.installAnimator()`
-- `c64.anim.every(n, fn)`
 - `c64.anim.frameCounter(address)`
-- `c64.anim.waitFrames(n)`
+- `c64.anim.waitFrames(count)`
+- `c64.anim.every(count, fn)`
+- `c64.timer.every(count, fn)`
+
+#### Loop helpers
+
+- `c64.loop.forever(fn)`
+- `c64.loop.until(condition, fn)`
+- `c64.loop.while(condition, fn)`
+
+#### Small utility helpers
+
+- `c64.var.bool(name, address, initialValue = 0)`
+- `c64.var.inc(name)`
+- `c64.var.dec(name)`
 
 ### Why This Version Matters
 
-- this is where demos and games start feeling alive
-- beginners get smooth movement without hand-writing update loops
-- it opens the door to higher-level scene systems later
+- games need input before they need complexity
+- predictable timing is the heart of gameplay
+- beginners should be able to build a moving, controllable sprite quickly
 
 ### Example Target
 
 ```js
-c64.sprite.enable(0);
-c64.sprite.position(0, 24, 80);
-c64.sprite.moveToX(0, 200, 2);
-c64.sprite.moveToY(0, 120, 1);
-c64.sprite.installAnimator();
-```
-
-### Technical Notes
-
-- sprite animation state must live in safe RAM, not fragile zero-page locations
-- updates should be driven by a predictable tick or IRQ
-- target clamping is essential to avoid overshooting
-
----
-
-## v0.5.0 - Bitmap Graphics
-
-### Goal
-
-Add a true graphics layer for high-resolution bitmap work.
-
-### Main Priorities
-
-- support C64 bitmap setup cleanly
-- provide a set of drawing primitives
-- make graphical demos much easier to build
-
-### Recommended Features
-
-#### Bitmap mode management
-
-- `c64.hires.enable()`
-- `c64.hires.disable()`
-- `c64.hires.bitmap(address = 0x2000)`
-- `c64.hires.screen(address = 0x0400)`
-- `c64.hires.clear(color = 0)`
-
-#### Drawing primitives
-
-- `c64.hires.point(x, y, color)`
-- `c64.hires.line(x1, y1, x2, y2, color)`
-- `c64.hires.rect(x, y, w, h, color)`
-- `c64.hires.fillRect(x, y, w, h, color)`
-- `c64.hires.circle(cx, cy, r, color)`
-- `c64.hires.fillCircle(cx, cy, r, color)`
-
-#### Optional next step inside bitmap work
-
-- `c64.multiBitmap.enable()`
-- `c64.multiBitmap.point(...)`
-- `c64.multiBitmap.fillRect(...)`
-
-### Why This Version Matters
-
-- it transforms `js-c64` into a real graphics playground
-- it enables logos, shapes, HUDs, diagrams, and demo art
-- it combines naturally with raster effects and sprite animation
-
-### Example Target
-
-```js
-c64.hires.enable();
-c64.hires.clear(0);
-c64.hires.line(0, 0, 319, 199, 1);
-c64.hires.circle(160, 100, 40, 1);
-c64.hires.fillRect(20, 20, 60, 30, 1);
-```
-
-### Technical Notes
-
-- VIC-II bitmap memory layout must be abstracted carefully
-- color handling will need clear rules and documentation
-- line/circle algorithms should favor predictable code generation over excessive cleverness
-
----
-
-## v0.6.0 - SID Audio and Music
-
-### Goal
-
-Give `js-c64` a real sound layer for effects, melodies, and simple 3-voice music during games or animations.
-
-### Main Priorities
-
-- make it easy to play immediate sound effects
-- support melodic playback with notes and durations
-- support three simultaneous voices
-- let audio run alongside animations and raster effects
-
-### Recommended Features
-
-#### Simple one-shot sound helpers
-
-- `c64.sid.beep()`
-- `c64.sid.noise(duration)`
-- `c64.sid.click()`
-- `c64.sid.explosion()`
-- `c64.sid.laser()`
-- `c64.sid.pickup()`
-
-These should be convenience wrappers built from normal SID register writes.
-
-#### Voice-oriented API
-
-- `c64.sid.voice(1).frequency(value)`
-- `c64.sid.voice(1).pulseWidth(value)`
-- `c64.sid.voice(1).waveform(type)`
-- `c64.sid.voice(1).gate(on)`
-- `c64.sid.voice(1).attackDecay(value)`
-- `c64.sid.voice(1).sustainRelease(value)`
-
-Possible waveforms:
-
-- `triangle`
-- `saw`
-- `pulse`
-- `noise`
-
-#### Musical note helpers
-
-- `c64.sid.note(voice, noteName, duration)`
-- `c64.sid.freq(voice, hzOrRawValue)`
-- `c64.sid.rest(voice, duration)`
-- `c64.sid.volume(value)`
-- `c64.sid.filter(mode, cutoff, resonance)`
-
-#### Music pattern helpers
-
-- `c64.sid.sequence(voice, notes)`
-- `c64.sid.playSong(songDefinition)`
-- `c64.sid.stopSong()`
-- `c64.sid.pauseSong()`
-- `c64.sid.resumeSong()`
-
-#### 3-voice music support
-
-- `c64.sid.song({
-    tempo: 6,
-    voices: [
-      [...voice1Notes],
-      [...voice2Notes],
-      [...voice3Notes]
-    ]
-  })`
-
-#### Sync with animation/game loops
-
-- `c64.sid.installPlayer()`
-- `c64.sid.tick()`
-- `c64.sid.onBeat(fn)`
-- `c64.sid.playDuringIrq()` or equivalent internal hook
-
-### Why This Version Matters
-
-- sound is the missing half of the C64 feel
-- demos become much more memorable
-- small games become dramatically more alive
-- music + animation + raster together is where `js-c64` starts to feel special
-
-### Example Targets
-
-#### Simple sound effect
-
-```js
-c64.sid.beep();
-```
-
-#### Manual voice setup
-
-```js
-c64.sid.volume(15);
-c64.sid.voice(1).waveform("pulse");
-c64.sid.voice(1).attackDecay(0x11);
-c64.sid.voice(1).sustainRelease(0xf0);
-c64.sid.note(1, "C4", 12);
-```
-
-#### 3-voice music idea
-
-```js
-c64.sid.playSong({
-  tempo: 6,
-  voices: [
-    ["C4", "E4", "G4", "C5"],
-    ["C3", "C3", "G2", "G2"],
-    ["R", "C2", "R", "C2"]
-  ]
+c64.loop.forever(() => {
+  if (c64.joystick.left(2)) c64.sprite.moveX(0, -1);
+  if (c64.joystick.right(2)) c64.sprite.moveX(0, 1);
+  if (c64.joystick.fire(2)) c64.sid.beep();
 });
 ```
 
-#### Sound during animation
+### Technical Notes
+
+- input polling must coexist with raster and SID IRQ systems
+- helper APIs should compile to compact loops, not repeated boilerplate
+- frame-driven gameplay should stay deterministic
+
+---
+
+## v0.8.0 - Sprites Pro
+
+### Goal
+
+Turn the sprite system into a proper gameplay-ready subsystem.
+
+### Main Priorities
+
+- collision support
+- multi-frame animation
+- better movement helpers
+- more convenient sprite state handling
+
+### Recommended Features
+
+#### Collision helpers
+
+- `c64.sprite.collidesWithSprite(a, b)`
+- `c64.sprite.collidesWithBackground(n)`
+- `c64.sprite.onCollision(a, b, fn)`
+- `c64.sprite.onBackgroundCollision(n, fn)`
+
+#### Sprite animation helpers
+
+- `c64.sprite.frame(n, frameIndex)`
+- `c64.sprite.frames(n, frameList)`
+- `c64.sprite.nextFrame(n)`
+- `c64.sprite.animateFrames(n, frames, speed)`
+
+#### Movement helpers
+
+- `c64.sprite.velocity(n, vx, vy)`
+- `c64.sprite.acceleration(n, ax, ay)`
+- `c64.sprite.limit(n, minX, maxX, minY, maxY)`
+- `c64.sprite.bounceX(n, minX, maxX, speed)`
+- `c64.sprite.bounceY(n, minY, maxY, speed)`
+
+#### State and convenience helpers
+
+- `c64.sprite.active(n, enabled)`
+- `c64.sprite.cloneData(n, sourceLabelOrFrames)`
+- `c64.sprite.showFrame(n, frameIndex, x, y, color)`
+
+### Why This Version Matters
+
+- collisions are the base of gameplay
+- multi-frame animation makes a game feel alive immediately
+- movement primitives reduce a lot of repetitive assembly logic
+
+### Example Target
 
 ```js
-c64.sprite.moveToX(0, 200, 2);
-c64.sid.playSong(myTune);
-c64.sprite.installAnimator();
+c64.sprite.enable(0);
+c64.sprite.position(0, 40, 120);
+c64.sprite.animateFrames(0, [0, 1, 2, 1], 6);
+
+if (c64.sprite.collidesWithSprite(0, 1)) {
+  c64.sid.explosion();
+}
 ```
 
 ### Technical Notes
 
-- note-to-frequency conversion needs a stable internal table
-- duration/tempo needs a tick system, likely driven by IRQ or a frame clock
-- the sound player must not interfere with raster handlers or KERNAL stability
-- one-shot effects and music playback should coexist cleanly
-
-### Recommended Internal Strategy
-
-Build SID support in layers:
-
-1. raw register helpers
-2. voice builder API
-3. note/frequency helpers
-4. pattern playback
-5. song player with 3 voices
-
-This will keep the system flexible and easier to debug.
+- collision helpers can build on VIC-II collision registers where possible
+- sprite frame animation should reuse existing animation IRQ infrastructure
+- generated code should prefer per-frame state machines, not full code duplication
 
 ---
 
-## Cross-Version Priorities
+## v0.9.0 - Charset, Tiles, Scrolling
 
-These are important across all versions:
+### Goal
 
-- keep generated code compact and readable
-- keep examples updated whenever a feature lands
-- keep beginner documentation aligned with the real API
-- keep IRQ and runtime state in safe RAM areas
-- expand tests with each new subsystem
+Add the classic building blocks required for level-based C64 games.
+
+### Main Priorities
+
+- custom character sets
+- tilemap-friendly workflows
+- horizontal and vertical scrolling
+- camera-style screen movement
+
+### Recommended Features
+
+#### Custom charset helpers
+
+- `c64.charset.address(address)`
+- `c64.charset.copyDefault(toAddress)`
+- `c64.charset.define(charCode, bytes)`
+- `c64.charset.enable(address)`
+- `c64.charset.disable()`
+
+#### Tile helpers
+
+- `c64.tile.define(name, charCode, color)`
+- `c64.map.define(name, width, height, tiles)`
+- `c64.map.draw(name, screenX, screenY)`
+- `c64.map.getTile(name, x, y)`
+- `c64.map.setTile(name, x, y, value)`
+
+#### Scrolling helpers
+
+- `c64.scroll.horizontal(speed)`
+- `c64.scroll.vertical(speed)`
+- `c64.scroll.setFineX(value)`
+- `c64.scroll.setFineY(value)`
+- `c64.scroll.followSprite(n)`
+- `c64.scroll.camera(xRef, yRef)`
+
+#### Screen streaming helpers
+
+- `c64.map.streamColumn(...)`
+- `c64.map.streamRow(...)`
+- `c64.scroll.onWrap(fn)`
+
+### Why This Version Matters
+
+- this is what makes real levels possible
+- custom charset plus scroll is one of the most important C64 game combinations
+- users can begin building platformers, maze games and shooters with moving backgrounds
+
+### Example Target
+
+```js
+c64.charset.enable(0x3000);
+c64.map.draw("level1", 0, 0);
+c64.scroll.followSprite(0);
+```
+
+### Technical Notes
+
+- VIC memory pointers must stay compatible with hires and sprite data strategies
+- scroll helpers should cooperate with raster and animation runtimes
+- tile streaming should be designed for compact code generation
 
 ---
 
-## Suggested Milestone Order
+## v1.0.0 - Mini C64 Game Engine
 
-If development time is limited, this is the most valuable order:
+### Goal
 
-1. `v0.2.0`
-- data
-- variables
-- text/screen helpers
+Provide a small but coherent game engine layer on top of the DSL.
 
-2. `v0.3.0`
-- sprite engine
+### Main Priorities
 
-3. `v0.4.0`
+- scene/state management
+- HUD and score helpers
+- gameplay entity helpers
+- stronger runtime coordination
+
+### Recommended Features
+
+#### Scene helpers
+
+- `c64.scene.define(name, fn)`
+- `c64.scene.switch(name)`
+- `c64.scene.reset(name)`
+
+#### Game state helpers
+
+- `c64.state.set(name, value)`
+- `c64.state.get(name)`
+- `c64.state.inc(name)`
+- `c64.state.dec(name)`
+
+#### HUD helpers
+
+- `c64.score.set(value)`
+- `c64.score.add(value)`
+- `c64.lives.set(value)`
+- `c64.lives.dec()`
+- `c64.hud.printValue(x, y, valueRef)`
+
+#### Entity/gameplay helpers
+
+- `c64.enemy.spawn(type, x, y)`
+- `c64.bullet.spawn(x, y, vx, vy)`
+- `c64.hitbox.define(name, data)`
+- `c64.random.byte()`
+- `c64.random.range(min, max)`
+
+#### Audio/game sync helpers
+
+- `c64.sid.pauseSong()`
+- `c64.sid.resumeSong()`
+- `c64.sid.sequence(voice, notes)`
+- `c64.sid.onBeat(fn)`
+
+### Why This Version Matters
+
+- users move from “writing routines” to “building games”
+- demos and prototypes gain real structure
+- more ambitious projects become easier to maintain
+
+### Example Target
+
+```js
+c64.scene.define("title", () => {
+  c64.printCentered(10, "PRESS FIRE");
+});
+
+c64.scene.define("game", () => {
+  c64.sprite.enable(0);
+  c64.sprite.position(0, 40, 120);
+});
+```
+
+### Technical Notes
+
+- avoid hiding too much low-level behavior
+- keep advanced users free to mix high-level and low-level APIs
+- runtime state must remain predictable and exportable
+
+---
+
+## Cross-Version Technical Priorities
+
+These priorities matter across every future version.
+
+### 1. Unified IRQ Runtime
+
+All long-running systems should cooperate through one coherent runtime strategy:
+
+- raster effects
 - sprite animation
+- SID music
+- gameplay timers
+- scrolling
 
-4. `v0.5.0`
-- bitmap graphics
+This is critical for stability.
 
-5. `v0.6.0`
-- SID sound and music
+### 2. Safe Memory Strategy
+
+Document and formalize:
+
+- runtime RAM usage
+- animation state RAM
+- SID player state RAM
+- map/charset reserved areas
+- safe defaults for beginners
+
+### 3. Output Optimization
+
+Add optional optimization modes later:
+
+- `--opt size`
+- `--opt speed`
+- `--opt balanced`
+
+### 4. Better Diagnostics
+
+Improve developer feedback with:
+
+- clearer compile-time errors
+- better symbol exports
+- optional memory map reports
+- optional runtime warnings for risky overlaps
+
+### 5. Strong Example Coverage
+
+Every major feature should land with at least one working example.
+
+Recommended future examples:
+
+- `examples/player-move.js`
+- `examples/joystick-game-loop.js`
+- `examples/sprite-collision.js`
+- `examples/sprite-animation-frames.js`
+- `examples/custom-charset.js`
+- `examples/tilemap-scroll-x.js`
+- `examples/tilemap-scroll-y.js`
+- `examples/shooter-demo.js`
+- `examples/platform-demo.js`
+
+---
+
+## Recommended Implementation Order
+
+If development time is limited, this is the highest-value order:
+
+1. `v0.7.0`
+- inputs
+- timers
+- loops
+
+2. `v0.8.0`
+- collisions
+- multi-frame sprite animation
+- richer movement helpers
+
+3. `v0.9.0`
+- custom charset
+- tilemaps
+- scrolling
+
+4. `v1.0.0`
+- scenes
+- score/lives/state
+- entity-style helpers
 
 ---
 
@@ -449,7 +436,7 @@ If development time is limited, this is the most valuable order:
 
 If this roadmap is completed, `js-c64` becomes:
 
-- a beginner-friendly entry point into C64 development
-- a productive DSL for small retro experiments
-- a fun tool for demos, sprite scenes, and audiovisual projects
-
+- a beginner-friendly entry point to C64 game programming
+- a compact DSL for small but real retro games
+- a practical prototype tool for sprites, scroll, sound and gameplay
+- a creative engine for demos, toy engines and arcade experiments
