@@ -219,6 +219,108 @@ c64.clearScreen();
 
 `waitKey()` blocks the generated program until the user presses and releases a key on the C64 keyboard matrix.
 
+### SID audio API
+
+Current `v0.6.0` layer includes:
+
+- `c64.sid.volume(value)`
+- `c64.sid.filter(mode, cutoff, resonance)`
+- `c64.sid.voice(voice).frequency(value)`
+- `c64.sid.voice(voice).pulseWidth(value)`
+- `c64.sid.voice(voice).waveform(type)`
+- `c64.sid.voice(voice).gate(on = true)`
+- `c64.sid.voice(voice).attackDecay(value)`
+- `c64.sid.voice(voice).sustainRelease(value)`
+- `c64.sid.note(voice, noteName, duration = 0)`
+- `c64.sid.freq(voice, hzOrRawValue)`
+- `c64.sid.rest(voice, duration = 0)`
+- `c64.sid.playSong(songDefinition)`
+- `c64.sid.installPlayer(line = 250)`
+- `c64.sid.stopSong()`
+- `c64.sid.beep()`
+- `c64.sid.click()`
+- `c64.sid.noise(duration = 12)`
+- `c64.sid.explosion()`
+- `c64.sid.laser()`
+- `c64.sid.pickup()`
+
+Supported waveforms:
+
+- `triangle`
+- `saw`
+- `pulse`
+- `noise`
+
+Example:
+
+```js
+import { c64 } from "js-c64";
+
+c64.sid.volume(15);
+c64.sid.voice(1).waveform("pulse");
+c64.sid.voice(1).pulseWidth(0x0800);
+c64.sid.voice(1).attackDecay(0x11);
+c64.sid.voice(1).sustainRelease(0xf0);
+c64.sid.filter("lowpass", 1024, 8);
+c64.sid.note(1, "C4", 10);
+c64.sid.rest(1, 4);
+c64.sid.note(1, "G4", 10);
+```
+
+Current notes:
+
+- `note()` accepts names like `C4`, `F#4`, `Bb3`
+- if `duration > 0`, the generated code waits briefly and then closes the gate
+- `freq()` currently treats small values like `440` as Hertz and larger values as raw SID register values
+- `filter(mode, cutoff, resonance)` writes the SID filter registers `$D415` to `$D418`
+- `mode` accepts `off`, `lowpass`, `bandpass`, `highpass`, combinations like `lowpass+highpass`, or an array like `["lowpass", "bandpass"]`
+- `cutoff` must be between `0` and `2047`
+- `resonance` must be between `0` and `15`
+- `playSong()` is now a non-blocking 3-voice IRQ player with a shared tempo
+- `playSong()` can coexist with raster IRQ effects and the sprite animator
+- one-shot effects like `beep()` or `laser()` are still simple immediate helpers, while `playSong()` is the background music layer
+
+Song example:
+
+```js
+c64.sid.playSong({
+  tempo: 8,
+  voices: [
+    ["C4", "E4", "G4", "C5"],
+    [{ note: "C3", duration: 2 }, { note: "G2", duration: 2 }],
+    ["R", "C5", "R", "G4"]
+  ]
+});
+```
+
+Music plus raster example:
+
+```js
+import { c64 } from "js-c64";
+
+c64.sid.volume(15);
+c64.sid.filter("lowpass", 1200, 8);
+c64.sid.playSong({
+  tempo: 18,
+  voices: [
+    ["C4", "E4", "G4", "C5"],
+    ["C3", "R", "G2", "R"],
+    ["R", "C5", "R", "G4"]
+  ]
+});
+
+c64.irq.raster(50, () => {
+  c64.borderColor(c64.COLOR_RED);
+});
+
+c64.irq.raster(150, () => {
+  c64.borderColor(c64.COLOR_BLUE);
+});
+
+c64.irq.chainToKernal();
+c64.irq.install();
+```
+
 ### Low-level assembler helpers
 
 ```js
@@ -320,12 +422,14 @@ c64js init my-c64-demo
 - [examples/sprite-api.js](./examples/sprite-api.js)
 - [examples/sprite-animate.js](./examples/sprite-animate.js)
 - [examples/sid-beep.js](./examples/sid-beep.js)
+- [examples/combo-irq.js](./examples/combo-irq.js)
 - [examples/sprite-basic.js](./examples/sprite-basic.js)
 
 `examples/raster-bars.js` is the reference IRQ demo to try in VICE first.
 `examples/raster-ready-border-cycle.js` shows a single raster IRQ that cycles the border color from `0` to `15` forever while chaining back to the KERNAL IRQ so the `READY.` prompt remains responsive.
 `examples/vice-showcase.js` is the more presentation-oriented demo for VICE with animated border and background colors.
 `examples/sprite-animate.js` shows the new `v0.4.0` sprite animator moving a balloon smoothly with an internal raster IRQ updater.
+`examples/combo-irq.js` shows the current `v0.6.0` direction: background SID music plus raster color changes on the same IRQ system.
 
 ## Keeping READY Alive
 

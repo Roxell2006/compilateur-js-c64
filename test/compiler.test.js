@@ -292,6 +292,137 @@ describe("v0.4 sprite animation", () => {
   });
 });
 
+describe("v0.6 sid helpers", () => {
+  it("emits SID voice setup helpers", () => {
+    const result = compileInstructions([
+      { op: "sidVolume", args: [15] },
+      { op: "sidFilter", args: ["lowpass", 0x456, 9] },
+      { op: "sidVoiceWaveform", args: [1, "pulse"] },
+      { op: "sidVoicePulseWidth", args: [1, 0x0800] },
+      { op: "sidVoiceAttackDecay", args: [1, 0x11] },
+      { op: "sidVoiceSustainRelease", args: [1, 0xf0] }
+    ]);
+
+    expect(result.asm).toMatch(/STA \$D418/);
+    expect(result.asm).toMatch(/STA \$D415/);
+    expect(result.asm).toMatch(/STA \$D416/);
+    expect(result.asm).toMatch(/STA \$D417/);
+    expect(result.asm).toMatch(/STA \$D404/);
+    expect(result.asm).toMatch(/STA \$D402/);
+    expect(result.asm).toMatch(/STA \$D403/);
+    expect(result.asm).toMatch(/STA \$D405/);
+    expect(result.asm).toMatch(/STA \$D406/);
+  });
+
+  it("supports SID filter mode combinations while preserving volume", () => {
+    const result = compileInstructions([
+      { op: "sidVolume", args: [10] },
+      { op: "sidFilter", args: ["lowpass+highpass", 2047, 15] }
+    ]);
+
+    expect(result.asm).toMatch(/LDA #\$07\s+STA \$D415/);
+    expect(result.asm).toMatch(/LDA #\$FF\s+STA \$D416/);
+    expect(result.asm).toMatch(/LDA #\$F7\s+STA \$D417/);
+    expect(result.asm).toMatch(/LDA #\$5A\s+STA \$D418/);
+  });
+
+  it("emits note playback with gate on and off", () => {
+    const result = compileInstructions([
+      { op: "sidVoiceWaveform", args: [1, "triangle"] },
+      { op: "sidNote", args: [1, "A4", 2] }
+    ]);
+
+    expect(result.asm).toMatch(/STA \$D400/);
+    expect(result.asm).toMatch(/STA \$D401/);
+    expect(result.asm).toMatch(/LDY #\$02/);
+    expect(result.asm).toMatch(/STA \$D404/);
+  });
+
+  it("compiles the sid-beep example without error", async () => {
+    const result = await compileFile("examples/sid-beep.js");
+    expect(result.bytes.length).toBeGreaterThan(0);
+    expect(result.asm).toMatch(/STA \$D418/);
+    expect(result.asm).toMatch(/sid_player_irq:/);
+    expect(result.asm).toMatch(/STA \$0314/);
+  });
+
+  it("emits a non-blocking 3-voice SID song player", () => {
+    const result = compileInstructions([
+      {
+        op: "sidPlaySong",
+        args: [{
+          tempo: 8,
+          voices: [
+            ["C4", "E4", "G4", "C5"],
+            [{ note: "C3", duration: 2 }, { note: "G2", duration: 2 }],
+            ["R", "C5", "R", "G4"]
+          ]
+        }]
+      }
+    ]);
+
+    expect(result.asm).toMatch(/sid_song_irq_0_v1_action:/);
+    expect(result.asm).toMatch(/sid_song_irq_0_v2_lo:/);
+    expect(result.asm).toMatch(/sid_song_irq_0_v3_hi:/);
+    expect(result.asm).toMatch(/STA \$D400/);
+    expect(result.asm).toMatch(/STA \$D407/);
+    expect(result.asm).toMatch(/STA \$D40E/);
+    expect(result.asm).toMatch(/sid_player_irq:/);
+    expect(result.asm).toMatch(/JMP \$EA31/);
+  });
+
+  it("allows SID player and sprite animator to share one IRQ", () => {
+    const result = compileInstructions([
+      { op: "spritePosition", args: [0, 32, 90] },
+      { op: "spriteAnimateTo", args: [0, { x: 240, y: 60, speedX: 2, speedY: 1 }] },
+      { op: "sidPlaySong", args: [{
+        tempo: 8,
+        voices: [
+          ["C4", "E4", "G4", "C5"],
+          ["C3", "R", "G2", "R"],
+          ["R", "C5", "R", "G4"]
+        ]
+      }] },
+      { op: "spriteInstallAnimator", args: [250] }
+    ]);
+
+    expect(result.asm).toMatch(/runtime_combo_irq:/);
+    expect(result.asm).toMatch(/STA \$0314/);
+    expect(result.asm).toMatch(/STA \$D000/);
+    expect(result.asm).toMatch(/STA \$D400/);
+    expect(result.asm).not.toMatch(/sprite_animator_irq:/);
+  });
+
+  it("allows raster IRQ, SID player and sprite animator to coexist", () => {
+    const result = compileInstructions([
+      { op: "spritePosition", args: [0, 32, 90] },
+      { op: "spriteAnimateTo", args: [0, { x: 240, y: 60, speedX: 2, speedY: 1 }] },
+      { op: "sidPlaySong", args: [{
+        tempo: 8,
+        voices: [
+          ["C4", "E4", "G4", "C5"],
+          ["C3", "R", "G2", "R"],
+          ["R", "C5", "R", "G4"]
+        ]
+      }] },
+      { op: "irqChainToKernal", args: [] },
+      { op: "irqInstall", args: [] }
+    ], {
+      irqHandlers: [
+        { line: 50, instructions: [{ op: "borderColor", args: [2] }] },
+        { line: 150, instructions: [{ op: "borderColor", args: [6] }] }
+      ]
+    });
+
+    expect(result.asm).toMatch(/irq_dispatch:/);
+    expect(result.asm).toMatch(/sid_song_irq_body_/);
+    expect(result.asm).toMatch(/STA \$D400/);
+    expect(result.asm).toMatch(/STA \$D000/);
+    expect(result.asm).not.toMatch(/sid_player_irq:/);
+    expect(result.asm).not.toMatch(/sprite_animator_irq:/);
+  });
+});
+
 describe("irq raster", () => {
   it("generates raster vector writes", () => {
     const result = compileInstructions([
@@ -322,6 +453,41 @@ describe("irq raster", () => {
     const result = await compileFile("examples/raster-ready-border-cycle.js");
     expect(result.bytes.length).toBeGreaterThan(0);
     expect(result.asm).toMatch(/STA \$C000/);
+    expect(result.asm).toMatch(/JMP \$EA31/);
+  });
+
+  it("allows SID player to coexist with custom raster IRQ handlers", () => {
+    const result = compileInstructions([
+      { op: "sidPlaySong", args: [{
+        tempo: 8,
+        voices: [
+          ["C4", "E4", "G4", "C5"],
+          ["C3", "R", "G2", "R"],
+          ["R", "C5", "R", "G4"]
+        ]
+      }] },
+      { op: "irqChainToKernal", args: [] },
+      { op: "irqInstall", args: [] }
+    ], {
+      irqHandlers: [
+        { line: 50, instructions: [{ op: "borderColor", args: [2] }] },
+        { line: 150, instructions: [{ op: "borderColor", args: [6] }] }
+      ]
+    });
+
+    expect(result.asm).toMatch(/irq_dispatch:/);
+    expect(result.asm).toMatch(/sid_song_irq_body_0_v1_action:/);
+    expect(result.asm).toMatch(/STA \$D400/);
+    expect(result.asm).toMatch(/STA \$0314/);
+    expect(result.asm).not.toMatch(/sid_player_irq:/);
+  });
+
+  it("compiles combo-irq example without error", async () => {
+    const result = await compileFile("examples/combo-irq.js");
+    expect(result.bytes.length).toBeGreaterThan(0);
+    expect(result.asm).toMatch(/irq_dispatch:/);
+    expect(result.asm).toMatch(/STA \$D400/);
+    expect(result.asm).toMatch(/STA \$D020/);
     expect(result.asm).toMatch(/JMP \$EA31/);
   });
 

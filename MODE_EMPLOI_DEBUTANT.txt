@@ -680,6 +680,367 @@ import { c64 } from "js-c64";
 c64.poke(c64.VIC_BACKGROUND_COLOR, c64.COLOR_CYAN);
 
 
+7.1 LE SON SID (V0.6.0)
+-----------------------
+
+La version actuelle de js-c64 sait deja faire :
+
+- des petits bruitages immediats
+- des notes simples
+- de la musique 3 voix
+- de la musique qui tourne en fond pendant des IRQ raster ou une animation
+
+Autrement dit, on peut deja faire une petite demo sonore assez sympa.
+
+
+7.1.1 c64.sid.volume(valeur)
+---------------------------
+
+Regle le volume general du SID.
+
+La valeur va de 0 a 15.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.sid.volume(15);
+
+
+7.1.2 c64.sid.filter(mode, cutoff, resonance)
+---------------------------------------------
+
+Active et regle le filtre SID.
+
+Parametres :
+
+- mode = type de filtre
+- cutoff = frequence de coupure
+- resonance = resonance du filtre
+
+Valeurs utiles :
+
+- mode peut etre :
+  off
+  lowpass
+  bandpass
+  highpass
+
+On peut aussi combiner plusieurs modes :
+
+- "lowpass+highpass"
+- "lowpass+bandpass"
+
+cutoff doit etre entre 0 et 2047.
+
+resonance doit etre entre 0 et 15.
+
+Exemple simple :
+
+import { c64 } from "js-c64";
+
+c64.sid.volume(15);
+c64.sid.filter("lowpass", 1024, 8);
+
+Exemple avec combinaison :
+
+import { c64 } from "js-c64";
+
+c64.sid.volume(10);
+c64.sid.filter("lowpass+highpass", 1600, 12);
+
+Important :
+
+Cette fonction ecrit dans les registres SID du filtre.
+Elle sert surtout a changer le caractere du son.
+
+
+7.1.3 c64.sid.voice(numero)
+---------------------------
+
+Donne acces a une voix SID precise.
+
+Le numero doit etre :
+
+- 1
+- 2
+- 3
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.sid.voice(1).waveform("pulse");
+
+
+7.1.4 c64.sid.voice(1).frequency(valeur)
+---------------------------------------
+
+Definit directement la frequence brute d'une voix.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.sid.voice(1).frequency(0x1147);
+
+
+7.1.5 c64.sid.freq(voix, valeur)
+--------------------------------
+
+Version plus simple pour donner une frequence.
+
+Si la valeur est petite, la librairie la traite comme une frequence en Hertz.
+Si la valeur est grande, elle la traite comme une valeur SID brute.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.sid.freq(1, 440);
+
+
+7.1.6 c64.sid.voice(1).pulseWidth(valeur)
+----------------------------------------
+
+Regle la largeur d'impulsion pour l'onde pulse.
+
+La valeur va de 0 a 4095.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.sid.voice(1).waveform("pulse");
+c64.sid.voice(1).pulseWidth(0x0800);
+
+
+7.1.7 c64.sid.voice(1).waveform(type)
+------------------------------------
+
+Choisit la forme d'onde.
+
+Types disponibles :
+
+- triangle
+- saw
+- pulse
+- noise
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.sid.voice(1).waveform("triangle");
+
+
+7.1.8 c64.sid.voice(1).gate(on)
+-------------------------------
+
+Ouvre ou ferme manuellement la gate d'une voix.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.sid.voice(1).waveform("saw");
+c64.sid.voice(1).gate(true);
+
+
+7.1.9 c64.sid.voice(1).attackDecay(valeur)
+-----------------------------------------
+
+Regle l'attaque et le decay.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.sid.voice(1).attackDecay(0x11);
+
+
+7.1.10 c64.sid.voice(1).sustainRelease(valeur)
+---------------------------------------------
+
+Regle le sustain et le release.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.sid.voice(1).sustainRelease(0xf0);
+
+
+7.1.11 c64.sid.note(voix, note, duree)
+--------------------------------------
+
+Joue une note sur une voix.
+
+Exemples de notes :
+
+- C4
+- F#4
+- Bb3
+
+Si duree > 0, la note attend un peu puis ferme la gate.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.sid.volume(15);
+c64.sid.voice(1).waveform("pulse");
+c64.sid.voice(1).attackDecay(0x11);
+c64.sid.voice(1).sustainRelease(0xf0);
+c64.sid.note(1, "C4", 10);
+
+
+7.1.12 c64.sid.rest(voix, duree)
+--------------------------------
+
+Fait une pause sur une voix.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.sid.rest(1, 6);
+
+
+7.1.13 c64.sid.playSong(songDefinition)
+---------------------------------------
+
+Lance une musique 3 voix en fond.
+
+Important :
+
+- ce n'est plus un lecteur bloquant
+- la musique tourne en IRQ
+- elle peut cohabiter avec un raster effect
+- elle peut aussi cohabiter avec l'animateur de sprites
+
+Structure :
+
+import { c64 } from "js-c64";
+
+c64.sid.playSong({
+  tempo: 18,
+  voices: [
+    ["C4", "E4", "G4", "C5"],
+    ["C3", "R", "G2", "R"],
+    ["R", "C5", "R", "G4"]
+  ]
+});
+
+Ici :
+
+- tempo regle la vitesse generale
+- voices contient 3 tableaux
+- chaque tableau correspond a une voix SID
+- "R" veut dire silence
+
+
+7.1.14 c64.sid.installPlayer(ligneRaster)
+-----------------------------------------
+
+Installe le lecteur musical sur une ligne raster donnee.
+
+Dans beaucoup de cas, playSong() suffit deja car il demande automatiquement
+le lecteur en fond.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.sid.installPlayer(250);
+
+
+7.1.15 c64.sid.stopSong()
+-------------------------
+
+Arrete la musique en fond.
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.sid.stopSong();
+
+
+7.1.16 Bruitages prets a l'emploi
+---------------------------------
+
+Fonctions disponibles :
+
+- c64.sid.beep()
+- c64.sid.click()
+- c64.sid.noise(duree)
+- c64.sid.explosion()
+- c64.sid.laser()
+- c64.sid.pickup()
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.sid.beep();
+c64.sid.laser();
+
+
+7.1.17 Exemple complet : musique + raster
+-----------------------------------------
+
+Exemple :
+
+import { c64 } from "js-c64";
+
+c64.clearScreen();
+c64.borderColor(c64.COLOR_BLACK);
+c64.backgroundColor(c64.COLOR_BLACK);
+c64.textColor(c64.COLOR_WHITE);
+c64.printAt(0, 0, "COMBO IRQ");
+
+c64.sid.volume(15);
+c64.sid.filter("lowpass", 1200, 8);
+
+c64.sid.voice(1).waveform("pulse");
+c64.sid.voice(1).pulseWidth(0x0800);
+c64.sid.voice(1).attackDecay(0x11);
+c64.sid.voice(1).sustainRelease(0xf0);
+
+c64.sid.voice(2).waveform("triangle");
+c64.sid.voice(2).attackDecay(0x11);
+c64.sid.voice(2).sustainRelease(0xd0);
+
+c64.sid.voice(3).waveform("saw");
+c64.sid.voice(3).attackDecay(0x11);
+c64.sid.voice(3).sustainRelease(0xa0);
+
+c64.sid.playSong({
+  tempo: 18,
+  voices: [
+    ["C4", "E4", "G4", "C5"],
+    ["C3", "R", "G2", "R"],
+    ["R", "C5", "R", "G4"]
+  ]
+});
+
+c64.irq.raster(50, () => {
+  c64.borderColor(c64.COLOR_RED);
+});
+
+c64.irq.raster(150, () => {
+  c64.borderColor(c64.COLOR_BLUE);
+});
+
+c64.irq.chainToKernal();
+c64.irq.install();
+
+Cet exemple correspond a l'idee du fichier :
+
+examples/combo-irq.js
+
+
 8. GESTION DES IRQ RASTER
 -------------------------
 
