@@ -9,19 +9,19 @@
   LDA #$03
   STA $C200
   LDX #$00
-copydata_428_titleText_17_0:
+copydata_428_titleText_18_0:
   LDA titleText,X
   STA $0428,X
   INX
-  CPX #$11
-  BNE copydata_428_titleText_17_0
-  LDX #$00
-memset_d828_7_17:
+  CPX #$12
+  BNE copydata_428_titleText_18_0
   LDA #$07
+  LDX #$00
+memset_d828_7_18:
   STA $D828,X
   INX
-  CPX #$11
-  BNE memset_d828_7_17
+  CPX #$12
+  BNE memset_d828_7_18
   LDA #$09
   STA $C200
   LDX #$00
@@ -32,7 +32,7 @@ printat_loop_1:
   LDA #$01
   STA $D8A0,X
   INX
-  JMP printat_loop_1
+  BNE printat_loop_1
 printat_done_2:
   RTS
 ; String pool

@@ -1,14 +1,17 @@
 {
   "printat_loop_0": 2086,
-  "printat_done_1": 2103,
-  "printat_loop_2": 2105,
-  "printat_done_3": 2122,
-  "printat_loop_4": 2124,
-  "printat_done_5": 2141,
-  "irq_dispatch": 2189,
-  "irq_handler_0": 2204,
-  "program_end": 2249,
-  "str_screen_0": 2250,
-  "str_screen_1": 2275,
-  "str_screen_2": 2295
+  "printat_done_1": 2102,
+  "printat_loop_2": 2104,
+  "printat_done_3": 2120,
+  "printat_loop_4": 2122,
+  "printat_done_5": 2138,
+  "irq_dispatch": 2186,
+  "irq_dispatch_vic_raster": 2206,
+  "irq_dispatch_match_0": 2221,
+  "irq_dispatch_next_0": 2224,
+  "irq_handler_0": 2227,
+  "program_end": 2267,
+  "str_screen_0": 2268,
+  "str_screen_1": 2293,
+  "str_screen_2": 2313
 }

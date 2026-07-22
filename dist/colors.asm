@@ -14,7 +14,7 @@ printat_loop_0:
   LDA #$00
   STA $D800,X
   INX
-  JMP printat_loop_0
+  BNE printat_loop_0
 printat_done_1:
   LDA #$01
   STA $0286
@@ -26,7 +26,7 @@ printat_loop_2:
   LDA #$01
   STA $D828,X
   INX
-  JMP printat_loop_2
+  BNE printat_loop_2
 printat_done_3:
   LDA #$02
   STA $0286
@@ -38,7 +38,7 @@ printat_loop_4:
   LDA #$02
   STA $D850,X
   INX
-  JMP printat_loop_4
+  BNE printat_loop_4
 printat_done_5:
   LDA #$03
   STA $0286
@@ -50,7 +50,7 @@ printat_loop_6:
   LDA #$03
   STA $D878,X
   INX
-  JMP printat_loop_6
+  BNE printat_loop_6
 printat_done_7:
   LDA #$04
   STA $0286
@@ -62,7 +62,7 @@ printat_loop_8:
   LDA #$04
   STA $D8A0,X
   INX
-  JMP printat_loop_8
+  BNE printat_loop_8
 printat_done_9:
   LDA #$05
   STA $0286
@@ -74,7 +74,7 @@ printat_loop_10:
   LDA #$05
   STA $D8C8,X
   INX
-  JMP printat_loop_10
+  BNE printat_loop_10
 printat_done_11:
   LDA #$06
   STA $0286
@@ -86,7 +86,7 @@ printat_loop_12:
   LDA #$06
   STA $D8F0,X
   INX
-  JMP printat_loop_12
+  BNE printat_loop_12
 printat_done_13:
   LDA #$07
   STA $0286
@@ -98,7 +98,7 @@ printat_loop_14:
   LDA #$07
   STA $D918,X
   INX
-  JMP printat_loop_14
+  BNE printat_loop_14
 printat_done_15:
   LDA #$08
   STA $0286
@@ -110,7 +110,7 @@ printat_loop_16:
   LDA #$08
   STA $D940,X
   INX
-  JMP printat_loop_16
+  BNE printat_loop_16
 printat_done_17:
   LDA #$09
   STA $0286
@@ -122,7 +122,7 @@ printat_loop_18:
   LDA #$09
   STA $D968,X
   INX
-  JMP printat_loop_18
+  BNE printat_loop_18
 printat_done_19:
   LDA #$0A
   STA $0286
@@ -134,7 +134,7 @@ printat_loop_20:
   LDA #$0A
   STA $D990,X
   INX
-  JMP printat_loop_20
+  BNE printat_loop_20
 printat_done_21:
   LDA #$0B
   STA $0286
@@ -146,7 +146,7 @@ printat_loop_22:
   LDA #$0B
   STA $D9B8,X
   INX
-  JMP printat_loop_22
+  BNE printat_loop_22
 printat_done_23:
   LDA #$0C
   STA $0286
@@ -158,7 +158,7 @@ printat_loop_24:
   LDA #$0C
   STA $D9E0,X
   INX
-  JMP printat_loop_24
+  BNE printat_loop_24
 printat_done_25:
   LDA #$0D
   STA $0286
@@ -170,7 +170,7 @@ printat_loop_26:
   LDA #$0D
   STA $DA08,X
   INX
-  JMP printat_loop_26
+  BNE printat_loop_26
 printat_done_27:
   LDA #$0E
   STA $0286
@@ -182,7 +182,7 @@ printat_loop_28:
   LDA #$0E
   STA $DA30,X
   INX
-  JMP printat_loop_28
+  BNE printat_loop_28
 printat_done_29:
   LDA #$0F
   STA $0286
@@ -194,7 +194,7 @@ printat_loop_30:
   LDA #$0F
   STA $DA58,X
   INX
-  JMP printat_loop_30
+  BNE printat_loop_30
 printat_done_31:
   RTS
 ; String pool

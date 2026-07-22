@@ -1,8 +1,40 @@
 # Changelog
 
-# Changelog
-
 ## Unreleased
+
+- Added automatic 16-logical-sprite support through `c64.sprite.create(0..15)`
+- Replaced the fixed two-zone renderer with a dynamic Y-sorted 16-to-8 VIC-II sprite multiplexer
+- Added height-aware channel recycling for normal and vertically expanded sprites, with no unavailable middle zone
+- Added logical pointer, color, multicolor, expansion and priority state for multiplexed sprites
+- Kept software AABB collisions for all 16 sprites and rejected ambiguous VIC collision reads in multiplexed mode
+- Added `examples/sprite-multiplex-16.js` plus multiplexer limits and regression tests
+- Added balanced size optimization by default without changing user JavaScript
+- Deduplicated identical sprite pixel constants while keeping explicit-address data independent
+- Pooled repeated sprite synchronization, AABB comparison and non-blocking SID click code into generated subroutines
+- Reduced `breakout-mini.prg` from 4,644 bytes to 3,335 bytes (about 28%) while adding 16-sprite logical state
+- Added optimizer size and sharing regression tests
+- Made `c64.sid.click()` non-blocking by removing its generated busy-wait delay
+- Updated `breakout-mini.js` so missed balls leave through the bottom and restart
+- Completed the v0.8 object-based sprite gameplay API with 9-bit runtime X positions
+- Added signed velocity, bounds, stable clamp/bounce, activation and explicit VIC-II synchronization
+- Added shared 64-byte frame assets, named animation sequences, looping and pause/resume
+- Added configurable software AABB collisions and centralized VIC-II collision snapshots
+- Added the playable `examples/breakout-mini.js` demo with paddle, ball, blocks, sound and score
+- Migrated `game-loop-input.js` and `sprite-animate.js` to the v0.8 sprite API
+- Added TypeScript declarations and eight-active-sprite budget coverage for the gameplay API
+- Started the v0.7 gameplay foundation with auto-allocated runtime byte variables
+- Added runtime byte assignment, arithmetic and comparisons
+- Added `c64.control.if()` for generated 6502 branches
+- Added frame-snapshot joystick input with held, pressed and released states
+- Added `c64.game.frame()` with one deterministic update per video frame
+- Added reserved runtime RAM overlap diagnostics
+- Added `examples/game-loop-input.js` and automatic compilation coverage for every example
+- Fixed standalone SID/sprite runtime IRQs so CIA hits no longer execute VIC raster work
+- Completed the v0.7 runtime types with word and bool variables plus bit operations
+- Added bounded repeat/while control flow and named generated routines
+- Added runtime-indexed byte tables and configurable non-blocking keyboard actions
+- Added `c64.game.init()` and counter-based `c64.game.every()` tasks
+- Added PAL/NTSC detection and normalized 50 Hz logical updates
 
 - Added `v0.2.0` comfort foundations
 - Added `c64.data.*` declarations for bytes, words, PETSCII strings, and screen strings

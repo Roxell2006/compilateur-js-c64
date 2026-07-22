@@ -1,4 +1,4 @@
-import { createRuntimeFacade, defineRuntimeData, getProgramState, getRuntimeDataLength, pushInstruction, resetRuntime, setColorBase, setScreenBase, setTextColor } from "./runtime.js";
+import { captureBlock, createRuntimeFacade, defineRuntimeData, getProgramState, getRuntimeDataLength, pushInstruction, resetRuntime, setColorBase, setScreenBase, setTextColor, useJoystickPort, useKeyboardKey } from "./runtime.js";
 
 // This file exposes the public DSL used by end users.
 // Important idea: calling c64.printAt(), c64.sprite.show(), etc. does not
@@ -35,6 +35,8 @@ export const C64_CONSTANTS = {
   VIC_MEMORY_POINTERS: 0xd018,
   VIC_IRQ_STATUS: 0xd019,
   VIC_IRQ_ENABLE: 0xd01a,
+  VIC_SPRITE_SPRITE_COLLISION: 0xd01e,
+  VIC_SPRITE_BACKGROUND_COLLISION: 0xd01f,
   VIC_SPRITE_PRIORITY: 0xd01b,
   VIC_SPRITE_MULTICOLOR: 0xd01c,
   VIC_SPRITE_EXPAND_X: 0xd01d,
@@ -98,6 +100,7 @@ export const C64_CONSTANTS = {
   KERNAL_LOAD: 0xffd5,
   KERNAL_SAVE: 0xffd8,
   KERNAL_IRQ: 0xea31,
+  KERNAL_IRQ_EXIT: 0xea81,
   KEY_SPACE: 0x3c,
   KEY_RETURN: 0x01,
   KEY_F1: 0x04,
@@ -295,14 +298,193 @@ c64.data = {
   }
 };
 
+c64.table = {
+  byte(name, values) {
+    c64.data.byte(name, values);
+    return {
+      load(index, target) {
+        pushInstruction("runtimeTableLoad", name, index, target);
+      },
+      store(index, value) {
+        pushInstruction("runtimeTableStore", name, index, value);
+      }
+    };
+  }
+};
+
 // Variables are explicit RAM locations chosen by the user. The compiler will
 // emit initialization code for them at program start.
 c64.var = {
-  byte(name, address, initialValue = 0) {
-    pushInstruction("varByte", name, address, initialValue);
+  byte(name, addressOrOptions, initialValue = 0) {
+    const options = addressOrOptions && typeof addressOrOptions === "object"
+      ? addressOrOptions
+      : { address: addressOrOptions, initial: initialValue };
+    const ref = createRuntimeByteRef(name);
+    pushInstruction("varByte", name, options.address, options.initial ?? 0);
+    return ref;
   },
   word(name, address, initialValue = 0) {
-    pushInstruction("varWord", name, address, initialValue);
+    const options = address && typeof address === "object" ? address : { address, initial: initialValue };
+    const ref = createRuntimeValueRef(name, "word");
+    pushInstruction("varWord", name, options.address, options.initial ?? 0);
+    return ref;
+  },
+  bool(name, options = {}) {
+    const normalized = typeof options === "boolean" ? { initial: options } : options;
+    const ref = createRuntimeValueRef(name, "bool");
+    pushInstruction("varBool", name, normalized.address, Boolean(normalized.initial));
+    return ref;
+  }
+};
+
+function condition(operator, left, right = undefined) {
+  return { type: "runtimeCondition", operator, left, right };
+}
+
+function createRuntimeValueRef(name, valueType = "byte") {
+  const ref = {
+    type: "varRef",
+    valueType,
+    name,
+    set(value) {
+      pushInstruction("runtimeSet", ref, value);
+    },
+    add(value) {
+      pushInstruction("runtimeAdd", ref, value);
+    },
+    sub(value) {
+      pushInstruction("runtimeSub", ref, value);
+    },
+    inc() {
+      pushInstruction("runtimeInc", ref);
+    },
+    dec() {
+      pushInstruction("runtimeDec", ref);
+    },
+    and(value) {
+      pushInstruction("runtimeBit", "and", ref, value);
+    },
+    or(value) {
+      pushInstruction("runtimeBit", "or", ref, value);
+    },
+    xor(value) {
+      pushInstruction("runtimeBit", "xor", ref, value);
+    },
+    toggle() {
+      pushInstruction("runtimeBit", "xor", ref, 1);
+    },
+    eq(value) {
+      return condition("eq", ref, value);
+    },
+    ne(value) {
+      return condition("ne", ref, value);
+    },
+    lt(value) {
+      return condition("lt", ref, value);
+    },
+    lte(value) {
+      return condition("lte", ref, value);
+    },
+    gt(value) {
+      return condition("gt", ref, value);
+    },
+    gte(value) {
+      return condition("gte", ref, value);
+    }
+  };
+  return ref;
+}
+
+function createRuntimeByteRef(name) {
+  return createRuntimeValueRef(name, "byte");
+}
+
+c64.control = {
+  if(runtimeCondition, thenHandler, elseHandler = undefined) {
+    if (!runtimeCondition || runtimeCondition.type !== "runtimeCondition") {
+      throw new Error("c64.control.if() needs a runtime condition");
+    }
+    if (typeof thenHandler !== "function") {
+      throw new Error("c64.control.if() needs a then callback");
+    }
+    const thenInstructions = captureBlock(thenHandler);
+    const elseInstructions = elseHandler === undefined ? [] : captureBlock(elseHandler);
+    pushInstruction("controlIf", runtimeCondition, thenInstructions, elseInstructions);
+  },
+  repeat(count, handler) {
+    pushInstruction("controlRepeat", count, captureBlock(handler));
+  },
+  while(runtimeCondition, handler, options = {}) {
+    if (!runtimeCondition || runtimeCondition.type !== "runtimeCondition") {
+      throw new Error("c64.control.while() needs a runtime condition");
+    }
+    pushInstruction("controlWhile", runtimeCondition, captureBlock(handler), options.maxIterations);
+  },
+  routine(name, handler) {
+    pushInstruction("controlRoutine", String(name), captureBlock(handler));
+  },
+  call(name) {
+    pushInstruction("controlCall", String(name));
+  }
+};
+
+const JOYSTICK_DIRECTIONS = Object.freeze({
+  up: 0x01,
+  down: 0x02,
+  left: 0x04,
+  right: 0x08,
+  fire: 0x10
+});
+
+function joystickCondition(port, direction, event) {
+  useJoystickPort(port);
+  return condition("joystick", { port, direction, mask: JOYSTICK_DIRECTIONS[direction], event });
+}
+
+function createInputButton(makeCondition) {
+  return {
+    held: () => makeCondition("held"),
+    pressed: () => makeCondition("pressed"),
+    released: () => makeCondition("released")
+  };
+}
+
+c64.input = {
+  joystick(port = 2) {
+    useJoystickPort(port);
+    const api = {};
+    for (const direction of Object.keys(JOYSTICK_DIRECTIONS)) {
+      api[direction] = () => joystickCondition(port, direction, "held");
+      api[`${direction}Pressed`] = () => joystickCondition(port, direction, "pressed");
+      api[`${direction}Released`] = () => joystickCondition(port, direction, "released");
+    }
+    return api;
+  },
+  keyboard(bindings) {
+    const actions = {};
+    for (const [action, keyCode] of Object.entries(bindings ?? {})) {
+      useKeyboardKey(keyCode);
+      actions[action] = createInputButton((event) => {
+        useKeyboardKey(keyCode);
+        return condition("keyboard", { keyCode, event });
+      });
+    }
+    return actions;
+  }
+};
+
+c64.game = {
+  init(handler) {
+    pushInstruction("gameInit", captureBlock(handler));
+  },
+  every(count, handler) {
+    pushInstruction("gameEvery", count, captureBlock(handler));
+  },
+  frame(handler, options = {}) {
+    if (typeof handler !== "function") {
+      throw new Error("c64.game.frame() needs a callback");
+    }
+    pushInstruction("gameFrame", captureBlock(handler), { rasterLine: options.rasterLine ?? 240, hz: options.hz ?? 50 });
   }
 };
 
@@ -311,10 +493,141 @@ c64.var = {
 c64.varRef = (name) => ({ type: "varRef", name });
 c64.dataRef = (name, length = undefined) => ({ type: "dataRef", name, length });
 
+function normalizeSpriteHitbox(hitbox = {}) {
+  return {
+    offsetX: hitbox.offsetX ?? 0,
+    offsetY: hitbox.offsetY ?? 0,
+    width: hitbox.width ?? 24,
+    height: hitbox.height ?? 21
+  };
+}
+
+function validateSpriteXLiteral(value, label) {
+  if (typeof value === "number" && (!Number.isInteger(value) || value < 0 || value > 511)) {
+    throw new Error(`${label} must be between 0 and 511`);
+  }
+}
+
+function validateSpriteVelocity(value, label) {
+  if (typeof value === "number" && (!Number.isInteger(value) || value < -128 || value > 127)) {
+    throw new Error(`${label} must be a signed byte between -128 and 127`);
+  }
+}
+
+const SPRITE_LOGICAL_STATE_BASE = 0xc500;
+const SPRITE_LOGICAL_STATE_STRIDE = 8;
+
+function validateLogicalSpriteIndex(index) {
+  if (!Number.isInteger(index) || index < 0 || index > 15) {
+    throw new Error("sprite index must be between 0 and 15");
+  }
+}
+
+function createSpriteHandle(index, options = {}) {
+  validateLogicalSpriteIndex(index);
+  validateSpriteXLiteral(options.x ?? 0, "sprite x");
+  validateSpriteVelocity(options.vx ?? 0, "sprite vx");
+  validateSpriteVelocity(options.vy ?? 0, "sprite vy");
+  const stateAddress = SPRITE_LOGICAL_STATE_BASE + index * SPRITE_LOGICAL_STATE_STRIDE;
+  const state = {
+    type: "spriteRef",
+    index,
+    x: c64.var.word(`__sprite${index}_x`, { address: stateAddress, initial: options.x ?? 0 }),
+    y: c64.var.byte(`__sprite${index}_y`, { address: stateAddress + 2, initial: options.y ?? 0 }),
+    vx: c64.var.byte(`__sprite${index}_vx`, { address: stateAddress + 3, initial: options.vx ?? 0 }),
+    vy: c64.var.byte(`__sprite${index}_vy`, { address: stateAddress + 4, initial: options.vy ?? 0 }),
+    active: c64.var.bool(`__sprite${index}_active`, { address: stateAddress + 5, initial: options.active !== false }),
+    hitbox: normalizeSpriteHitbox(options.hitbox)
+  };
+  pushInstruction("spriteCreateRuntime", state, {
+    minX: options.minX ?? 0,
+    maxX: options.maxX ?? 511,
+    minY: options.minY ?? 0,
+    maxY: options.maxY ?? 255,
+    bounceX: Boolean(options.bounceX),
+    bounceY: Boolean(options.bounceY)
+  });
+  if (options.data !== undefined) pushInstruction("spriteRuntimeData", state, options.data, options.dataAddress);
+  if (options.frames !== undefined) pushInstruction("spriteUseFrames", state, options.frames);
+  if (options.color !== undefined) pushInstruction("spriteRuntimeColor", state, options.color);
+  if (options.multicolor !== undefined) pushInstruction("spriteRuntimeFlag", state, "multicolor", Boolean(options.multicolor));
+  if (options.expandX !== undefined) pushInstruction("spriteRuntimeFlag", state, "expandX", Boolean(options.expandX));
+  if (options.expandY !== undefined) pushInstruction("spriteRuntimeFlag", state, "expandY", Boolean(options.expandY));
+  if (options.priority !== undefined) pushInstruction("spriteRuntimeFlag", state, "priority", Boolean(options.priority));
+
+  return {
+    ...state,
+    setPosition(x, y) {
+      validateSpriteXLiteral(x, "sprite x");
+      state.x.set(x);
+      state.y.set(y);
+      pushInstruction("spriteRuntimeSync", state);
+    },
+    setVelocity(vx, vy) {
+      validateSpriteVelocity(vx, "sprite vx");
+      validateSpriteVelocity(vy, "sprite vy");
+      state.vx.set(vx);
+      state.vy.set(vy);
+    },
+    setBounds(minX, maxX, minY, maxY, options = {}) {
+      pushInstruction("spriteRuntimeBounds", state, { minX, maxX, minY, maxY, bounceX: Boolean(options.bounceX), bounceY: Boolean(options.bounceY) });
+    },
+    update() {
+      pushInstruction("spriteRuntimeUpdate", state);
+    },
+    reverseX() {
+      pushInstruction("spriteReverseVelocity", state, "x");
+    },
+    reverseY() {
+      pushInstruction("spriteReverseVelocity", state, "y");
+    },
+    sync() {
+      pushInstruction("spriteRuntimeSync", state);
+    },
+    enable() {
+      state.active.set(true);
+      pushInstruction("spriteRuntimeSync", state);
+    },
+    disable() {
+      state.active.set(false);
+      pushInstruction("spriteRuntimeSync", state);
+    },
+    sequence(name, frameIndexes, sequenceOptions = {}) {
+      pushInstruction("spriteSequence", state, String(name), Array.from(frameIndexes), { speed: sequenceOptions.speed ?? 6, loop: sequenceOptions.loop !== false });
+    },
+    play(name) {
+      pushInstruction("spritePlaySequence", state, String(name));
+    },
+    pauseAnimation() {
+      pushInstruction("spritePauseSequence", state);
+    },
+    resumeAnimation() {
+      pushInstruction("spriteResumeSequence", state);
+    },
+    collides(other) {
+      return condition("spriteAabb", { a: state, b: other });
+    },
+    vicCollides(other) {
+      return condition("spriteVic", { a: index, b: other.index });
+    },
+    collidesWithBackground() {
+      return condition("spriteBackground", { index });
+    }
+  };
+}
+
 // Sprite helpers follow the same pattern as the screen API: each call stores a
 // semantic instruction that the compiler later expands into VIC-II register
 // writes or IRQ-based animation code.
 c64.sprite = {
+  frames(name, frames, options = {}) {
+    const ref = { type: "spriteFrames", name: String(name) };
+    pushInstruction("spriteFrames", ref, Array.from(frames, (frame) => Array.from(frame)), options.address);
+    return ref;
+  },
+  create(index, options = {}) {
+    return createSpriteHandle(index, options);
+  },
   enable(n) {
     pushInstruction("spriteEnable", n);
   },

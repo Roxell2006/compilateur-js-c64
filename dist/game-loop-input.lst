@@ -1,0 +1,581 @@
+0810  A9 00       LDA #$00
+0812  8D 00 C1    STA $C100
+0815  A9 00       LDA #$00
+0817  8D 01 C1    STA $C101
+081A  A9 00       LDA #$00
+081C  8D 02 C1    STA $C102
+081F  A9 00       LDA #$00
+0821  8D 03 C1    STA $C103
+0824  A9 64       LDA #$64
+0826  8D 00 C5    STA $C500
+0829  A9 00       LDA #$00
+082B  8D 01 C5    STA $C501
+082E  A9 D2       LDA #$D2
+0830  8D 02 C5    STA $C502
+0833  A9 00       LDA #$00
+0835  8D 03 C5    STA $C503
+0838  A9 00       LDA #$00
+083A  8D 04 C5    STA $C504
+083D  A9 01       LDA #$01
+083F  8D 05 C5    STA $C505
+0842  20 45 0C    JSR runtime_sprite_sync_0
+0845  A2 00       LDX #$00
+0847        copydata_2000_sprite_data_0_0_63_0:
+0847  BD CB 0C    LDA sprite_data_0_0,X
+084A  9D 00 20    STA $2000,X
+084D  E8          INX
+084E  E0 3F       CPX #$3F
+0850  D0 F5       BNE copydata_2000_sprite_data_0_0_63_0
+0852  A9 80       LDA #$80
+0854  8D 04 C4    STA $C404
+0857  AD 04 C4    LDA $C404
+085A  8D F8 07    STA $07F8
+085D  A9 07       LDA #$07
+085F  8D 05 C4    STA $C405
+0862  A9 07       LDA #$07
+0864  8D 27 D0    STA $D027
+0867  4C 75 08    JMP user_routine_move_player_left_after
+086A        user_routine_move_player_left:
+086A  A9 FD       LDA #$FD
+086C  8D 03 C5    STA $C503
+086F  A9 00       LDA #$00
+0871  8D 04 C5    STA $C504
+0874  60          RTS
+0875        user_routine_move_player_left_after:
+0875  4C 83 08    JMP user_routine_move_player_right_after
+0878        user_routine_move_player_right:
+0878  A9 03       LDA #$03
+087A  8D 03 C5    STA $C503
+087D  A9 00       LDA #$00
+087F  8D 04 C5    STA $C504
+0882  60          RTS
+0883        user_routine_move_player_right_after:
+0883  A9 93       LDA #$93
+0885  20 D2 FF    JSR $FFD2
+0888  A9 00       LDA #$00
+088A  8D 20 D0    STA $D020
+088D  A9 06       LDA #$06
+088F  8D 21 D0    STA $D021
+0892  A9 01       LDA #$01
+0894  8D 86 02    STA $0286
+0897  A2 00       LDX #$00
+0899        printat_loop_1:
+0899  BD 84 0C    LDA str_screen_0,X
+089C  F0 0B       BEQ printat_done_2
+089E  9D 32 04    STA $0432,X
+08A1  A9 01       LDA #$01
+08A3  9D 32 D8    STA $D832,X
+08A6  E8          INX
+08A7  D0 F0       BNE printat_loop_1
+08A9        printat_done_2:
+08A9  A2 00       LDX #$00
+08AB        printat_loop_3:
+08AB  BD 99 0C    LDA str_screen_1,X
+08AE  F0 0B       BEQ printat_done_4
+08B0  9D 81 04    STA $0481,X
+08B3  A9 01       LDA #$01
+08B5  9D 81 D8    STA $D881,X
+08B8  E8          INX
+08B9  D0 F0       BNE printat_loop_3
+08BB        printat_done_4:
+08BB  A2 00       LDX #$00
+08BD        printat_loop_5:
+08BD  BD AF 0C    LDA str_screen_2,X
+08C0  F0 0B       BEQ printat_done_6
+08C2  9D A6 04    STA $04A6,X
+08C5  A9 01       LDA #$01
+08C7  9D A6 D8    STA $D8A6,X
+08CA  E8          INX
+08CB  D0 F0       BNE printat_loop_5
+08CD        printat_done_6:
+08CD  A9 0C       LDA #$0C
+08CF  8D 18 D4    STA $D418
+08D2  A9 10       LDA #$10
+08D4  8D 04 D4    STA $D404
+08D7  A9 11       LDA #$11
+08D9  8D 05 D4    STA $D405
+08DC  A9 90       LDA #$90
+08DE  8D 06 D4    STA $D406
+08E1  A9 00       LDA #$00
+08E3  8D 63 C7    STA $C763
+08E6  A9 00       LDA #$00
+08E8  8D 64 C7    STA $C764
+08EB  A9 01       LDA #$01
+08ED  8D 65 C7    STA $C765
+08F0  78          SEI
+08F1  A9 01       LDA #$01
+08F3  8D 1A D0    STA $D01A
+08F6  A9 01       LDA #$01
+08F8  8D 19 D0    STA $D019
+08FB  A9 FA       LDA #$FA
+08FD  8D 12 D0    STA $D012
+0900  AD 11 D0    LDA $D011
+0903  29 7F       AND #$7F
+0905  8D 11 D0    STA $D011
+0908  A9 16       LDA #<sid_player_irq
+090A  8D 14 03    STA $0314
+090D  A9 09       LDA #>sid_player_irq
+090F  8D 15 03    STA $0315
+0912  58          CLI
+0913  4C 04 0A    JMP program_end_after_sid_player
+            ; SID player IRQ
+0916        sid_player_irq:
+0916  48          PHA
+0917  8A          TXA
+0918  48          PHA
+0919  98          TYA
+091A  48          PHA
+091B  AD 19 D0    LDA $D019
+091E  29 01       AND #$01
+0920  D0 08       BNE sid_player_vic_raster
+0922  68          PLA
+0923  A8          TAY
+0924  68          PLA
+0925  AA          TAX
+0926  68          PLA
+0927  4C 31 EA    JMP $EA31
+092A        sid_player_vic_raster:
+092A  A9 01       LDA #$01
+092C  8D 19 D0    STA $D019
+092F  AD 65 C7    LDA $C765
+0932  F0 0B       BEQ sid_irq_done_jump_3
+0934  AD 64 C7    LDA $C764
+0937  F0 09       BEQ sid_irq_process_jump_3
+0939  CE 64 C7    DEC $C764
+093C  4C EF 09    JMP sid_irq_done_3
+093F        sid_irq_done_jump_3:
+093F  4C EF 09    JMP sid_irq_done_3
+0942        sid_irq_process_jump_3:
+0942  4C 45 09    JMP sid_irq_process_3
+0945        sid_irq_process_3:
+0945  AE 63 C7    LDX $C763
+0948  E0 04       CPX #$04
+094A  D0 03       BNE sid_irq_stop_continue_3
+094C  4C D8 09    JMP sid_irq_stop_3
+094F        sid_irq_stop_continue_3:
+094F  BD 0A 0D    LDA sid_song_irq_3_v1_action,X
+0952  F0 1D       BEQ sid_irq_voice1_rest_3
+0954  C9 01       CMP #$01
+0956  F0 21       BEQ sid_irq_voice1_hold_3
+0958  BD 0E 0D    LDA sid_song_irq_3_v1_lo,X
+095B  8D 00 D4    STA $D400
+095E  BD 12 0D    LDA sid_song_irq_3_v1_hi,X
+0961  8D 01 D4    STA $D401
+0964  A9 10       LDA #$10
+0966  8D 04 D4    STA $D404
+0969  A9 11       LDA #$11
+096B  8D 04 D4    STA $D404
+096E  4C 79 09    JMP sid_irq_voice1_done_3
+0971        sid_irq_voice1_rest_3:
+0971  A9 10       LDA #$10
+0973  8D 04 D4    STA $D404
+0976  4C 79 09    JMP sid_irq_voice1_done_3
+0979        sid_irq_voice1_hold_3:
+            ; hold sid voice 1
+0979        sid_irq_voice1_done_3:
+0979  BD 16 0D    LDA sid_song_irq_3_v2_action,X
+097C  F0 1D       BEQ sid_irq_voice2_rest_3
+097E  C9 01       CMP #$01
+0980  F0 21       BEQ sid_irq_voice2_hold_3
+0982  BD 1A 0D    LDA sid_song_irq_3_v2_lo,X
+0985  8D 07 D4    STA $D407
+0988  BD 1E 0D    LDA sid_song_irq_3_v2_hi,X
+098B  8D 08 D4    STA $D408
+098E  A9 10       LDA #$10
+0990  8D 0B D4    STA $D40B
+0993  A9 11       LDA #$11
+0995  8D 0B D4    STA $D40B
+0998  4C A3 09    JMP sid_irq_voice2_done_3
+099B        sid_irq_voice2_rest_3:
+099B  A9 10       LDA #$10
+099D  8D 0B D4    STA $D40B
+09A0  4C A3 09    JMP sid_irq_voice2_done_3
+09A3        sid_irq_voice2_hold_3:
+            ; hold sid voice 2
+09A3        sid_irq_voice2_done_3:
+09A3  BD 22 0D    LDA sid_song_irq_3_v3_action,X
+09A6  F0 1D       BEQ sid_irq_voice3_rest_3
+09A8  C9 01       CMP #$01
+09AA  F0 21       BEQ sid_irq_voice3_hold_3
+09AC  BD 26 0D    LDA sid_song_irq_3_v3_lo,X
+09AF  8D 0E D4    STA $D40E
+09B2  BD 2A 0D    LDA sid_song_irq_3_v3_hi,X
+09B5  8D 0F D4    STA $D40F
+09B8  A9 10       LDA #$10
+09BA  8D 12 D4    STA $D412
+09BD  A9 11       LDA #$11
+09BF  8D 12 D4    STA $D412
+09C2  4C CD 09    JMP sid_irq_voice3_done_3
+09C5        sid_irq_voice3_rest_3:
+09C5  A9 10       LDA #$10
+09C7  8D 12 D4    STA $D412
+09CA  4C CD 09    JMP sid_irq_voice3_done_3
+09CD        sid_irq_voice3_hold_3:
+            ; hold sid voice 3
+09CD        sid_irq_voice3_done_3:
+09CD  EE 63 C7    INC $C763
+09D0  A9 06       LDA #$06
+09D2  8D 64 C7    STA $C764
+09D5  4C EF 09    JMP sid_irq_done_3
+09D8        sid_irq_stop_3:
+09D8  A9 00       LDA #$00
+09DA  8D 65 C7    STA $C765
+09DD  A9 10       LDA #$10
+09DF  8D 04 D4    STA $D404
+09E2  A9 10       LDA #$10
+09E4  8D 0B D4    STA $D40B
+09E7  A9 10       LDA #$10
+09E9  8D 12 D4    STA $D412
+09EC  4C EF 09    JMP sid_irq_done_3
+09EF        sid_irq_done_3:
+09EF  A9 FA       LDA #$FA
+09F1  8D 12 D0    STA $D012
+09F4  AD 11 D0    LDA $D011
+09F7  29 7F       AND #$7F
+09F9  8D 11 D0    STA $D011
+09FC  68          PLA
+09FD  A8          TAY
+09FE  68          PLA
+09FF  AA          TAX
+0A00  68          PLA
+0A01  4C 81 EA    JMP $EA81
+0A04        program_end_after_sid_player:
+            ; Deterministic game frame loop
+0A04  A9 00       LDA #$00
+0A06  8D 6A C7    STA $C76A
+0A09  A9 00       LDA #$00
+0A0B  8D 6B C7    STA $C76B
+0A0E  A9 00       LDA #$00
+0A10  8D 70 C7    STA $C770
+0A13  A9 3C       LDA #$3C
+0A15  8D 6F C7    STA $C76F
+0A18  A9 00       LDA #$00
+0A1A  8D 04 C1    STA $C104
+0A1D  A9 FF       LDA #$FF
+0A1F  8D 67 C7    STA $C767
+0A22  A9 FF       LDA #$FF
+0A24  8D 69 C7    STA $C769
+0A27  A9 01       LDA #$01
+0A29  8D 80 C7    STA $C780
+0A2C  A9 01       LDA #$01
+0A2E  8D 90 C7    STA $C790
+0A31        game_video_detect_low:
+0A31  AD 11 D0    LDA $D011
+0A34  30 FB       BMI game_video_detect_low
+0A36        game_video_detect_high:
+0A36  AD 11 D0    LDA $D011
+0A39  10 FB       BPL game_video_detect_high
+0A3B        game_video_detect_scan:
+0A3B  AD 11 D0    LDA $D011
+0A3E  10 0F       BPL game_video_detect_done
+0A40  AD 12 D0    LDA $D012
+0A43  C9 20       CMP #$20
+0A45  B0 03       BCS game_video_detect_pal
+0A47  4C 3B 0A    JMP game_video_detect_scan
+0A4A        game_video_detect_pal:
+0A4A  A9 32       LDA #$32
+0A4C  8D 6F C7    STA $C76F
+0A4F        game_video_detect_done:
+0A4F        game_frame_loop:
+0A4F        game_frame_wait_leave:
+0A4F  AD 12 D0    LDA $D012
+0A52  C9 F0       CMP #$F0
+0A54  F0 F9       BEQ game_frame_wait_leave
+0A56        game_frame_wait_target:
+0A56  AD 12 D0    LDA $D012
+0A59  C9 F0       CMP #$F0
+0A5B  D0 F9       BNE game_frame_wait_target
+0A5D  18          CLC
+0A5E  AD 70 C7    LDA $C770
+0A61  69 32       ADC #$32
+0A63  8D 70 C7    STA $C770
+0A66  CD 6F C7    CMP $C76F
+0A69  B0 03       BCS game_frame_logical_tick
+0A6B  4C 4F 0A    JMP game_frame_loop
+0A6E        game_frame_logical_tick:
+0A6E  38          SEC
+0A6F  AD 70 C7    LDA $C770
+0A72  ED 6F C7    SBC $C76F
+0A75  8D 70 C7    STA $C770
+0A78  AD 67 C7    LDA $C767
+0A7B  8D 69 C7    STA $C769
+0A7E  AD 00 DC    LDA $DC00
+0A81  8D 67 C7    STA $C767
+0A84  AD 00 DC    LDA $DC00
+0A87  8D 6C C7    STA $C76C
+0A8A  AD 02 DC    LDA $DC02
+0A8D  8D 6D C7    STA $C76D
+0A90  AD 03 DC    LDA $DC03
+0A93  8D 6E C7    STA $C76E
+0A96  A9 FF       LDA #$FF
+0A98  8D 02 DC    STA $DC02
+0A9B  A9 00       LDA #$00
+0A9D  8D 03 DC    STA $DC03
+0AA0  AD 80 C7    LDA $C780
+0AA3  8D 90 C7    STA $C790
+0AA6  A9 7F       LDA #$7F
+0AA8  8D 00 DC    STA $DC00
+0AAB  AD 01 DC    LDA $DC01
+0AAE  29 10       AND #$10
+0AB0  F0 05       BEQ keyboard_scan_pressed_60
+0AB2  A9 01       LDA #$01
+0AB4  4C B9 0A    JMP keyboard_scan_stored_60
+0AB7        keyboard_scan_pressed_60:
+0AB7  A9 00       LDA #$00
+0AB9        keyboard_scan_stored_60:
+0AB9  8D 80 C7    STA $C780
+0ABC  AD 6C C7    LDA $C76C
+0ABF  8D 00 DC    STA $DC00
+0AC2  AD 6D C7    LDA $C76D
+0AC5  8D 02 DC    STA $DC02
+0AC8  AD 6E C7    LDA $C76E
+0ACB  8D 03 DC    STA $DC03
+0ACE  EE 6A C7    INC $C76A
+0AD1  D0 03       BNE game_frame_counter_done_7
+0AD3  EE 6B C7    INC $C76B
+0AD6        game_frame_counter_done_7:
+0AD6  EE 02 C1    INC $C102
+0AD9  D0 03       BNE runtime_word_inc_done_8
+0ADB  EE 03 C1    INC $C103
+0ADE        runtime_word_inc_done_8:
+0ADE  A9 00       LDA #$00
+0AE0  8D 03 C5    STA $C503
+0AE3  A9 00       LDA #$00
+0AE5  8D 04 C5    STA $C504
+0AE8  AD 00 C1    LDA $C100
+0AEB  C9 00       CMP #$00
+0AED  F0 03       BEQ condition_pass_10
+0AEF  4C 15 0B    JMP control_if_else_9
+0AF2        condition_pass_10:
+0AF2  AD 67 C7    LDA $C767
+0AF5  29 04       AND #$04
+0AF7  F0 03       BEQ condition_pass_12
+0AF9  4C 02 0B    JMP control_if_else_11
+0AFC        condition_pass_12:
+0AFC  20 6A 08    JSR user_routine_move_player_left
+0AFF  4C 02 0B    JMP control_if_end_11
+0B02        control_if_else_11:
+0B02        control_if_end_11:
+0B02  AD 67 C7    LDA $C767
+0B05  29 08       AND #$08
+0B07  F0 03       BEQ condition_pass_14
+0B09  4C 12 0B    JMP control_if_else_13
+0B0C        condition_pass_14:
+0B0C  20 78 08    JSR user_routine_move_player_right
+0B0F  4C 12 0B    JMP control_if_end_13
+0B12        control_if_else_13:
+0B12        control_if_end_13:
+0B12  4C 15 0B    JMP control_if_end_9
+0B15        control_if_else_9:
+0B15        control_if_end_9:
+0B15  AD 67 C7    LDA $C767
+0B18  29 10       AND #$10
+0B1A  F0 03       BEQ joystick_current_pressed_16
+0B1C  4C 31 0B    JMP control_if_else_15
+0B1F        joystick_current_pressed_16:
+0B1F  AD 69 C7    LDA $C769
+0B22  29 10       AND #$10
+0B24  D0 03       BNE condition_pass_16
+0B26  4C 31 0B    JMP control_if_else_15
+0B29        condition_pass_16:
+0B29  A9 02       LDA #$02
+0B2B  8D 20 D0    STA $D020
+0B2E  4C 31 0B    JMP control_if_end_15
+0B31        control_if_else_15:
+0B31        control_if_end_15:
+0B31  AD 67 C7    LDA $C767
+0B34  29 10       AND #$10
+0B36  D0 03       BNE joystick_current_released_18
+0B38  4C 4D 0B    JMP control_if_else_17
+0B3B        joystick_current_released_18:
+0B3B  AD 69 C7    LDA $C769
+0B3E  29 10       AND #$10
+0B40  F0 03       BEQ condition_pass_18
+0B42  4C 4D 0B    JMP control_if_else_17
+0B45        condition_pass_18:
+0B45  A9 00       LDA #$00
+0B47  8D 20 D0    STA $D020
+0B4A  4C 4D 0B    JMP control_if_end_17
+0B4D        control_if_else_17:
+0B4D        control_if_end_17:
+0B4D  AD 80 C7    LDA $C780
+0B50  F0 03       BEQ keyboard_pressed_20
+0B52  4C 68 0B    JMP control_if_else_19
+0B55        keyboard_pressed_20:
+0B55  AD 90 C7    LDA $C790
+0B58  D0 03       BNE condition_pass_20
+0B5A  4C 68 0B    JMP control_if_else_19
+0B5D        condition_pass_20:
+0B5D  AD 00 C1    LDA $C100
+0B60  49 01       EOR #$01
+0B62  8D 00 C1    STA $C100
+0B65  4C 68 0B    JMP control_if_end_19
+0B68        control_if_else_19:
+0B68        control_if_end_19:
+0B68  EE 04 C1    INC $C104
+0B6B  AD 04 C1    LDA $C104
+0B6E  C9 19       CMP #$19
+0B70  B0 03       BCS game_every_run_21
+0B72  4C 99 0B    JMP game_every_done_22
+0B75        game_every_run_21:
+0B75  A9 00       LDA #$00
+0B77  8D 04 C1    STA $C104
+0B7A  AD 01 C1    LDA $C101
+0B7D  49 01       EOR #$01
+0B7F  8D 01 C1    STA $C101
+0B82  AD 01 C1    LDA $C101
+0B85  C9 01       CMP #$01
+0B87  F0 03       BEQ condition_pass_24
+0B89  4C 94 0B    JMP control_if_else_23
+0B8C        condition_pass_24:
+0B8C  A9 06       LDA #$06
+0B8E  8D 21 D0    STA $D021
+0B91  4C 99 0B    JMP control_if_end_23
+0B94        control_if_else_23:
+0B94  A9 04       LDA #$04
+0B96  8D 21 D0    STA $D021
+0B99        control_if_end_23:
+0B99        game_every_done_22:
+0B99  AD 05 C5    LDA $C505
+0B9C  D0 03       BNE sprite_update_active_0_26
+0B9E  4C 3F 0C    JMP sprite_update_inactive_0_25
+0BA1        sprite_update_active_0_26:
+0BA1  18          CLC
+0BA2  AD 00 C5    LDA $C500
+0BA5  6D 03 C5    ADC $C503
+0BA8  8D 00 C5    STA $C500
+0BAB  AD 03 C5    LDA $C503
+0BAE  10 08       BPL sprite_vx_positive_27
+0BB0  AD 01 C5    LDA $C501
+0BB3  69 FF       ADC #$FF
+0BB5  4C BD 0B    JMP sprite_vx_done_27
+0BB8        sprite_vx_positive_27:
+0BB8  AD 01 C5    LDA $C501
+0BBB  69 00       ADC #$00
+0BBD        sprite_vx_done_27:
+0BBD  8D 01 C5    STA $C501
+0BC0  AD 04 C5    LDA $C504
+0BC3  10 0C       BPL sprite_vy_positive_28
+0BC5  18          CLC
+0BC6  AD 02 C5    LDA $C502
+0BC9  6D 04 C5    ADC $C504
+0BCC  90 12       BCC sprite_vy_clamp_min_28
+0BCE  4C DA 0B    JMP sprite_vy_store_28
+0BD1        sprite_vy_positive_28:
+0BD1  18          CLC
+0BD2  AD 02 C5    LDA $C502
+0BD5  6D 04 C5    ADC $C504
+0BD8  B0 0E       BCS sprite_vy_clamp_max_28
+0BDA        sprite_vy_store_28:
+0BDA  8D 02 C5    STA $C502
+0BDD  4C ED 0B    JMP sprite_vy_done_28
+0BE0        sprite_vy_clamp_min_28:
+0BE0  A9 D2       LDA #$D2
+0BE2  8D 02 C5    STA $C502
+0BE5  4C ED 0B    JMP sprite_vy_done_28
+0BE8        sprite_vy_clamp_max_28:
+0BE8  A9 D2       LDA #$D2
+0BEA  8D 02 C5    STA $C502
+0BED        sprite_vy_done_28:
+0BED  AD 01 C5    LDA $C501
+0BF0  30 0D       BMI sprite_x_clamp_min_29
+0BF2  C9 00       CMP #$00
+0BF4  90 09       BCC sprite_x_clamp_min_29
+0BF6  D0 11       BNE sprite_x_min_ok_29
+0BF8  AD 00 C5    LDA $C500
+0BFB  C9 18       CMP #$18
+0BFD  B0 0A       BCS sprite_x_min_ok_29
+0BFF        sprite_x_clamp_min_29:
+0BFF  A9 18       LDA #$18
+0C01  8D 00 C5    STA $C500
+0C04  A9 00       LDA #$00
+0C06  8D 01 C5    STA $C501
+0C09        sprite_x_min_ok_29:
+0C09  AD 01 C5    LDA $C501
+0C0C  C9 01       CMP #$01
+0C0E  90 15       BCC sprite_x_max_ok_29
+0C10  D0 09       BNE sprite_x_clamp_max_29
+0C12  AD 00 C5    LDA $C500
+0C15  C9 40       CMP #$40
+0C17  90 0C       BCC sprite_x_max_ok_29
+0C19  F0 0A       BEQ sprite_x_max_ok_29
+0C1B        sprite_x_clamp_max_29:
+0C1B  A9 40       LDA #$40
+0C1D  8D 00 C5    STA $C500
+0C20  A9 01       LDA #$01
+0C22  8D 01 C5    STA $C501
+0C25        sprite_x_max_ok_29:
+0C25  AD 02 C5    LDA $C502
+0C28  C9 D2       CMP #$D2
+0C2A  B0 05       BCS sprite_y_min_ok_29
+0C2C  A9 D2       LDA #$D2
+0C2E  8D 02 C5    STA $C502
+0C31        sprite_y_min_ok_29:
+0C31  AD 02 C5    LDA $C502
+0C34  C9 D2       CMP #$D2
+0C36  90 07       BCC sprite_y_max_ok_29
+0C38  F0 05       BEQ sprite_y_max_ok_29
+0C3A  A9 D2       LDA #$D2
+0C3C  8D 02 C5    STA $C502
+0C3F        sprite_y_max_ok_29:
+0C3F        sprite_update_inactive_0_25:
+0C3F  20 45 0C    JSR runtime_sprite_sync_0
+0C42  4C 4F 0A    JMP game_frame_loop
+            ; Shared VIC-II synchronization for sprite 0
+0C45        runtime_sprite_sync_0:
+0C45  AD 05 C5    LDA $C505
+0C48  D0 0B       BNE sprite_runtime_active_0_30
+0C4A  AD 15 D0    LDA $D015
+0C4D  29 FE       AND #$FE
+0C4F  8D 15 D0    STA $D015
+0C52  4C 83 0C    JMP sprite_runtime_sync_done_0_33
+0C55        sprite_runtime_active_0_30:
+0C55  AD 15 D0    LDA $D015
+0C58  09 01       ORA #$01
+0C5A  8D 15 D0    STA $D015
+0C5D  AD 00 C5    LDA $C500
+0C60  8D 00 D0    STA $D000
+0C63  AD 01 C5    LDA $C501
+0C66  29 01       AND #$01
+0C68  D0 0B       BNE sprite_runtime_xhigh_0_31
+0C6A  AD 10 D0    LDA $D010
+0C6D  29 FE       AND #$FE
+0C6F  8D 10 D0    STA $D010
+0C72  4C 7D 0C    JMP sprite_runtime_xdone_0_32
+0C75        sprite_runtime_xhigh_0_31:
+0C75  AD 10 D0    LDA $D010
+0C78  09 01       ORA #$01
+0C7A  8D 10 D0    STA $D010
+0C7D        sprite_runtime_xdone_0_32:
+0C7D  AD 02 C5    LDA $C502
+0C80  8D 01 D0    STA $D001
+0C83        sprite_runtime_sync_done_0_33:
+0C83  60          RTS
+            ; String pool
+0C84        str_screen_0:
+0C84  16 30 2E 38 20 07 01 0D 05 10 0C 01 19 20 13 10 12 09 14 05 00 .byte $16, $30, $2E, $38, $20, $07, $01, $0D, $05, $10, $0C, $01, $19, $20, $13, $10, $12, $09, $14, $05, $00
+0C99        str_screen_1:
+0C99  0D 0F 16 05 3A 20 0A 0F 19 13 14 09 03 0B 20 10 0F 12 14 20 32 00 .byte $0D, $0F, $16, $05, $3A, $20, $0A, $0F, $19, $13, $14, $09, $03, $0B, $20, $10, $0F, $12, $14, $20, $32, $00
+0CAF        str_screen_2:
+0CAF  06 09 12 05 3A 20 02 0F 12 04 05 12 20 2F 20 13 10 01 03 05 3A 20 10 01 15 13 05 00 .byte $06, $09, $12, $05, $3A, $20, $02, $0F, $12, $04, $05, $12, $20, $2F, $20, $13, $10, $01, $03, $05, $3A, $20, $10, $01, $15, $13, $05, $00
+            ; User data
+0CCB        sprite_data_0_0:
+0CCB  FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 .byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+0D0A        sid_song_irq_3_v1_action:
+0D0A  02 02 02 02 .byte $02, $02, $02, $02
+0D0E        sid_song_irq_3_v1_lo:
+0D0E  67 ED 13 ED .byte $67, $ED, $13, $ED
+0D12        sid_song_irq_3_v1_hi:
+0D12  11 15 1A 15 .byte $11, $15, $1A, $15
+0D16        sid_song_irq_3_v2_action:
+0D16  02 00 02 00 .byte $02, $00, $02, $00
+0D1A        sid_song_irq_3_v2_lo:
+0D1A  B4 00 85 00 .byte $B4, $00, $85, $00
+0D1E        sid_song_irq_3_v2_hi:
+0D1E  08 00 06 00 .byte $08, $00, $06, $00
+0D22        sid_song_irq_3_v3_action:
+0D22  00 02 00 02 .byte $00, $02, $00, $02
+0D26        sid_song_irq_3_v3_lo:
+0D26  00 CE 00 13 .byte $00, $CE, $00, $13
+0D2A        sid_song_irq_3_v3_hi:
+0D2A  00 22 00 1A .byte $00, $22, $00, $1A

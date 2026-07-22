@@ -17,7 +17,10 @@ c64.textColor(c64.COLOR_WHITE);
 c64.printCentered(0, "C64 HOT AIR BALLOON");
 c64.printCentered(2, "SPRITE 0 FROM THE USER MANUAL");
 
-c64.sprite.data(0, BALLOON_SPRITE_BYTES, SPRITE_DATA_ADDRESS);
-c64.sprite.color(0, c64.COLOR_RED);
-c64.sprite.position(0, 120, 90);
-c64.sprite.enable(0);
+c64.sprite.create(0, {
+  x: 120,
+  y: 90,
+  data: BALLOON_SPRITE_BYTES,
+  dataAddress: SPRITE_DATA_ADDRESS,
+  color: c64.COLOR_RED
+});

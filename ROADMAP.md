@@ -1,442 +1,686 @@
-# ROADMAP
+# ROADMAP — js-c64 Game Compiler
 
-This roadmap repositions `js-c64` as a practical game creation toolkit for Commodore 64.
+## Vision
 
-The goal is no longer only to generate small assembly programs, but to help build:
+`js-c64` doit permettre d'écrire en JavaScript un programme de jeu lisible, puis
+de générer un programme 6502 compact et réellement exécutable sur Commodore 64.
 
-- playable arcade-style games
-- scrolling action scenes
-- sprite-based demos with music
-- structured retro game prototypes
+Le projet ne cherche pas à faire tourner JavaScript sur le C64 et ne cherche pas
+non plus à traduire tout le langage JavaScript en assembleur. Le modèle visé est :
 
-The long-term direction is:
+1. le fichier JavaScript décrit le jeu avec un DSL ;
+2. le DSL construit une représentation intermédiaire (IR) ;
+3. le compilateur vérifie les types, la mémoire et les ressources VIC/SID ;
+4. le backend génère l'assembleur 6502 et les données ;
+5. un petit runtime coordonne la boucle de jeu, les IRQ, les sprites et le son.
 
-- keep the DSL beginner-friendly
-- keep generated machine code compact
-- make subsystems coexist cleanly
-- progressively add the classic building blocks of a C64 game engine
+Cette approche peut raisonnablement produire :
 
----
+- Snake et Tetris en mode caractères ;
+- un casse-brique utilisant caractères et sprites ;
+- un jeu de labyrinthe inspiré de Pac-Man ;
+- un petit jeu de plates-formes à écrans fixes puis avec scrolling ;
+- des shooters et des démos avec sprites, musique et effets raster.
 
-## Core Direction
-
-`js-c64` should evolve into a layered tool:
-
-1. machine-code generator
-2. practical C64 API
-3. runtime helpers for animation, audio and IRQ
-4. game-oriented systems for input, collisions, maps and scenes
-
-To stay healthy as the project grows, every new subsystem should respect these rules:
-
-- no fragile IRQ conflicts
-- safe RAM usage
-- compact emitted code
-- readable generated ASM
-- examples and docs updated whenever a feature lands
+Un jeu de la taille et de la finition du Super Mario Bros original n'est pas un
+objectif réaliste à court terme. En revanche, un « mini platformer » possédant
+quelques niveaux, des tiles, des collisions, des ennemis simples, du scrolling
+et du son est un excellent objectif pour valider le compilateur.
 
 ---
 
-## Current State
+## Principes non négociables
 
-Already in place today:
+Chaque nouvelle fonctionnalité doit respecter les règles suivantes :
 
-- screen and text helpers
-- data and variable helpers
-- raster IRQ helpers
-- sprite setup and animation
-- hires bitmap layer
-- SID sound effects
-- non-blocking 3-voice SID song playback
-- coexistence between SID music, raster IRQ and sprite animation
+- code 6502 déterministe et inspectable ;
+- pas de conflit caché entre IRQ raster, musique, animation et boucle de jeu ;
+- aucune allocation dynamique sur le C64 ;
+- adresses mémoire connues et vérifiées à la compilation ;
+- coût mémoire et coût CPU documentés ;
+- compatibilité PAL en priorité, avec comportement NTSC explicitement testé ou
+  signalé comme non pris en charge ;
+- API débutant simple, avec possibilité d'insérer du `c64.asm.*` pour les usages
+  avancés ;
+- exemples jouables et tests de non-régression pour chaque jalon.
 
-This is a strong base.
-
-The next roadmap focuses on turning that base into a real game-oriented toolkit.
+Une fonctionnalité n'est pas terminée parce que son API compile. Elle est
+terminée lorsqu'un exemple jouable l'utilise sur un vrai émulateur C64.
 
 ---
 
-## v0.7.0 - Gameplay Foundations
+## État actuel vérifié
 
-### Goal
+Le projet possède déjà une base utile :
 
-Add the missing building blocks needed for interactive programs and small games.
+- assembleur NMOS 6502 avec labels, relocations et listing ;
+- sorties PRG, BIN, ASM, LST et BASIC DATA ;
+- texte, écran, couleurs, mémoire, données et variables ;
+- lecture bloquante du clavier et exemples joystick bas niveau ;
+- sprites matériels, données de sprites, déplacement et animation vers une cible ;
+- dessin bitmap hires ;
+- effets SID et lecteur musical trois voix non bloquant ;
+- plusieurs handlers raster et coordination partielle SID/sprites/IRQ ;
+- tests automatisés du code généré.
 
-### Main Priorities
+### Dette structurante à traiter avant les API de jeu
 
-- read player inputs cleanly
-- add predictable frame/timer helpers
-- provide a simple structured game loop
-- reduce the amount of manual polling code users need to write
+Le DSL actuel enregistre surtout une suite linéaire d'instructions. Un `if`, une
+boucle ou une expression JavaScript ordinaire est évalué par Node.js pendant la
+compilation, pas par le 6510 pendant le jeu.
 
-### Recommended Features
-
-#### Keyboard input
-
-- `c64.input.keyPressed(key)`
-- `c64.input.keyReleased(key)`
-- `c64.input.anyKeyPressed()`
-- `c64.input.readMatrix()` or equivalent internal helper
-
-#### Joystick input
-
-- `c64.joystick.read(port)`
-- `c64.joystick.up(port)`
-- `c64.joystick.down(port)`
-- `c64.joystick.left(port)`
-- `c64.joystick.right(port)`
-- `c64.joystick.fire(port)`
-
-#### Timing helpers
-
-- `c64.anim.frameCounter(address)`
-- `c64.anim.waitFrames(count)`
-- `c64.anim.every(count, fn)`
-- `c64.timer.every(count, fn)`
-
-#### Loop helpers
-
-- `c64.loop.forever(fn)`
-- `c64.loop.until(condition, fn)`
-- `c64.loop.while(condition, fn)`
-
-#### Small utility helpers
-
-- `c64.var.bool(name, address, initialValue = 0)`
-- `c64.var.inc(name)`
-- `c64.var.dec(name)`
-
-### Why This Version Matters
-
-- games need input before they need complexity
-- predictable timing is the heart of gameplay
-- beginners should be able to build a moving, controllable sprite quickly
-
-### Example Target
+Ce code ne doit donc pas être présenté comme valide tant que le contrôle de flux
+runtime n'existe pas :
 
 ```js
-c64.loop.forever(() => {
-  if (c64.joystick.left(2)) c64.sprite.moveX(0, -1);
-  if (c64.joystick.right(2)) c64.sprite.moveX(0, 1);
-  if (c64.joystick.fire(2)) c64.sid.beep();
-});
-```
-
-### Technical Notes
-
-- input polling must coexist with raster and SID IRQ systems
-- helper APIs should compile to compact loops, not repeated boilerplate
-- frame-driven gameplay should stay deterministic
-
----
-
-## v0.8.0 - Sprites Pro
-
-### Goal
-
-Turn the sprite system into a proper gameplay-ready subsystem.
-
-### Main Priorities
-
-- collision support
-- multi-frame animation
-- better movement helpers
-- more convenient sprite state handling
-
-### Recommended Features
-
-#### Collision helpers
-
-- `c64.sprite.collidesWithSprite(a, b)`
-- `c64.sprite.collidesWithBackground(n)`
-- `c64.sprite.onCollision(a, b, fn)`
-- `c64.sprite.onBackgroundCollision(n, fn)`
-
-#### Sprite animation helpers
-
-- `c64.sprite.frame(n, frameIndex)`
-- `c64.sprite.frames(n, frameList)`
-- `c64.sprite.nextFrame(n)`
-- `c64.sprite.animateFrames(n, frames, speed)`
-
-#### Movement helpers
-
-- `c64.sprite.velocity(n, vx, vy)`
-- `c64.sprite.acceleration(n, ax, ay)`
-- `c64.sprite.limit(n, minX, maxX, minY, maxY)`
-- `c64.sprite.bounceX(n, minX, maxX, speed)`
-- `c64.sprite.bounceY(n, minY, maxY, speed)`
-
-#### State and convenience helpers
-
-- `c64.sprite.active(n, enabled)`
-- `c64.sprite.cloneData(n, sourceLabelOrFrames)`
-- `c64.sprite.showFrame(n, frameIndex, x, y, color)`
-
-### Why This Version Matters
-
-- collisions are the base of gameplay
-- multi-frame animation makes a game feel alive immediately
-- movement primitives reduce a lot of repetitive assembly logic
-
-### Example Target
-
-```js
-c64.sprite.enable(0);
-c64.sprite.position(0, 40, 120);
-c64.sprite.animateFrames(0, [0, 1, 2, 1], 6);
-
-if (c64.sprite.collidesWithSprite(0, 1)) {
-  c64.sid.explosion();
+if (c64.joystick.left(2)) {
+  c64.sprite.moveX(0, -1);
 }
 ```
 
-### Technical Notes
-
-- collision helpers can build on VIC-II collision registers where possible
-- sprite frame animation should reuse existing animation IRQ infrastructure
-- generated code should prefer per-frame state machines, not full code duplication
-
----
-
-## v0.9.0 - Charset, Tiles, Scrolling
-
-### Goal
-
-Add the classic building blocks required for level-based C64 games.
-
-### Main Priorities
-
-- custom character sets
-- tilemap-friendly workflows
-- horizontal and vertical scrolling
-- camera-style screen movement
-
-### Recommended Features
-
-#### Custom charset helpers
-
-- `c64.charset.address(address)`
-- `c64.charset.copyDefault(toAddress)`
-- `c64.charset.define(charCode, bytes)`
-- `c64.charset.enable(address)`
-- `c64.charset.disable()`
-
-#### Tile helpers
-
-- `c64.tile.define(name, charCode, color)`
-- `c64.map.define(name, width, height, tiles)`
-- `c64.map.draw(name, screenX, screenY)`
-- `c64.map.getTile(name, x, y)`
-- `c64.map.setTile(name, x, y, value)`
-
-#### Scrolling helpers
-
-- `c64.scroll.horizontal(speed)`
-- `c64.scroll.vertical(speed)`
-- `c64.scroll.setFineX(value)`
-- `c64.scroll.setFineY(value)`
-- `c64.scroll.followSprite(n)`
-- `c64.scroll.camera(xRef, yRef)`
-
-#### Screen streaming helpers
-
-- `c64.map.streamColumn(...)`
-- `c64.map.streamRow(...)`
-- `c64.scroll.onWrap(fn)`
-
-### Why This Version Matters
-
-- this is what makes real levels possible
-- custom charset plus scroll is one of the most important C64 game combinations
-- users can begin building platformers, maze games and shooters with moving backgrounds
-
-### Example Target
+Un modèle explicite doit d'abord être ajouté, par exemple :
 
 ```js
-c64.charset.enable(0x3000);
-c64.map.draw("level1", 0, 0);
-c64.scroll.followSprite(0);
-```
+const playerX = c64.var.byte("playerX", { initial: 100 });
+const joy = c64.input.joystick(2);
 
-### Technical Notes
-
-- VIC memory pointers must stay compatible with hires and sprite data strategies
-- scroll helpers should cooperate with raster and animation runtimes
-- tile streaming should be designed for compact code generation
-
----
-
-## v1.0.0 - Mini C64 Game Engine
-
-### Goal
-
-Provide a small but coherent game engine layer on top of the DSL.
-
-### Main Priorities
-
-- scene/state management
-- HUD and score helpers
-- gameplay entity helpers
-- stronger runtime coordination
-
-### Recommended Features
-
-#### Scene helpers
-
-- `c64.scene.define(name, fn)`
-- `c64.scene.switch(name)`
-- `c64.scene.reset(name)`
-
-#### Game state helpers
-
-- `c64.state.set(name, value)`
-- `c64.state.get(name)`
-- `c64.state.inc(name)`
-- `c64.state.dec(name)`
-
-#### HUD helpers
-
-- `c64.score.set(value)`
-- `c64.score.add(value)`
-- `c64.lives.set(value)`
-- `c64.lives.dec()`
-- `c64.hud.printValue(x, y, valueRef)`
-
-#### Entity/gameplay helpers
-
-- `c64.enemy.spawn(type, x, y)`
-- `c64.bullet.spawn(x, y, vx, vy)`
-- `c64.hitbox.define(name, data)`
-- `c64.random.byte()`
-- `c64.random.range(min, max)`
-
-#### Audio/game sync helpers
-
-- `c64.sid.pauseSong()`
-- `c64.sid.resumeSong()`
-- `c64.sid.sequence(voice, notes)`
-- `c64.sid.onBeat(fn)`
-
-### Why This Version Matters
-
-- users move from “writing routines” to “building games”
-- demos and prototypes gain real structure
-- more ambitious projects become easier to maintain
-
-### Example Target
-
-```js
-c64.scene.define("title", () => {
-  c64.printCentered(10, "PRESS FIRE");
-});
-
-c64.scene.define("game", () => {
-  c64.sprite.enable(0);
-  c64.sprite.position(0, 40, 120);
+c64.game.frame(() => {
+  c64.control.if(joy.left(), () => {
+    playerX.sub(1);
+  });
 });
 ```
 
-### Technical Notes
+Les noms exacts pourront évoluer après prototypage, mais l'IR doit savoir
+représenter les variables, expressions, conditions, branches et boucles.
 
-- avoid hiding too much low-level behavior
-- keep advanced users free to mix high-level and low-level APIs
-- runtime state must remain predictable and exportable
+### Cohérence des versions
 
----
-
-## Cross-Version Technical Priorities
-
-These priorities matter across every future version.
-
-### 1. Unified IRQ Runtime
-
-All long-running systems should cooperate through one coherent runtime strategy:
-
-- raster effects
-- sprite animation
-- SID music
-- gameplay timers
-- scrolling
-
-This is critical for stability.
-
-### 2. Safe Memory Strategy
-
-Document and formalize:
-
-- runtime RAM usage
-- animation state RAM
-- SID player state RAM
-- map/charset reserved areas
-- safe defaults for beginners
-
-### 3. Output Optimization
-
-Add optional optimization modes later:
-
-- `--opt size`
-- `--opt speed`
-- `--opt balanced`
-
-### 4. Better Diagnostics
-
-Improve developer feedback with:
-
-- clearer compile-time errors
-- better symbol exports
-- optional memory map reports
-- optional runtime warnings for risky overlaps
-
-### 5. Strong Example Coverage
-
-Every major feature should land with at least one working example.
-
-Recommended future examples:
-
-- `examples/player-move.js`
-- `examples/joystick-game-loop.js`
-- `examples/sprite-collision.js`
-- `examples/sprite-animation-frames.js`
-- `examples/custom-charset.js`
-- `examples/tilemap-scroll-x.js`
-- `examples/tilemap-scroll-y.js`
-- `examples/shooter-demo.js`
-- `examples/platform-demo.js`
+Avant la prochaine publication, synchroniser `package.json`, `CHANGELOG.md`, les
+guides et les annonces de versions. Le package déclare encore `0.1.0` alors que
+plusieurs documents parlent déjà de fonctionnalités v0.6.0.
 
 ---
 
-## Recommended Implementation Order
+## Architecture cible
 
-If development time is limited, this is the highest-value order:
+### 1. Frontend DSL et IR
 
-1. `v0.7.0`
-- inputs
-- timers
-- loops
+Le frontend transforme les appels JavaScript en nœuds typés :
 
-2. `v0.8.0`
-- collisions
-- multi-frame sprite animation
-- richer movement helpers
+- constantes byte, word et bool ;
+- références mémoire ;
+- expressions arithmétiques et bit à bit ;
+- comparaisons ;
+- `if/else`, boucles bornées et appels de routines ;
+- blocs d'initialisation, de frame, de scène et d'IRQ ;
+- données de sprites, charset, tiles, maps et musique.
 
-3. `v0.9.0`
-- custom charset
-- tilemaps
-- scrolling
+L'IR doit être indépendant de l'assembleur afin de pouvoir être validé et
+optimisé avant l'émission du code.
 
-4. `v1.0.0`
-- scenes
-- score/lives/state
-- entity-style helpers
+### 2. Backend 6502
+
+Le backend est responsable de :
+
+- choisir les modes d'adressage ;
+- réutiliser les routines communes ;
+- préserver les registres selon une convention documentée ;
+- produire symboles, listing et carte mémoire ;
+- signaler les branches trop longues, chevauchements et dépassements de budget.
+
+### 3. Runtime unifié
+
+Un seul ordonnanceur doit coordonner :
+
+- IRQ VIC-II et CIA ;
+- tick logique de jeu ;
+- musique et effets sonores ;
+- animation des sprites ;
+- scrolling et streaming de map.
+
+Les handlers doivent être enregistrés comme tâches avec une fréquence, une
+priorité et un budget approximatif, plutôt que d'installer plusieurs systèmes
+d'interruptions concurrents.
+
+### 4. Planificateur mémoire
+
+Le compilateur doit connaître et réserver :
+
+- code et données du programme ;
+- variables et état du runtime ;
+- écran et Color RAM ;
+- charset ;
+- données de sprites et pointeurs ;
+- buffers de map et de scrolling ;
+- bitmap hires éventuel ;
+- zones utilisées par le KERNAL lorsque celui-ci reste actif.
+
+Une commande comme `c64js build ... --map memory.json` doit pouvoir produire un
+rapport lisible et refuser les chevauchements dangereux.
+
+### 5. Pipeline d'assets
+
+Les assets doivent être compilés séparément puis intégrés au programme :
+
+```text
+éditeur d'assets -> JSON source -> validation -> BIN/JS/ASM -> linker js-c64
+```
+
+Le JSON reste la source éditable. Les fichiers binaires sont les données finales
+compactes destinées au C64.
 
 ---
 
-## Long-Term Result
+## v0.7.0 — Langage de gameplay et boucle de jeu
 
-If this roadmap is completed, `js-c64` becomes:
+### Objectif
 
-- a beginner-friendly entry point to C64 game programming
-- a compact DSL for small but real retro games
-- a practical prototype tool for sprites, scroll, sound and gameplay
-- a creative engine for demos, toy engines and arcade experiments
+Rendre possible une logique de jeu runtime déterministe, sans écrire les branches
+et boucles principales directement en assembleur.
+
+### État d'avancement
+
+Implémentation v0.7 disponible :
+
+- [x] variables byte auto-allouées dans une zone RAM dédiée ;
+- [x] opérations `set`, `add`, `sub`, `inc` et `dec` ;
+- [x] comparaisons `eq`, `ne`, `lt`, `lte`, `gt` et `gte` ;
+- [x] branche `c64.control.if()` avec `else` optionnel ;
+- [x] snapshot joystick ports 1 et 2 par frame ;
+- [x] états joystick maintenu, pressé et relâché ;
+- [x] boucle `c64.game.frame()` à une mise à jour par frame ;
+- [x] compteur interne 16 bits ;
+- [x] protection des principales zones RAM réservées ;
+- [x] exemple `examples/game-loop-input.js` et tests de compilation ;
+- [x] variables word et bool typées avec opérations runtime ;
+- [x] expressions bit à bit et tableaux indexés ;
+- [x] `repeat`, `while` borné et routines nommées ;
+- [x] clavier non bloquant par actions ;
+- [x] `game.init()` et tâches `every()` ;
+- [x] détection PAL/NTSC et fréquence logique configurable ;
+- [ ] validation jouable dans VICE PAL et NTSC.
+
+Cette première tranche est volontairement additive : les anciennes déclarations
+`c64.var.byte(name, address, initialValue)` restent acceptées.
+
+Le code et les tests automatisés de la v0.7 sont terminés. La dernière case est
+un contrôle externe manuel : elle doit être cochée après exécution du PRG dans
+VICE PAL puis NTSC, VICE n'étant pas fourni avec le projet.
+
+### Fonctionnalités prioritaires
+
+#### Valeurs et expressions runtime
+
+- allocation automatique ou explicite de variables `byte`, `word` et `bool` ;
+- références typées plutôt que simples descripteurs non vérifiés ;
+- `set`, `add`, `sub`, `inc`, `dec`, `and`, `or`, `xor` ;
+- comparaisons `eq`, `ne`, `lt`, `lte`, `gt`, `gte` ;
+- constantes signées pour les vitesses ;
+- tableaux byte statiques avec index runtime.
+
+#### Contrôle de flux
+
+- `c64.control.if(condition, thenFn, elseFn?)` ;
+- `c64.control.repeat(count, fn)` pour les boucles bornées ;
+- `c64.control.while(condition, fn, { maxIterations })` uniquement avec garde ;
+- routines nommées et appels `JSR/RTS` ;
+- erreurs de compilation pour les conditions JavaScript ambiguës.
+
+#### Entrées
+
+- snapshot joystick par frame pour les ports 1 et 2 ;
+- états `held`, `pressed` et `released` ;
+- clavier par actions configurables plutôt que seulement par codes de matrice ;
+- prévention des conflits clavier/joystick sur les lignes CIA partagées.
+
+#### Boucle de jeu
+
+- `c64.game.init(fn)` ;
+- `c64.game.frame(fn, { hz: 50 })` ;
+- compteur de frames 16 bits ;
+- tâches `every(n, fn)` compilées en compteurs ;
+- attente verticale sans boucle de délai dépendante du processeur ;
+- politique PAL/NTSC documentée.
+
+### Exemple cible
+
+```js
+const joy = c64.input.joystick(2);
+const player = c64.sprite.create(0, {
+  x: 100, y: 120, data: Array(63).fill(255), minX: 24, maxX: 320
+});
+
+c64.game.frame(() => {
+  player.setVelocity(0, 0);
+  c64.control.if(joy.left(), () => player.setVelocity(-2, 0));
+  c64.control.if(joy.right(), () => player.setVelocity(2, 0));
+  player.update();
+});
+```
+
+### Critères de sortie
+
+- une raquette déplaçable reste fluide avec musique SID active ;
+- un appui unique ne se répète pas lorsqu'on utilise `pressed` ;
+- aucun exemple de documentation ne dépend d'un `if` JavaScript évalué à tort ;
+- tests unitaires de l'IR, du contrôle de flux et du code 6502 généré ;
+- exemple `examples/game-loop-input.js` prêt pour validation dans VICE PAL et NTSC
+  (validation manuelle externe encore à effectuer).
+
+---
+
+## v0.8.0 — Sprites, animations et collisions
+
+### Objectif
+
+Transformer les sprites existants en objets réellement utilisables pour le
+gameplay.
+
+### État d'avancement
+
+Implémentation terminée dans le compilateur et couverte par les tests
+automatiques. Les exemples générés restent à valider visuellement dans VICE sur
+une machine PAL et une machine NTSC.
+
+### Fonctionnalités prioritaires
+
+#### État des sprites
+
+- position 9 bits en X et 8 bits en Y dans des variables runtime ;
+- vitesse signée `vx/vy` ;
+- limites, clamp et rebond ;
+- activation/désactivation ;
+- synchronisation explicite entre état logiciel et registres VIC-II.
+
+#### Animation par frames
+
+- plusieurs blocs de 64 octets par sprite ;
+- séquences nommées (`idle`, `walk`, `hit`) ;
+- vitesse, boucle, pause et changement de séquence ;
+- partage des frames entre plusieurs sprites ;
+- changement atomique du pointeur de sprite pendant la frame.
+
+#### Collisions
+
+- AABB logiciel avec hitboxes configurables ;
+- collision sprite/sprite VIC-II optionnelle ;
+- lecture centralisée des registres de collision VIC, qui sont effacés à la
+  lecture et ne doivent jamais être lus indépendamment par plusieurs systèmes ;
+- événements `enter`, `stay` et `leave` seulement si leur coût reste raisonnable ;
+- aucune promesse de collision pixel-perfect générique à ce stade.
+
+Les collisions avec une tilemap appartiennent à la v0.9.0.
+
+### Critères de sortie
+
+- [x] animation de marche à plusieurs frames (`examples/sprite-animate.js`) ;
+- [x] balle avec vitesse signée et rebond stable ;
+- [x] collision balle/raquette/blocs par hitboxes AABB ;
+- [x] exemple jouable `examples/breakout-mini.js` avec son et score minimal ;
+- [x] chemin de mise à jour audité à au plus 220 cycles par sprite actif, soit
+  environ 1 760 cycles pour les 8 sprites sans tests AABB (moins de 9 % des
+  19 656 cycles théoriques d'une frame PAL) ;
+- [ ] validation visuelle externe dans VICE PAL et NTSC.
+
+Les événements de collision `enter`, `stay` et `leave` restent volontairement
+hors de cette étape : le gameplay cible fonctionne sans leur coût en mémoire et
+en CPU. Ils pourront être ajoutés plus tard à partir d'un besoin concret.
+
+---
+
+## v0.8.1 — Optimisation équilibrée du code généré
+
+Cette étape est terminée avant le démarrage de la v0.9. Elle ne modifie pas le
+JavaScript écrit par l'utilisateur.
+
+- [x] partage automatique d'un bloc VIC-II pour les données de pixels
+  identiques ;
+- [x] désactivation du partage avec `dataAddress` lorsqu'un bloc indépendant et
+  modifiable est nécessaire ;
+- [x] sous-routines générées pour les synchronisations de sprites répétées ;
+- [x] comparaison AABB commune lorsqu'une frame contient plusieurs collisions ;
+- [x] sous-routine commune pour plusieurs appels à `c64.sid.click()` ;
+- [x] code court conservé en ligne lorsqu'un seul appel serait moins coûteux ;
+- [x] tests automatiques de taille et de mutualisation ;
+- [x] `breakout-mini.prg` réduit de 4 644 à 3 335 octets, soit environ 28 %,
+  tout en ajoutant l'état logique nécessaire aux 16 sprites.
+
+Le compromis équilibré ajoute 12 cycles par appel partagé (`JSR` + `RTS`) mais
+réduit fortement la taille sans introduire de boucle non bornée ni modifier le
+comportement du DSL.
+
+---
+
+## v0.8.2 — 16 sprites logiques par multiplexage
+
+La création d'un sprite `8..15` active automatiquement un multiplexeur compact.
+À chaque image, les sprites actifs sont triés selon leur Y et les huit canaux
+VIC-II sont réattribués dès que le sprite précédent est entièrement terminé.
+
+- [x] `c64.sprite.create(0..15)` sans nouvelle API obligatoire ;
+- [x] état logique 9 bits X, Y, vitesse, activation, pointeur, couleur et flags
+  pour 16 sprites ;
+- [x] tri automatique des sprites actifs selon leur coordonnée Y ;
+- [x] une seule routine assembleur de rendu réutilisée pour les 16 sprites ;
+- [x] prise en compte de la hauteur 21 pixels et de `expandY` (42 pixels) ;
+- [x] aucune séparation fixe entre zone haute, centrale et basse ;
+- [x] partage automatique des frames et des pixels conservé ;
+- [x] animations runtime disponibles pour les sprites 8 à 15 ;
+- [x] collisions AABB entre tous les sprites logiques ;
+- [x] refus explicite des collisions VIC ambiguës et de l'ancienne API directe ;
+- [x] exemple `examples/sprite-multiplex-16.js` inférieur à 2,5 Ko ;
+- [x] tests des indices, du renderer, des erreurs et de la taille ;
+- [ ] validation visuelle dans VICE PAL et NTSC.
+
+Limitation matérielle assumée : neuf sprites ou davantage ne peuvent pas
+occuper les mêmes lignes raster. Dans ce cas, les sprites sans canal disponible
+sont omis pendant l'image concernée. Les collisions VIC restent ambiguës ; les
+collisions AABB logiques restent disponibles.
+
+---
+
+## v0.9.0 — Charset Studio, tiles et maps statiques
+
+### Objectif
+
+Fournir le pipeline complet permettant de dessiner des caractères, de construire
+des tiles et des niveaux, puis de les utiliser sans recopier manuellement des
+tableaux d'octets dans le code JavaScript.
+
+Le générateur de caractères est non seulement possible, mais recommandé : il
+réduit fortement la difficulté de création d'un jeu C64 et évite de nombreuses
+erreurs de format.
+
+### 1. Charset Studio intégré aux outils js-c64
+
+Ajouter une application locale, par exemple lancée avec :
+
+```text
+c64js assets
+```
+
+L'outil peut être une petite application web locale indépendante du compilateur
+principal. Elle doit fonctionner hors ligne et proposer :
+
+- éditeur pixel 8 × 8 avec zoom ;
+- modes caractère hires 1 bit et multicolore 2 bits ;
+- palette C64 fixe de 16 couleurs ;
+- aperçu de tous les caractères du charset ;
+- copier/coller, miroir X/Y, décalage et rotation simple ;
+- duplication et réorganisation des caractères ;
+- aperçu sur une grille d'écran C64 ;
+- import/export JSON sans perte ;
+- export `.bin`, module `.js` et éventuellement `.asm` ;
+- validation de la taille et des contraintes multicolores.
+
+Un import PNG indexé peut être ajouté ensuite, mais il ne doit pas être la seule
+source : la conversion automatique de couleurs et de pixels doit toujours
+afficher les pertes avant export.
+
+### 2. Tiles et metatiles
+
+Un tile n'est pas limité à un caractère. Le studio doit permettre des metatiles
+configurables, par exemple 1 × 1, 2 × 2 ou 4 × 4 caractères, contenant :
+
+- indices de caractères ;
+- couleurs par cellule ;
+- type de collision ;
+- propriétés utilisateur (`solid`, `ladder`, `danger`, `collectible`, etc.).
+
+### 3. Éditeur de map
+
+- grille redimensionnable ;
+- palette de tiles ;
+- outils crayon, rectangle, remplissage et sélection ;
+- couche visuelle ;
+- couche de collision ;
+- couche d'objets/spawns séparée de l'image ;
+- coordonnées et propriétés d'objets ;
+- export JSON source et données binaires compactes ;
+- compression RLE optionnelle, avec taille avant/après affichée.
+
+### 4. API compilateur et runtime
+
+API indicative :
+
+```js
+const level = c64.assets.loadMap("assets/level1.json");
+
+c64.charset.use(level.charset, { address: 0x3000 });
+c64.map.draw(level, { x: 0, y: 0 });
+
+const tile = c64.map.tileAt(level, playerTileX, playerTileY);
+c64.control.if(tile.isSolid(), () => {
+  playerX.set(previousX);
+});
+```
+
+Fonctionnalités nécessaires :
+
+- chargement d'assets à la compilation ;
+- charset à une adresse alignée et compatible avec la banque VIC ;
+- copie ou inclusion directe des données ;
+- dessin d'une map ou d'une zone rectangulaire ;
+- `getTile`/`setTile` avec coordonnées runtime ;
+- requêtes de propriétés de collision ;
+- conversion coordonnées pixel, caractère et tile ;
+- rapport mémoire du charset, de la map et des tables de propriétés.
+
+### Périmètre volontaire
+
+La v0.9.0 doit d'abord réussir les maps statiques et les changements de salle.
+Le scrolling fin et le streaming continu sont reportés en v0.10.0. Les livrer en
+même temps rendrait la version trop risquée et beaucoup plus difficile à tester.
+
+### Critères de sortie
+
+- un charset peut être dessiné, sauvegardé, rouvert et exporté sans perte ;
+- une map peut être dessinée dans le studio puis compilée dans un PRG ;
+- les collisions utilisent la couche logique, pas la couleur affichée ;
+- exemples `examples/snake.js`, `examples/tetris-mini.js` et
+  `examples/maze-game.js` ;
+- un projet exemple contient les sources JSON des assets, pas seulement le BIN.
+
+---
+
+## v0.10.0 — Scrolling, caméra et streaming de niveaux
+
+### Objectif
+
+Permettre des niveaux plus grands que l'écran et préparer un petit jeu de
+plates-formes ou un shooter à scrolling.
+
+### Fonctionnalités prioritaires
+
+- fine scroll X/Y via `$D016` et `$D011` ;
+- grossier scroll par déplacement de lignes/colonnes ;
+- streaming d'une colonne ou d'une ligne de tiles au wrap ;
+- caméra bornée suivant une position logique ;
+- double écran ou buffer adapté lorsque nécessaire ;
+- gestion correcte de Color RAM ;
+- carte plus grande que 256 cases avec coordonnées 16 bits ;
+- hooks de chargement de salle et de zone ;
+- stratégie de décompression par morceaux ;
+- limites de vitesse selon le budget CPU.
+
+### Risques techniques à traiter explicitement
+
+- badlines VIC-II et temps CPU réellement disponible ;
+- différences PAL/NTSC ;
+- déchirement lors de la copie de Color RAM ;
+- banque VIC commune au charset, à l'écran et aux sprites ;
+- coexistence du streaming avec musique, animation et IRQ raster ;
+- coût des maps 16 bits et des multiplications de coordonnées.
+
+### Critères de sortie
+
+- scroll horizontal unidirectionnel sans déchirement ;
+- scroll horizontal bidirectionnel avec caméra bornée ;
+- collision correcte pendant le déplacement de la caméra ;
+- exemple `examples/tilemap-scroll-x.js` ;
+- exemple `examples/platformer-mini.js` avec au moins deux zones jouables ;
+- profil CPU/mémoire inclus dans le rapport de build.
+
+Le scroll vertical complet peut être livré après le scroll horizontal si le
+budget de la version devient trop important.
+
+---
+
+## v0.11.0 — Audio de jeu, outils et optimisation
+
+### Objectif
+
+Rendre les jeux agréables à produire, déboguer et optimiser avant de figer l'API
+1.0.
+
+### Audio
+
+- priorité entre musique et effets sonores ;
+- réservation configurable d'une voix SID pour les bruitages ;
+- pause/reprise/fade de la musique ;
+- patterns et instruments réutilisables ;
+- tempo stable PAL/NTSC ;
+- diagnostic lorsque musique et effet modifient la même voix.
+
+### Diagnostics
+
+- rapport mémoire détaillé ;
+- estimation des cycles des routines critiques ;
+- avertissement lorsqu'une tâche de frame dépasse son budget ;
+- symboles exploitables dans le moniteur VICE ;
+- assertion runtime optionnelle en build debug ;
+- modes `--debug` et `--release`.
+
+### Optimisation
+
+- élimination des routines inutilisées ;
+- mutualisation des séquences répétées ;
+- choix `--opt size`, `--opt speed` et `--opt balanced` seulement après mesure ;
+- compression RLE des maps et charsets quand elle réduit réellement la taille ;
+- rapport comparatif taille/vitesse.
+
+### Option avancée
+
+Un multiplexeur de sprites peut être étudié ici, mais il ne doit pas bloquer la
+1.0. Les petits jeux visés peuvent déjà fonctionner avec les huit sprites
+matériels et des éléments de décor en caractères.
+
+---
+
+## v1.0.0 — Mini moteur de jeux C64
+
+### Objectif
+
+Stabiliser une API cohérente, documentée et validée par plusieurs jeux complets.
+
+### Systèmes de haut niveau
+
+- scènes `title`, `game`, `pause`, `gameOver` ;
+- transitions explicites entre scènes ;
+- score, vies et affichage numérique ;
+- générateur pseudo-aléatoire déterministe avec seed ;
+- pools fixes d'entités, projectiles et ennemis ;
+- spawns provenant de la couche objets d'une map ;
+- sauvegarde de configuration ou high-score en option, hors cœur initial.
+
+Les entités doivent utiliser des pools de taille fixe décidée à la compilation.
+Il ne faut pas introduire de système général avec allocation dynamique, héritage
+ou ramasse-miettes sur le C64.
+
+### Jeux de validation obligatoires
+
+La 1.0 ne doit pas reposer sur une seule démo technique. Elle doit compiler et
+faire fonctionner au minimum :
+
+1. `snake.js` — grille, input, timer, score et hasard ;
+2. `breakout-mini.js` — sprites, collisions, son et niveaux ;
+3. `maze-game.js` — charset, tilemap, collecte et ennemis simples ;
+4. `platformer-mini.js` — animation, collisions de tiles, caméra et scrolling.
+
+Un mini Tetris peut remplacer ou compléter Snake comme validation du mode
+caractères.
+
+---
+
+## Matrice des jeux cibles
+
+| Jeu cible | Fondations indispensables | Version minimale réaliste |
+|---|---|---:|
+| Snake | boucle frame, input, grille, hasard, score | v0.9.0 |
+| Tetris | grille, rotations, collisions logiques, timer | v0.9.0 |
+| Casse-brique | sprites, AABB, vitesse, score, SID | v0.8.0 |
+| Labyrinthe type Pac-Man | tilemap, collisions, animations, IA simple | v0.9.0 |
+| Mini platformer écran fixe | tiles, collisions, animation, scènes | v0.9.0 |
+| Mini platformer avec scroll | caméra, streaming, collisions de map | v0.10.0 |
+
+---
+
+## Stratégie de tests et critères communs
+
+Chaque fonctionnalité doit être couverte à plusieurs niveaux :
+
+1. test de l'IR produit par le DSL ;
+2. test des octets et symboles assembleur générés ;
+3. test d'intégration compilant un exemple complet ;
+4. test automatisé en émulateur quand cela devient possible ;
+5. contrôle visuel et jouable dans VICE pour les releases.
+
+À ajouter progressivement :
+
+- captures d'état mémoire après un nombre déterminé de frames ;
+- tests PAL et NTSC ;
+- tests des limites X=255/256, changements de banque et wrap de map ;
+- tests de collision reproductibles ;
+- budgets maximums de RAM, taille PRG et cycles par frame ;
+- build de tous les exemples dans la CI.
+
+---
+
+## Ordre d'implémentation recommandé
+
+Si le temps est limité, suivre cet ordre sans commencer le scrolling trop tôt :
+
+1. figer une syntaxe minimale d'expressions et de conditions ;
+2. créer l'IR typé et les branches 6502 ;
+3. créer une boucle de frame et des inputs snapshot ;
+4. formaliser le runtime IRQ et le plan mémoire ;
+5. livrer le mouvement et les collisions sprites ;
+6. réaliser un casse-brique jouable ;
+7. définir le format JSON charset/tile/map ;
+8. créer d'abord le compilateur d'assets, puis l'éditeur visuel ;
+9. livrer les maps statiques et leurs collisions ;
+10. réaliser Snake/Tetris et un jeu de labyrinthe ;
+11. seulement ensuite développer caméra, fine scroll et streaming ;
+12. stabiliser scènes, pools d'entités, audio et diagnostics pour la 1.0.
+
+---
+
+## Prochaine tranche de travail concrète
+
+La prochaine implémentation ne devrait pas commencer par une API de collision ou
+par l'éditeur graphique. Elle devrait produire un petit prototype vertical :
+
+1. `RuntimeValue` pour byte/bool ;
+2. comparaisons et `c64.control.if()` ;
+3. snapshot joystick port 2 ;
+4. `c64.game.frame()` synchronisé à une frame ;
+5. variable X 9 bits pour un sprite ;
+6. exemple où le joueur déplace un sprite à gauche/droite ;
+7. test du PRG dans VICE avec musique active.
+
+Ce prototype vérifiera la décision d'architecture la plus importante avant que
+de nombreuses API publiques dépendent d'elle.
+
+---
+
+## Résultat attendu
+
+Si ces jalons sont respectés, `js-c64` deviendra :
+
+- un compilateur DSL accessible aux débutants ;
+- un générateur d'assembleur 6502 lisible et optimisable ;
+- une chaîne de création complète pour code, sprites, caractères, tiles et maps ;
+- un outil capable de produire de vrais petits jeux C64 avec animation et son ;
+- une base assez ouverte pour permettre aux utilisateurs avancés d'ajouter leurs
+  propres routines assembleur lorsque le moteur atteint ses limites.

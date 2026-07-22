@@ -8,107 +8,131 @@
 0821  8D 86 02    STA $0286
 0824  A2 00       LDX #$00
 0826        printat_loop_0:
-0826  BD E4 08    LDA str_screen_0,X
-0829  F0 0C       BEQ printat_done_1
+0826  BD 0C 09    LDA str_screen_0,X
+0829  F0 0B       BEQ printat_done_1
 082B  9D 00 04    STA $0400,X
 082E  A9 01       LDA #$01
 0830  9D 00 D8    STA $D800,X
 0833  E8          INX
-0834  4C 26 08    JMP printat_loop_0
-0837        printat_done_1:
-0837  A2 00       LDX #$00
-0839        printat_loop_2:
-0839  BD F5 08    LDA str_screen_1,X
-083C  F0 0C       BEQ printat_done_3
-083E  9D 50 04    STA $0450,X
-0841  A9 01       LDA #$01
-0843  9D 50 D8    STA $D850,X
-0846  E8          INX
-0847  4C 39 08    JMP printat_loop_2
-084A        printat_done_3:
-084A  A2 00       LDX #$00
-084C        printat_loop_4:
-084C  BD 04 09    LDA str_screen_2,X
-084F  F0 0C       BEQ printat_done_5
-0851  9D 78 04    STA $0478,X
-0854  A9 01       LDA #$01
-0856  9D 78 D8    STA $D878,X
-0859  E8          INX
-085A  4C 4C 08    JMP printat_loop_4
-085D        printat_done_5:
-085D  78          SEI
-085E  A9 00       LDA #$00
-0860  8D FE C0    STA $C0FE
-0863  A9 01       LDA #$01
-0865  8D 1A D0    STA $D01A
-0868  A9 01       LDA #$01
-086A  8D 19 D0    STA $D019
-086D  A9 32       LDA #$32
-086F  8D 12 D0    STA $D012
-0872  AD 11 D0    LDA $D011
-0875  29 7F       AND #$7F
-0877  8D 11 D0    STA $D011
-087A  A9 88       LDA #<irq_dispatch
-087C  8D 14 03    STA $0314
-087F  A9 08       LDA #>irq_dispatch
-0881  8D 15 03    STA $0315
-0884  58          CLI
-0885  4C E3 08    JMP program_end
+0834  D0 F0       BNE printat_loop_0
+0836        printat_done_1:
+0836  A2 00       LDX #$00
+0838        printat_loop_2:
+0838  BD 1F 09    LDA str_screen_1,X
+083B  F0 0B       BEQ printat_done_3
+083D  9D 50 04    STA $0450,X
+0840  A9 01       LDA #$01
+0842  9D 50 D8    STA $D850,X
+0845  E8          INX
+0846  D0 F0       BNE printat_loop_2
+0848        printat_done_3:
+0848  A2 00       LDX #$00
+084A        printat_loop_4:
+084A  BD 2E 09    LDA str_screen_2,X
+084D  F0 0B       BEQ printat_done_5
+084F  9D 78 04    STA $0478,X
+0852  A9 01       LDA #$01
+0854  9D 78 D8    STA $D878,X
+0857  E8          INX
+0858  D0 F0       BNE printat_loop_4
+085A        printat_done_5:
+085A  78          SEI
+085B  A9 7F       LDA #$7F
+085D  8D 0D DC    STA $DC0D
+0860  8D 0D DD    STA $DD0D
+0863  AD 0D DC    LDA $DC0D
+0866  AD 0D DD    LDA $DD0D
+0869  A9 00       LDA #$00
+086B  8D FE C0    STA $C0FE
+086E  78          SEI
+086F  A9 01       LDA #$01
+0871  8D 1A D0    STA $D01A
+0874  A9 01       LDA #$01
+0876  8D 19 D0    STA $D019
+0879  A9 32       LDA #$32
+087B  8D 12 D0    STA $D012
+087E  AD 11 D0    LDA $D011
+0881  29 7F       AND #$7F
+0883  8D 11 D0    STA $D011
+0886  A9 94       LDA #<irq_dispatch
+0888  8D 14 03    STA $0314
+088B  A9 08       LDA #>irq_dispatch
+088D  8D 15 03    STA $0315
+0890  58          CLI
+0891  4C 0B 09    JMP program_end
             ; Raster IRQ dispatcher
-0888        irq_dispatch:
-0888  48          PHA
-0889  8A          TXA
-088A  48          PHA
-088B  98          TYA
-088C  48          PHA
-088D  AD FE C0    LDA $C0FE
-0890  C9 00       CMP #$00
-0892  F0 07       BEQ irq_handler_0
-0894  C9 01       CMP #$01
-0896  F0 27       BEQ irq_handler_1
-0898  4C 9B 08    JMP irq_handler_0
-089B        irq_handler_0:
-089B  A9 02       LDA #$02
-089D  8D 20 D0    STA $D020
-08A0  A9 01       LDA #$01
-08A2  8D FE C0    STA $C0FE
-08A5  A9 96       LDA #$96
-08A7  8D 12 D0    STA $D012
-08AA  AD 11 D0    LDA $D011
-08AD  29 7F       AND #$7F
-08AF  8D 11 D0    STA $D011
-08B2  A9 01       LDA #$01
-08B4  8D 19 D0    STA $D019
-08B7  68          PLA
-08B8  A8          TAY
-08B9  68          PLA
-08BA  AA          TAX
-08BB  68          PLA
-08BC  4C 31 EA    JMP $EA31
-08BF        irq_handler_1:
-08BF  A9 06       LDA #$06
-08C1  8D 20 D0    STA $D020
-08C4  A9 00       LDA #$00
-08C6  8D FE C0    STA $C0FE
-08C9  A9 32       LDA #$32
-08CB  8D 12 D0    STA $D012
-08CE  AD 11 D0    LDA $D011
-08D1  29 7F       AND #$7F
-08D3  8D 11 D0    STA $D011
-08D6  A9 01       LDA #$01
-08D8  8D 19 D0    STA $D019
-08DB  68          PLA
-08DC  A8          TAY
-08DD  68          PLA
-08DE  AA          TAX
-08DF  68          PLA
-08E0  4C 31 EA    JMP $EA31
-08E3        program_end:
-08E3  60          RTS
+0894        irq_dispatch:
+0894  48          PHA
+0895  8A          TXA
+0896  48          PHA
+0897  98          TYA
+0898  48          PHA
+0899  AD 19 D0    LDA $D019
+089C  29 01       AND #$01
+089E  D0 0E       BNE irq_dispatch_vic_raster
+08A0  AD 0D DC    LDA $DC0D
+08A3  AD 0D DD    LDA $DD0D
+08A6  68          PLA
+08A7  A8          TAY
+08A8  68          PLA
+08A9  AA          TAX
+08AA  68          PLA
+08AB  4C 81 EA    JMP $EA81
+08AE        irq_dispatch_vic_raster:
+08AE  A9 01       LDA #$01
+08B0  8D 19 D0    STA $D019
+08B3  AD FE C0    LDA $C0FE
+08B6  C9 00       CMP #$00
+08B8  F0 03       BEQ irq_dispatch_match_0
+08BA  4C C0 08    JMP irq_dispatch_next_0
+08BD        irq_dispatch_match_0:
+08BD  4C CD 08    JMP irq_handler_0
+08C0        irq_dispatch_next_0:
+08C0  C9 01       CMP #$01
+08C2  F0 03       BEQ irq_dispatch_match_1
+08C4  4C CA 08    JMP irq_dispatch_next_1
+08C7        irq_dispatch_match_1:
+08C7  4C EC 08    JMP irq_handler_1
+08CA        irq_dispatch_next_1:
+08CA  4C CD 08    JMP irq_handler_0
+08CD        irq_handler_0:
+08CD  A9 02       LDA #$02
+08CF  8D 20 D0    STA $D020
+08D2  A9 01       LDA #$01
+08D4  8D FE C0    STA $C0FE
+08D7  A9 96       LDA #$96
+08D9  8D 12 D0    STA $D012
+08DC  AD 11 D0    LDA $D011
+08DF  29 7F       AND #$7F
+08E1  8D 11 D0    STA $D011
+08E4  68          PLA
+08E5  A8          TAY
+08E6  68          PLA
+08E7  AA          TAX
+08E8  68          PLA
+08E9  4C 81 EA    JMP $EA81
+08EC        irq_handler_1:
+08EC  A9 06       LDA #$06
+08EE  8D 20 D0    STA $D020
+08F1  A9 00       LDA #$00
+08F3  8D FE C0    STA $C0FE
+08F6  A9 32       LDA #$32
+08F8  8D 12 D0    STA $D012
+08FB  AD 11 D0    LDA $D011
+08FE  29 7F       AND #$7F
+0900  8D 11 D0    STA $D011
+0903  68          PLA
+0904  A8          TAY
+0905  68          PLA
+0906  AA          TAX
+0907  68          PLA
+0908  4C 81 EA    JMP $EA81
+090B        program_end:
+090B  60          RTS
             ; String pool
-08E4        str_screen_0:
-08E4  13 01 06 05 20 12 01 13 14 05 12 20 02 01 12 13 00 .byte $13, $01, $06, $05, $20, $12, $01, $13, $14, $05, $12, $20, $02, $01, $12, $13, $00
-08F5        str_screen_1:
-08F5  12 05 04 20 01 14 20 0C 09 0E 05 20 35 30 00 .byte $12, $05, $04, $20, $01, $14, $20, $0C, $09, $0E, $05, $20, $35, $30, $00
-0904        str_screen_2:
-0904  02 0C 15 05 20 01 14 20 0C 09 0E 05 20 31 35 30 00 .byte $02, $0C, $15, $05, $20, $01, $14, $20, $0C, $09, $0E, $05, $20, $31, $35, $30, $00
+090C        str_screen_0:
+090C  13 14 01 02 0C 05 20 12 01 13 14 05 12 20 02 01 12 13 00 .byte $13, $14, $01, $02, $0C, $05, $20, $12, $01, $13, $14, $05, $12, $20, $02, $01, $12, $13, $00
+091F        str_screen_1:
+091F  12 05 04 20 01 14 20 0C 09 0E 05 20 35 30 00 .byte $12, $05, $04, $20, $01, $14, $20, $0C, $09, $0E, $05, $20, $35, $30, $00
+092E        str_screen_2:
+092E  02 0C 15 05 20 01 14 20 0C 09 0E 05 20 31 35 30 00 .byte $02, $0C, $15, $05, $20, $01, $14, $20, $0C, $09, $0E, $05, $20, $31, $35, $30, $00

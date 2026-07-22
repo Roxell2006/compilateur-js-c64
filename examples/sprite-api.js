@@ -16,10 +16,12 @@ c64.fillRect(0, 0, 40, 25, 32, c64.COLOR_LIGHTBLUE);
 c64.drawFrame(1, 1, 38, 8, 81, c64.COLOR_WHITE);
 c64.printCentered(3, "SPRITE API DEMO");
 
-c64.sprite.data(0, DEMO_SPRITE);
-c64.sprite.color(0, c64.COLOR_YELLOW);
-c64.sprite.multicolor(0, false);
-c64.sprite.expandX(0, true);
-c64.sprite.expandY(0, true);
-c64.sprite.position(0, 140, 100);
-c64.sprite.enable(0);
+c64.sprite.create(0, {
+  x: 140,
+  y: 100,
+  data: DEMO_SPRITE,
+  color: c64.COLOR_YELLOW,
+  multicolor: false,
+  expandX: true,
+  expandY: true
+});

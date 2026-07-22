@@ -212,7 +212,7 @@ sid_irq_body_done_3:
   PLA
   TAX
   PLA
-  JMP $EA31
+  RTI
 irq_handler_1:
   LDA #$06
   STA $D020

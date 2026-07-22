@@ -8,48 +8,84 @@
 0821  8D 86 02    STA $0286
 0824  A2 00       LDX #$00
 0826        printat_loop_0:
-0826  BD B3 08    LDA str_screen_0,X
-0829  F0 0C       BEQ printat_done_1
-082B  9D 00 04    STA $0400,X
+0826  BD C7 08    LDA str_screen_0,X
+0829  F0 0B       BEQ printat_done_1
+082B  9D 0A 04    STA $040A,X
 082E  A9 01       LDA #$01
-0830  9D 00 D8    STA $D800,X
+0830  9D 0A D8    STA $D80A,X
 0833  E8          INX
-0834  4C 26 08    JMP printat_loop_0
-0837        printat_done_1:
-0837  A2 00       LDX #$00
-0839        printat_loop_2:
-0839  BD C7 08    LDA str_screen_1,X
-083C  F0 0C       BEQ printat_done_3
-083E  9D 50 04    STA $0450,X
-0841  A9 01       LDA #$01
-0843  9D 50 D8    STA $D850,X
-0846  E8          INX
-0847  4C 39 08    JMP printat_loop_2
-084A        printat_done_3:
-084A  4C 8C 08    JMP sprite_setup
-084D        balloon_sprite_data:
-084D  00 7F 00 01 FF C0 03 FF E0 03 FF E0 07 FF F0 07 FF F0 07 FF F0 07 FF F0 07 FF F0 03 FF E0 03 FF E0 01 FF C0 00 FF 00 00 7E 00 00 3C 00 00 3C 00 00 18 00 00 24 00 00 7E 00 00 7E 00 00 3C 00 .byte $00, $7F, $00, $01, $FF, $C0, $03, $FF, $E0, $03, $FF, $E0, $07, $FF, $F0, $07, $FF, $F0, $07, $FF, $F0, $07, $FF, $F0, $07, $FF, $F0, $03, $FF, $E0, $03, $FF, $E0, $01, $FF, $C0, $00, $FF, $00, $00, $7E, $00, $00, $3C, $00, $00, $3C, $00, $00, $18, $00, $00, $24, $00, $00, $7E, $00, $00, $7E, $00, $00, $3C, $00
-088C        sprite_setup:
-088C  A2 00       LDX #$00
-088E        copy_balloon_sprite:
-088E  BD 4D 08    LDA balloon_sprite_data,X
-0891  9D 00 20    STA $2000,X
-0894  E8          INX
-0895  E0 3F       CPX #$3F
-0897  D0 F5       BNE copy_balloon_sprite
-0899  A9 80       LDA #$80
-089B  8D F8 07    STA $07F8
-089E  A9 78       LDA #$78
-08A0  8D 00 D0    STA $D000
-08A3  A9 5A       LDA #$5A
-08A5  8D 01 D0    STA $D001
-08A8  A9 02       LDA #$02
-08AA  8D 27 D0    STA $D027
-08AD  A9 01       LDA #$01
-08AF  8D 15 D0    STA $D015
-08B2  60          RTS
+0834  D0 F0       BNE printat_loop_0
+0836        printat_done_1:
+0836  A2 00       LDX #$00
+0838        printat_loop_2:
+0838  BD DB 08    LDA str_screen_1,X
+083B  F0 0B       BEQ printat_done_3
+083D  9D 55 04    STA $0455,X
+0840  A9 01       LDA #$01
+0842  9D 55 D8    STA $D855,X
+0845  E8          INX
+0846  D0 F0       BNE printat_loop_2
+0848        printat_done_3:
+0848  A9 78       LDA #$78
+084A  8D 00 C5    STA $C500
+084D  A9 00       LDA #$00
+084F  8D 01 C5    STA $C501
+0852  A9 5A       LDA #$5A
+0854  8D 02 C5    STA $C502
+0857  A9 00       LDA #$00
+0859  8D 03 C5    STA $C503
+085C  A9 00       LDA #$00
+085E  8D 04 C5    STA $C504
+0861  A9 01       LDA #$01
+0863  8D 05 C5    STA $C505
+0866  AD 05 C5    LDA $C505
+0869  D0 0B       BNE sprite_runtime_active_0_4
+086B  AD 15 D0    LDA $D015
+086E  29 FE       AND #$FE
+0870  8D 15 D0    STA $D015
+0873  4C A4 08    JMP sprite_runtime_sync_done_0_7
+0876        sprite_runtime_active_0_4:
+0876  AD 15 D0    LDA $D015
+0879  09 01       ORA #$01
+087B  8D 15 D0    STA $D015
+087E  AD 00 C5    LDA $C500
+0881  8D 00 D0    STA $D000
+0884  AD 01 C5    LDA $C501
+0887  29 01       AND #$01
+0889  D0 0B       BNE sprite_runtime_xhigh_0_5
+088B  AD 10 D0    LDA $D010
+088E  29 FE       AND #$FE
+0890  8D 10 D0    STA $D010
+0893  4C 9E 08    JMP sprite_runtime_xdone_0_6
+0896        sprite_runtime_xhigh_0_5:
+0896  AD 10 D0    LDA $D010
+0899  09 01       ORA #$01
+089B  8D 10 D0    STA $D010
+089E        sprite_runtime_xdone_0_6:
+089E  AD 02 C5    LDA $C502
+08A1  8D 01 D0    STA $D001
+08A4        sprite_runtime_sync_done_0_7:
+08A4  A2 00       LDX #$00
+08A6        copydata_2000_sprite_data_0_0_63_8:
+08A6  BD F9 08    LDA sprite_data_0_0,X
+08A9  9D 00 20    STA $2000,X
+08AC  E8          INX
+08AD  E0 3F       CPX #$3F
+08AF  D0 F5       BNE copydata_2000_sprite_data_0_0_63_8
+08B1  A9 80       LDA #$80
+08B3  8D 04 C4    STA $C404
+08B6  AD 04 C4    LDA $C404
+08B9  8D F8 07    STA $07F8
+08BC  A9 02       LDA #$02
+08BE  8D 05 C4    STA $C405
+08C1  A9 02       LDA #$02
+08C3  8D 27 D0    STA $D027
+08C6  60          RTS
             ; String pool
-08B3        str_screen_0:
-08B3  03 36 34 20 08 0F 14 20 01 09 12 20 02 01 0C 0C 0F 0F 0E 00 .byte $03, $36, $34, $20, $08, $0F, $14, $20, $01, $09, $12, $20, $02, $01, $0C, $0C, $0F, $0F, $0E, $00
-08C7        str_screen_1:
-08C7  13 10 12 09 14 05 20 30 20 06 12 0F 0D 20 14 08 05 20 15 13 05 12 20 0D 01 0E 15 01 0C 00 .byte $13, $10, $12, $09, $14, $05, $20, $30, $20, $06, $12, $0F, $0D, $20, $14, $08, $05, $20, $15, $13, $05, $12, $20, $0D, $01, $0E, $15, $01, $0C, $00
+08C7        str_screen_0:
+08C7  03 36 34 20 08 0F 14 20 01 09 12 20 02 01 0C 0C 0F 0F 0E 00 .byte $03, $36, $34, $20, $08, $0F, $14, $20, $01, $09, $12, $20, $02, $01, $0C, $0C, $0F, $0F, $0E, $00
+08DB        str_screen_1:
+08DB  13 10 12 09 14 05 20 30 20 06 12 0F 0D 20 14 08 05 20 15 13 05 12 20 0D 01 0E 15 01 0C 00 .byte $13, $10, $12, $09, $14, $05, $20, $30, $20, $06, $12, $0F, $0D, $20, $14, $08, $05, $20, $15, $13, $05, $12, $20, $0D, $01, $0E, $15, $01, $0C, $00
+            ; User data
+08F9        sprite_data_0_0:
+08F9  00 7F 00 01 FF C0 03 FF E0 03 FF E0 07 FF F0 07 FF F0 07 FF F0 07 FF F0 07 FF F0 03 FF E0 03 FF E0 01 FF C0 00 FF 00 00 7E 00 00 3C 00 00 3C 00 00 18 00 00 24 00 00 7E 00 00 7E 00 00 3C 00 .byte $00, $7F, $00, $01, $FF, $C0, $03, $FF, $E0, $03, $FF, $E0, $07, $FF, $F0, $07, $FF, $F0, $07, $FF, $F0, $07, $FF, $F0, $07, $FF, $F0, $03, $FF, $E0, $03, $FF, $E0, $01, $FF, $C0, $00, $FF, $00, $00, $7E, $00, $00, $3C, $00, $00, $3C, $00, $00, $18, $00, $00, $24, $00, $00, $7E, $00, $00, $7E, $00, $00, $3C, $00

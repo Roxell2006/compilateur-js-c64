@@ -1,0 +1,15 @@
+{
+  "memset_429_81_38": 2098,
+  "memset_d829_1_38": 2110,
+  "memset_541_81_38": 2122,
+  "memset_d941_1_38": 2134,
+  "printat_loop_0": 2264,
+  "printat_done_1": 2280,
+  "sprite_runtime_active_0_2": 2326,
+  "sprite_runtime_xhigh_0_3": 2358,
+  "sprite_runtime_xdone_0_4": 2366,
+  "sprite_runtime_sync_done_0_5": 2372,
+  "copydata_2000_sprite_data_0_0_63_6": 2374,
+  "str_screen_0": 2455,
+  "sprite_data_0_0": 2471
+}

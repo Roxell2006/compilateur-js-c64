@@ -20,6 +20,182 @@ export interface CompileResult {
   basicText: string;
 }
 
+export interface RuntimeCondition {
+  readonly type: "runtimeCondition";
+}
+
+export interface RuntimeByteRef {
+  readonly type: "varRef";
+  readonly valueType: "byte";
+  readonly name: string;
+  set(value: number | RuntimeByteRef): void;
+  add(value: number | RuntimeByteRef): void;
+  sub(value: number | RuntimeByteRef): void;
+  inc(): void;
+  dec(): void;
+  and(value: number | RuntimeByteRef): void;
+  or(value: number | RuntimeByteRef): void;
+  xor(value: number | RuntimeByteRef): void;
+  toggle(): void;
+  eq(value: number | RuntimeByteRef): RuntimeCondition;
+  ne(value: number | RuntimeByteRef): RuntimeCondition;
+  lt(value: number | RuntimeByteRef): RuntimeCondition;
+  lte(value: number | RuntimeByteRef): RuntimeCondition;
+  gt(value: number | RuntimeByteRef): RuntimeCondition;
+  gte(value: number | RuntimeByteRef): RuntimeCondition;
+}
+
+export interface RuntimeWordRef {
+  readonly type: "varRef";
+  readonly valueType: "word";
+  readonly name: string;
+  set(value: number | RuntimeWordRef): void;
+  add(value: number | RuntimeWordRef): void;
+  sub(value: number | RuntimeWordRef): void;
+  inc(): void;
+  dec(): void;
+  eq(value: number | RuntimeWordRef): RuntimeCondition;
+  ne(value: number | RuntimeWordRef): RuntimeCondition;
+  lt(value: number | RuntimeWordRef): RuntimeCondition;
+  lte(value: number | RuntimeWordRef): RuntimeCondition;
+  gt(value: number | RuntimeWordRef): RuntimeCondition;
+  gte(value: number | RuntimeWordRef): RuntimeCondition;
+}
+
+export interface RuntimeBoolRef {
+  readonly type: "varRef";
+  readonly valueType: "bool";
+  readonly name: string;
+  set(value: boolean | RuntimeBoolRef): void;
+  toggle(): void;
+  eq(value: boolean | RuntimeBoolRef): RuntimeCondition;
+  ne(value: boolean | RuntimeBoolRef): RuntimeCondition;
+}
+
+export interface InputButton {
+  held(): RuntimeCondition;
+  pressed(): RuntimeCondition;
+  released(): RuntimeCondition;
+}
+
+export interface JoystickInput {
+  up(): RuntimeCondition;
+  down(): RuntimeCondition;
+  left(): RuntimeCondition;
+  right(): RuntimeCondition;
+  fire(): RuntimeCondition;
+  upPressed(): RuntimeCondition;
+  downPressed(): RuntimeCondition;
+  leftPressed(): RuntimeCondition;
+  rightPressed(): RuntimeCondition;
+  firePressed(): RuntimeCondition;
+  upReleased(): RuntimeCondition;
+  downReleased(): RuntimeCondition;
+  leftReleased(): RuntimeCondition;
+  rightReleased(): RuntimeCondition;
+  fireReleased(): RuntimeCondition;
+}
+
+export interface SpriteFramesRef {
+  readonly type: "spriteFrames";
+  readonly name: string;
+}
+
+export interface SpriteHitbox {
+  offsetX?: number;
+  offsetY?: number;
+  width?: number;
+  height?: number;
+}
+
+export interface SpriteCreateOptions {
+  x?: number;
+  y?: number;
+  vx?: number;
+  vy?: number;
+  active?: boolean;
+  data?: Iterable<number> | string;
+  dataAddress?: number;
+  frames?: SpriteFramesRef;
+  color?: number;
+  multicolor?: boolean;
+  expandX?: boolean;
+  expandY?: boolean;
+  priority?: boolean;
+  hitbox?: SpriteHitbox;
+  minX?: number;
+  maxX?: number;
+  minY?: number;
+  maxY?: number;
+  bounceX?: boolean;
+  bounceY?: boolean;
+}
+
+export interface SpriteRef {
+  readonly type: "spriteRef";
+  readonly index: number;
+  readonly x: RuntimeWordRef;
+  readonly y: RuntimeByteRef;
+  readonly vx: RuntimeByteRef;
+  readonly vy: RuntimeByteRef;
+  readonly active: RuntimeBoolRef;
+  readonly hitbox: Required<SpriteHitbox>;
+  setPosition(x: number | RuntimeWordRef, y: number | RuntimeByteRef): void;
+  setVelocity(vx: number | RuntimeByteRef, vy: number | RuntimeByteRef): void;
+  setBounds(minX: number, maxX: number, minY: number, maxY: number, options?: { bounceX?: boolean; bounceY?: boolean }): void;
+  update(): void;
+  reverseX(): void;
+  reverseY(): void;
+  sync(): void;
+  enable(): void;
+  disable(): void;
+  sequence(name: string, frameIndexes: Iterable<number>, options?: { speed?: number; loop?: boolean }): void;
+  play(name: string): void;
+  pauseAnimation(): void;
+  resumeAnimation(): void;
+  collides(other: SpriteRef): RuntimeCondition;
+  vicCollides(other: SpriteRef): RuntimeCondition;
+  collidesWithBackground(): RuntimeCondition;
+}
+
+export interface C64Api {
+  [key: string]: any;
+  var: {
+    byte(name: string, options?: { address?: number; initial?: number }): RuntimeByteRef;
+    byte(name: string, address: number, initialValue?: number): RuntimeByteRef;
+    word(name: string, options?: { address?: number; initial?: number }): RuntimeWordRef;
+    word(name: string, address: number, initialValue?: number): RuntimeWordRef;
+    bool(name: string, options?: { address?: number; initial?: boolean } | boolean): RuntimeBoolRef;
+  };
+  control: {
+    if(condition: RuntimeCondition, thenHandler: () => void, elseHandler?: () => void): void;
+    repeat(count: number | RuntimeByteRef, handler: () => void): void;
+    while(condition: RuntimeCondition, handler: () => void, options: { maxIterations: number }): void;
+    routine(name: string, handler: () => void): void;
+    call(name: string): void;
+  };
+  input: {
+    joystick(port?: 1 | 2): JoystickInput;
+    keyboard<T extends Record<string, number>>(bindings: T): { [K in keyof T]: InputButton };
+  };
+  sprite: {
+    frames(name: string, frames: Iterable<Iterable<number>>, options?: { address?: number }): SpriteFramesRef;
+    create(index: number, options?: SpriteCreateOptions): SpriteRef;
+    [key: string]: any;
+  };
+  game: {
+    init(handler: () => void): void;
+    every(count: number, handler: () => void): void;
+    frame(handler: () => void, options?: { rasterLine?: number; hz?: 50 | "video" }): void;
+  };
+  table: {
+    byte(name: string, values: Iterable<number>): {
+      load(index: number | RuntimeByteRef, target: RuntimeByteRef): void;
+      store(index: number | RuntimeByteRef, value: number | RuntimeByteRef): void;
+    };
+  };
+}
+
 export declare class Assembler6502 {
   constructor(origin?: number);
   label(name: string): this;
@@ -38,7 +214,7 @@ export declare function compileJsToBasicData(source: string, options?: { codeSta
 export declare function createPrg(machineCode: Uint8Array, sysAddress?: number): Uint8Array;
 export declare function createBasicSysStub(sysAddress?: number): Uint8Array;
 export declare function exportBasicData(bytes: ArrayLike<number>, startLine?: number, step?: number, chunkSize?: number): string;
-export declare const c64: any;
+export declare const c64: C64Api;
 export declare function imm(value: number): Operand;
 export declare function immLo(value: number | string): Operand;
 export declare function immHi(value: number | string): Operand;

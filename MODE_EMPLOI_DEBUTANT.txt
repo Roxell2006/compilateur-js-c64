@@ -24,31 +24,175 @@ c64.printAt(0, 0, "HELLO C64");
 2. COMMENT COMPILER UN PROGRAMME
 --------------------------------
 
-Exemple pour produire un fichier PRG :
+2.1 POURQUOI LA COMMANDE C64JS PEUT NE PAS ETRE RECONNUE
+---------------------------------------------------------
+
+Si vous ouvrez simplement PowerShell et tapez :
 
 c64js build examples/hello.js -o hello.prg
 
-Exemple pour produire de l'assembleur lisible :
+Windows peut afficher un message du genre :
 
-c64js build examples/hello.js -o hello.asm --format asm
+Le terme "c64js" n'est pas reconnu...
 
-Exemple pour produire un listing :
+Ce message ne signifie pas que votre programme hello.js est mauvais.
+Il signifie seulement que la commande c64js n'a pas ete installee globalement,
+ou que Windows ne la trouve pas dans sa variable PATH.
 
-c64js build examples/hello.js -o hello.lst --format lst
+Pour un debutant qui travaille directement dans le dossier du compilateur,
+la methode la plus simple et la plus fiable est d'utiliser Node.js :
 
-Exemple pour produire un programme BASIC DATA :
+node .\src\cli.js build .\examples\hello.js -o .\hello.prg
 
-c64js build examples/hello.js -o hello.bas --format data
+Cette commande lance directement le fichier src\cli.js du projet. Elle ne
+demande pas que la commande c64js soit installee globalement.
 
-Exemple pour produire un BASIC DATA avec une autre adresse de depart :
 
-c64js build examples/hello.js -o hello.bas --format data --sys 49152
+2.2 PREPARER LE PROJET UNE PREMIERE FOIS
+----------------------------------------
 
-ou :
+1. Installez Node.js si ce n'est pas deja fait.
 
-c64js build examples/hello.js -o hello.bas --format data --sys 8192
+2. Dans VS Code, ouvrez le dossier complet du projet js-c64.
 
-Dans ce cas, le programme BASIC genere fera :
+3. Ouvrez le terminal de VS Code :
+
+Terminal > Nouveau terminal
+
+4. Verifiez que le terminal se trouve bien dans le dossier du compilateur :
+
+Get-Location
+
+Puis verifiez que package.json est visible :
+
+Get-ChildItem package.json
+
+Le chemin affiche doit se terminer par le dossier du projet, par exemple :
+
+D:\Programmation\Vibe Coding Pro\compilateur js-c64
+
+Si vous n'etes pas dans ce dossier, utilisez cd avec le chemin entre guillemets :
+
+cd "D:\Programmation\Vibe Coding Pro\compilateur js-c64"
+
+Les guillemets sont indispensables lorsque le chemin contient des espaces.
+
+5. Verifiez que Node.js et npm fonctionnent :
+
+node -v
+npm -v
+
+Ces commandes doivent afficher des numeros de version.
+
+6. Installez les dependances du projet. Cette operation est normalement a faire
+une seule fois, puis de nouveau uniquement si package.json change :
+
+npm install
+
+
+2.3 COMPILER DEPUIS LE DOSSIER DU COMPILATEUR - METHODE RECOMMANDEE
+-------------------------------------------------------------------
+
+Pour creer un fichier PRG directement chargeable dans VICE :
+
+node .\src\cli.js build .\examples\hello.js -o .\dist\hello.prg
+
+Detail de la commande :
+
+- node lance Node.js
+- .\src\cli.js est le programme de compilation
+- build demande une compilation
+- .\examples\hello.js est le fichier source JavaScript
+- -o signifie output, c'est-a-dire fichier de sortie
+- .\dist\hello.prg est le fichier qui sera cree
+
+Le compilateur cree automatiquement le dossier dist s'il n'existe pas.
+
+Pour produire de l'assembleur 6502 lisible :
+
+node .\src\cli.js build .\examples\hello.js -o .\dist\hello.asm --format asm
+
+Pour produire un listing avec les adresses et les octets machine :
+
+node .\src\cli.js build .\examples\hello.js -o .\dist\hello.lst --format lst
+
+Pour produire un fichier binaire brut, sans en-tete PRG :
+
+node .\src\cli.js build .\examples\hello.js -o .\dist\hello.bin --format bin
+
+Pour produire un programme BASIC contenant des lignes DATA :
+
+node .\src\cli.js build .\examples\hello.js -o .\dist\hello.bas --format data
+
+Pour creer aussi une carte JSON contenant les symboles et leurs adresses :
+
+node .\src\cli.js build .\examples\hello.js -o .\dist\hello.asm --format asm --map .\dist\hello-symbols.json
+
+Le format est aussi deduit automatiquement de l'extension du fichier de sortie.
+Par exemple, cette commande produit bien de l'assembleur :
+
+node .\src\cli.js build .\examples\hello.js -o .\dist\hello.asm
+
+Ecrire --format asm reste utile car cela rend la commande plus explicite.
+
+
+2.4 UTILISER NPX DANS UN AUTRE PROJET
+-------------------------------------
+
+Si js-c64 est installe comme dependance dans votre propre projet, placez-vous
+d'abord dans ce projet puis faites :
+
+npm install js-c64
+
+Vous pouvez ensuite lancer la commande locale du package avec npx :
+
+npx c64js build .\examples\hello.js -o .\build\hello.prg
+
+npx cherche c64js dans node_modules\.bin. Il n'est donc pas necessaire
+d'installer c64js globalement.
+
+Si le package npm n'est pas encore publie, vous pouvez l'installer depuis son
+dossier local. Depuis le dossier de votre propre projet :
+
+npm install "D:\Programmation\Vibe Coding Pro\compilateur js-c64"
+
+Puis utilisez la meme commande npx c64js.
+
+
+2.5 RENDRE LA COMMANDE C64JS DISPONIBLE PARTOUT - OPTION FACULTATIVE
+-------------------------------------------------------------------
+
+Cette methode est pratique, mais elle n'est pas obligatoire.
+
+Ouvrez un terminal dans le dossier du compilateur js-c64, puis tapez :
+
+npm link
+
+npm cree alors un lien global vers le projet. Dans PowerShell, vous pouvez
+verifier que la commande est maintenant visible avec :
+
+Get-Command c64js
+
+Puis compiler avec la commande courte :
+
+c64js build .\examples\hello.js -o .\dist\hello.prg
+
+Si c64js n'est toujours pas reconnu juste apres npm link, fermez puis rouvrez
+le terminal. La methode avec node .\src\cli.js continuera toujours a fonctionner.
+
+
+2.6 CHOISIR L'ADRESSE DE DEPART AVEC --sys
+------------------------------------------
+
+Exemple pour produire un BASIC DATA charge a l'adresse 49152 :
+
+node .\src\cli.js build .\examples\hello.js -o .\dist\hello.bas --format data --sys 49152
+
+Ou a l'adresse 8192 :
+
+node .\src\cli.js build .\examples\hello.js -o .\dist\hello.bas --format data --sys 8192
+
+Dans ces cas, le programme BASIC genere utilisera respectivement :
 
 SYS 49152
 
@@ -56,20 +200,45 @@ ou :
 
 SYS 8192
 
-Important :
+L'option --sys est surtout utile pour les formats suivants :
 
-L'option --sys est surtout utile pour :
+- BASIC DATA
+- ASM
+- LST
+- BIN
 
-- le format BASIC DATA
-- le format ASM
-- le format LST
-- le format BIN
-
-Pour le format PRG, la version actuelle est prevue surtout pour le cas standard
-SYS 2064.
+Pour le format PRG, la version actuelle utilise normalement le cas standard
+avec SYS 2064.
 
 
-2.1 COMPILER DIRECTEMENT UN TEXTE JS EN MEMOIRE
+2.7 RESOUDRE LES ERREURS LES PLUS COURANTES
+-------------------------------------------
+
+Erreur : "c64js n'est pas reconnu"
+
+Solution recommandee : utilisez node .\src\cli.js depuis le dossier js-c64.
+
+Erreur : "Cannot find module ...src\cli.js"
+
+Cause probable : le terminal n'est pas ouvert dans le dossier du compilateur.
+Utilisez Get-Location, puis cd pour revenir dans le bon dossier.
+
+Erreur : "node n'est pas reconnu"
+
+Node.js n'est pas installe, ou son installation n'est pas dans le PATH.
+Installez Node.js, puis fermez et rouvrez VS Code et son terminal.
+
+Erreur : le fichier examples\hello.js est introuvable
+
+Verifiez le dossier courant avec Get-Location et le fichier avec :
+
+Get-ChildItem .\examples\hello.js
+
+Tous les chemins de la commande sont relatifs au dossier actuellement affiche
+par Get-Location.
+
+
+2.8 COMPILER DIRECTEMENT UN TEXTE JS EN MEMOIRE
 -----------------------------------------------
 
 Cette nouvelle possibilite est utile si vous avez :
@@ -117,7 +286,7 @@ Important :
 - c'est tres pratique pour une IA qui genere elle-meme le code JS-C64
 
 
-2.2 VERSION ENCORE PLUS SIMPLE : BASIC TEXTE DIRECT
+2.9 VERSION ENCORE PLUS SIMPLE : BASIC TEXTE DIRECT
 ---------------------------------------------------
 
 Si vous voulez directement recuperer le texte BASIC sans passer par result,
@@ -587,16 +756,33 @@ La longueur optionnelle peut etre utile si vous voulez referencer une donnee
 avant sa declaration.
 
 
-5.7 c64.var.byte(nom, adresse, valeurInitiale)
-----------------------------------------------
+5.7 c64.var.byte(nom, adresseOuOptions, valeurInitiale)
+-------------------------------------------------------
 
-Declare une variable octet.
+Declare une variable octet, comprise entre 0 et 255.
+
+Ancienne forme avec une adresse choisie manuellement :
 
 Exemple :
 
 import { c64 } from "js-c64";
 
 c64.var.byte("counter", 0xC200, 3);
+
+Nouvelle forme recommandee pour la logique de jeu :
+
+const counter = c64.var.byte("counter", { initial: 3 });
+
+Le compilateur choisit alors une adresse libre dans sa zone de variables.
+La reference retournee possede les operations runtime suivantes :
+
+counter.set(10);
+counter.add(2);
+counter.sub(1);
+counter.inc();
+counter.dec();
+
+Elle peut aussi creer des conditions avec eq(), ne(), lt(), lte(), gt() et gte().
 
 
 5.8 c64.var.word(nom, adresse, valeurInitiale)
@@ -1041,6 +1227,270 @@ Cet exemple correspond a l'idee du fichier :
 examples/combo-irq.js
 
 
+7.2 PREMIERE BOUCLE DE JEU RUNTIME (V0.7.0)
+--------------------------------------------
+
+Une boucle de jeu execute son bloc une seule fois par image video :
+
+const joystick = c64.input.joystick(2);
+const player = c64.sprite.create(0, {
+  x: 100,
+  y: 120,
+  data: Array(63).fill(255),
+  minX: 24,
+  maxX: 320
+});
+
+c64.game.frame(() => {
+  player.setVelocity(0, 0);
+  c64.control.if(joystick.left(), () => player.setVelocity(-2, 0));
+  c64.control.if(joystick.right(), () => player.setVelocity(2, 0));
+  player.update();
+});
+
+Les directions disponibles sont :
+
+- joystick.up()
+- joystick.down()
+- joystick.left()
+- joystick.right()
+- joystick.fire()
+
+Pour detecter seulement la premiere frame d'un appui :
+
+joystick.firePressed()
+
+Pour detecter le relachement :
+
+joystick.fireReleased()
+
+Tres important : une condition normale JavaScript est executee par Node.js
+pendant la compilation. Elle ne represente pas une decision prise par le C64.
+
+N'ecrivez donc pas :
+
+if (joystick.left()) {
+  player.setVelocity(-2, 0);
+}
+
+Utilisez toujours c64.control.if() pour une condition runtime :
+
+c64.control.if(joystick.left(), () => {
+  player.setVelocity(-2, 0);
+});
+
+Une seule boucle c64.game.frame() est autorisee par programme. Pour le moment,
+le compilateur detecte PAL ou NTSC. Avec { hz: 50 }, le jeu effectue 50 mises a
+jour logiques par seconde dans les deux cas. Avec { hz: "video" }, il suit la
+frequence native : 50 sur PAL et 60 sur NTSC.
+
+La v0.7 ajoute aussi :
+
+- c64.var.word() pour les valeurs 16 bits
+- c64.var.bool() pour les etats vrai/faux
+- and(), or(), xor() et toggle()
+- c64.control.repeat() pour une repetition bornee
+- c64.control.while() avec maxIterations obligatoire
+- c64.control.routine() et c64.control.call()
+- c64.input.keyboard() pour des actions clavier non bloquantes
+- c64.game.init() pour l'initialisation
+- c64.game.every() pour une tache periodique
+- c64.table.byte() pour un tableau indexe pendant le jeu
+
+Les variables doivent etre creees avant la boucle pour que le code de la frame
+puisse garder leurs references. La configuration de l'ecran, des musiques et des
+sprites peut etre regroupee dans c64.game.init().
+
+Exemple complet :
+
+examples/game-loop-input.js
+
+
+7.3 SPRITES DE JEU, ANIMATIONS ET COLLISIONS (V0.8.0)
+------------------------------------------------------
+
+Pour un jeu, creez maintenant un sprite sous forme d'objet. Vous gardez cet
+objet dans une constante et vous lui demandez ensuite de bouger, rebondir ou
+tester une collision :
+
+const pixels = Array(63).fill(255);
+
+const player = c64.sprite.create(0, {
+  x: 100,
+  y: 120,
+  data: pixels,
+  color: c64.COLOR_YELLOW,
+  minX: 24,
+  maxX: 320,
+  minY: 50,
+  maxY: 220
+});
+
+Le premier nombre de create() est le numero materiel du sprite. Le C64 possede
+8 sprites, donc les numeros valides vont de 0 a 7.
+
+La position X n'est pas limitee a 255. player.x est une variable runtime 16
+bits et le compilateur gere automatiquement le bit supplementaire dans le
+registre VIC-II $D010. Une valeur comme 296 ou 320 fonctionne donc directement.
+
+Pour deplacer le sprite avec le joystick :
+
+const joystick = c64.input.joystick(2);
+
+c64.game.frame(() => {
+  player.setVelocity(0, 0);
+  c64.control.if(joystick.left(), () => player.setVelocity(-3, 0));
+  c64.control.if(joystick.right(), () => player.setVelocity(3, 0));
+  player.update();
+});
+
+Les vitesses vx et vy sont signees : une valeur negative va vers la gauche ou
+vers le haut. update() applique la vitesse, respecte les limites et recopie la
+position dans les registres video.
+
+Pour obtenir un rebond automatique, ajoutez bounceX: true ou bounceY: true dans
+les options de create(). Les methodes reverseX() et reverseY() permettent aussi
+d'inverser la direction vous-meme.
+
+Animation avec plusieurs images :
+
+const frames = c64.sprite.frames("hero", [imageRepos, imageMarche]);
+const hero = c64.sprite.create(0, { x: 80, y: 120, frames });
+
+hero.sequence("walk", [0, 1], { speed: 5, loop: true });
+hero.play("walk");
+
+Chaque image contient au maximum 63 octets. Le compilateur reserve et aligne
+automatiquement les blocs de 64 octets demandes par le VIC-II. Plusieurs
+sprites peuvent reutiliser le meme objet frames sans recopier les pixels.
+
+Collision simple avec des rectangles invisibles (hitboxes) :
+
+const ball = c64.sprite.create(0, {
+  x: 100, y: 100, data: ballePixels,
+  hitbox: { width: 8, height: 8 }
+});
+
+const paddle = c64.sprite.create(1, {
+  x: 120, y: 220, data: raquettePixels,
+  hitbox: { width: 24, height: 5 }
+});
+
+c64.game.frame(() => {
+  ball.update();
+  c64.control.if(ball.collides(paddle), () => ball.reverseY());
+});
+
+collides() effectue une collision AABB logicielle et previsible. Pour utiliser
+les collisions materielles du VIC-II, il existe vicCollides() et
+collidesWithBackground(). Le compilateur centralise leur lecture, car les
+registres materiels de collision sont effaces lorsqu'on les lit.
+
+Exemples complets :
+
+examples/sprite-animate.js
+examples/breakout-mini.js
+
+Le compilateur optimise automatiquement le code genere. Si plusieurs sprites
+utilisent les memes pixels, leurs donnees constantes sont partagees dans la
+memoire VIC-II. Indiquez un dataAddress different pour chaque sprite si vous
+voulez modifier leurs pixels separement pendant le jeu. Les collisions AABB, la synchronisation des
+sprites et sid.click() utilisent aussi une routine assembleur commune lorsqu'il
+y a plusieurs appels. Vous ne devez rien changer dans votre code JavaScript.
+
+
+7.4 SPRITES VIRTUELS 8 A 15 ET MULTIPLEXAGE (V0.8.2)
+-----------------------------------------------------
+
+Le C64 ne possede physiquement que 8 sprites. js-c64 permet cependant de creer
+16 sprites logiques, numerotes de 0 a 15 :
+
+const top = c64.sprite.create(0, {
+  x: 80, y: 70, data: pixels, color: c64.COLOR_WHITE
+});
+
+const virtuel = c64.sprite.create(8, {
+  x: 180, y: 180, data: pixels, color: c64.COLOR_RED
+});
+
+c64.game.frame(() => {
+  top.update();
+  virtuel.update();
+});
+
+Des que vous creez le sprite 8, 9, 10, 11, 12, 13, 14 ou 15, le compilateur
+active automatiquement le multiplexeur. Vous ne devez appeler aucune fonction
+speciale. Les sprites 8 a 15 possedent les memes proprietes x, y, vx, vy et
+active, les memes animations et les memes collisions AABB que les sprites 0 a
+7.
+
+COMMENT FONCTIONNE LE TRI AUTOMATIQUE
+
+Les numeros 0 a 15 ne definissent plus une zone de l'ecran. Par exemple, le
+sprite 8 peut etre en haut et le sprite 0 en bas :
+
+const sprite0 = c64.sprite.create(0, { x: 80, y: 190, data: pixels });
+const sprite8 = c64.sprite.create(8, { x: 180, y: 60, data: pixels });
+
+A chaque image, le code genere effectue automatiquement les operations
+suivantes :
+
+1. il conserve uniquement les sprites actifs ;
+2. il les trie du plus petit Y au plus grand Y ;
+3. il attribue les huit premiers canaux materiels du VIC-II ;
+4. quand un sprite est entierement termine, son canal materiel est reutilise
+   pour le prochain sprite de la liste.
+
+Un sprite normal occupe 21 lignes. Le scheduler ajoute une petite marge avant
+de reutiliser son canal. Avec expandY: true, il tient compte d'une hauteur de
+42 lignes. La position X et l'option expandX ne changent pas les lignes raster
+occupees.
+
+Il n'existe donc plus de separation fixe entre le haut et le bas. Un sprite
+place au centre reste programme pendant toute sa hauteur. Il n'est pas coupe et
+il n'est pas necessaire de le dessiner deux fois. Cela evite aussi de gaspiller
+un second canal materiel pour le meme sprite.
+
+Le tri, la copie des positions, couleurs, pointeurs et options ainsi que la
+reutilisation des canaux sont realises par des routines assembleur partagees.
+Le JavaScript de l'utilisateur reste simple et le PRG reste compact.
+
+LIMITATIONS IMPORTANTES
+
+1. Une boucle c64.game.frame() est obligatoire.
+
+2. Tous les sprites 0 a 15 peuvent etre places librement sur X et Y et peuvent
+se croiser verticalement. Leur numero n'impose aucune zone.
+
+3. Le C64 ne peut toujours afficher que 8 sprites sur une meme ligne raster.
+Si un neuvieme sprite recouvre le meme intervalle vertical, aucun canal
+materiel n'est disponible : ce sprite est omis pendant cette image. Il pourra
+reapparaitre automatiquement a l'image suivante si une place se libere.
+
+4. expandY: true double la hauteur raster utilisee. Il est donc plus facile
+d'atteindre la limite de 8 chevauchements avec des sprites agrandis en Y.
+
+5. Utilisez spriteA.collides(spriteB) pour les collisions. vicCollides() et
+collidesWithBackground() ne sont pas disponibles avec le multiplexage, car les
+bits de collision materiels correspondent aux 8 canaux reutilises.
+
+6. N'utilisez pas en meme temps l'ancienne API directe comme
+c64.sprite.position(). Manipulez uniquement les objets retournes par
+c64.sprite.create(). Le compilateur signale ce melange comme une erreur.
+
+7. Gardez la boucle de jeu courte et bornee. Le tri et la preparation des
+premiers canaux doivent etre termines avant le retour de l'image visible.
+
+En mode multiplexe, la mise a jour logique commence automatiquement vers la
+ligne raster 200. Seule la memoire logique est modifiee a ce moment : les
+registres VIC-II ne sont reprogrammes qu'au vrai retour du raster en haut de
+l'image. Un sprite central deja affiche ne peut donc pas etre coupe.
+
+Exemple complet :
+
+examples/sprite-multiplex-16.js
+
+
 8. GESTION DES IRQ RASTER
 -------------------------
 
@@ -1425,6 +1875,8 @@ Cela veut dire que :
 - Pour des effets tres avances, il faut souvent utiliser c64.asm.
 - En hires standard, la couleur est limitee par bloc de 8x8 pixels.
 - waitKey() attend maintenant une vraie touche du clavier C64, pas seulement Return.
+- Une condition de jeu doit utiliser c64.control.if(), pas un if JavaScript normal.
+- c64.game.frame() accepte une seule boucle et normalise hz: 50 sur PAL/NTSC.
 
 
 14. CONSEIL POUR BIEN COMMENCER
@@ -1461,6 +1913,7 @@ examples/colors.js
 examples/comfort-frame.js
 examples/comfort-data-vars.js
 examples/screen-fill.js
+examples/game-loop-input.js
 examples/raster-bars.js
 examples/raster-ready-border-cycle.js
 examples/vice-showcase.js

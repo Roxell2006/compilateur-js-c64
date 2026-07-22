@@ -10,7 +10,7 @@ printat_loop_0:
   LDA #$01
   STA $D800,X
   INX
-  JMP printat_loop_0
+  BNE printat_loop_0
 printat_done_1:
   JSR $FF9F
   JSR $FFCF
