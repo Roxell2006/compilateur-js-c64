@@ -1,0 +1,177 @@
+0810  A9 93       LDA #$93
+0812  20 D2 FF    JSR $FFD2
+0815  A9 00       LDA #$00
+0817  8D 20 D0    STA $D020
+081A  A9 06       LDA #$06
+081C  8D 21 D0    STA $D021
+081F  A9 0E       LDA #$0E
+0821  8D 86 02    STA $0286
+0824  A9 93       LDA #$93
+0826  20 D2 FF    JSR $FFD2
+0829  A9 01       LDA #$01
+082B  8D 86 02    STA $0286
+082E  A9 51       LDA #$51
+0830  A2 00       LDX #$00
+0832        memset_429_81_38:
+0832  9D 29 04    STA $0429,X
+0835  E8          INX
+0836  E0 26       CPX #$26
+0838  D0 F8       BNE memset_429_81_38
+083A  A9 01       LDA #$01
+083C  A2 00       LDX #$00
+083E        memset_d829_1_38:
+083E  9D 29 D8    STA $D829,X
+0841  E8          INX
+0842  E0 26       CPX #$26
+0844  D0 F8       BNE memset_d829_1_38
+0846  A9 51       LDA #$51
+0848  A2 00       LDX #$00
+084A        memset_541_81_38:
+084A  9D 41 05    STA $0541,X
+084D  E8          INX
+084E  E0 26       CPX #$26
+0850  D0 F8       BNE memset_541_81_38
+0852  A9 01       LDA #$01
+0854  A2 00       LDX #$00
+0856        memset_d941_1_38:
+0856  9D 41 D9    STA $D941,X
+0859  E8          INX
+085A  E0 26       CPX #$26
+085C  D0 F8       BNE memset_d941_1_38
+085E  A9 51       LDA #$51
+0860  8D 51 04    STA $0451
+0863  A9 01       LDA #$01
+0865  8D 51 D8    STA $D851
+0868  A9 51       LDA #$51
+086A  8D 76 04    STA $0476
+086D  A9 01       LDA #$01
+086F  8D 76 D8    STA $D876
+0872  A9 51       LDA #$51
+0874  8D 79 04    STA $0479
+0877  A9 01       LDA #$01
+0879  8D 79 D8    STA $D879
+087C  A9 51       LDA #$51
+087E  8D 9E 04    STA $049E
+0881  A9 01       LDA #$01
+0883  8D 9E D8    STA $D89E
+0886  A9 51       LDA #$51
+0888  8D A1 04    STA $04A1
+088B  A9 01       LDA #$01
+088D  8D A1 D8    STA $D8A1
+0890  A9 51       LDA #$51
+0892  8D C6 04    STA $04C6
+0895  A9 01       LDA #$01
+0897  8D C6 D8    STA $D8C6
+089A  A9 51       LDA #$51
+089C  8D C9 04    STA $04C9
+089F  A9 01       LDA #$01
+08A1  8D C9 D8    STA $D8C9
+08A4  A9 51       LDA #$51
+08A6  8D EE 04    STA $04EE
+08A9  A9 01       LDA #$01
+08AB  8D EE D8    STA $D8EE
+08AE  A9 51       LDA #$51
+08B0  8D F1 04    STA $04F1
+08B3  A9 01       LDA #$01
+08B5  8D F1 D8    STA $D8F1
+08B8  A9 51       LDA #$51
+08BA  8D 16 05    STA $0516
+08BD  A9 01       LDA #$01
+08BF  8D 16 D9    STA $D916
+08C2  A9 51       LDA #$51
+08C4  8D 19 05    STA $0519
+08C7  A9 01       LDA #$01
+08C9  8D 19 D9    STA $D919
+08CC  A9 51       LDA #$51
+08CE  8D 3E 05    STA $053E
+08D1  A9 01       LDA #$01
+08D3  8D 3E D9    STA $D93E
+08D6  A2 00       LDX #$00
+08D8        printat_loop_0:
+08D8  BD 97 09    LDA str_screen_0,X
+08DB  F0 0B       BEQ printat_done_1
+08DD  9D 84 04    STA $0484,X
+08E0  A9 01       LDA #$01
+08E2  9D 84 D8    STA $D884,X
+08E5  E8          INX
+08E6  D0 F0       BNE printat_loop_0
+08E8        printat_done_1:
+08E8  A9 8C       LDA #$8C
+08EA  8D 00 C5    STA $C500
+08ED  A9 00       LDA #$00
+08EF  8D 01 C5    STA $C501
+08F2  A9 64       LDA #$64
+08F4  8D 02 C5    STA $C502
+08F7  A9 00       LDA #$00
+08F9  8D 03 C5    STA $C503
+08FC  A9 00       LDA #$00
+08FE  8D 04 C5    STA $C504
+0901  A9 01       LDA #$01
+0903  8D 05 C5    STA $C505
+0906  AD 05 C5    LDA $C505
+0909  D0 0B       BNE sprite_runtime_active_0_2
+090B  AD 15 D0    LDA $D015
+090E  29 FE       AND #$FE
+0910  8D 15 D0    STA $D015
+0913  4C 44 09    JMP sprite_runtime_sync_done_0_5
+0916        sprite_runtime_active_0_2:
+0916  AD 15 D0    LDA $D015
+0919  09 01       ORA #$01
+091B  8D 15 D0    STA $D015
+091E  AD 00 C5    LDA $C500
+0921  8D 00 D0    STA $D000
+0924  AD 01 C5    LDA $C501
+0927  29 01       AND #$01
+0929  D0 0B       BNE sprite_runtime_xhigh_0_3
+092B  AD 10 D0    LDA $D010
+092E  29 FE       AND #$FE
+0930  8D 10 D0    STA $D010
+0933  4C 3E 09    JMP sprite_runtime_xdone_0_4
+0936        sprite_runtime_xhigh_0_3:
+0936  AD 10 D0    LDA $D010
+0939  09 01       ORA #$01
+093B  8D 10 D0    STA $D010
+093E        sprite_runtime_xdone_0_4:
+093E  AD 02 C5    LDA $C502
+0941  8D 01 D0    STA $D001
+0944        sprite_runtime_sync_done_0_5:
+0944  A2 00       LDX #$00
+0946        copydata_2000_sprite_data_0_0_63_6:
+0946  BD A7 09    LDA sprite_data_0_0,X
+0949  9D 00 20    STA $2000,X
+094C  E8          INX
+094D  E0 3F       CPX #$3F
+094F  D0 F5       BNE copydata_2000_sprite_data_0_0_63_6
+0951  A9 80       LDA #$80
+0953  8D 04 C4    STA $C404
+0956  AD 04 C4    LDA $C404
+0959  8D F8 07    STA $07F8
+095C  A9 07       LDA #$07
+095E  8D 05 C4    STA $C405
+0961  A9 07       LDA #$07
+0963  8D 27 D0    STA $D027
+0966  AD 06 C4    LDA $C406
+0969  29 FE       AND #$FE
+096B  8D 06 C4    STA $C406
+096E  AD 1C D0    LDA $D01C
+0971  29 FE       AND #$FE
+0973  8D 1C D0    STA $D01C
+0976  AD 06 C4    LDA $C406
+0979  09 02       ORA #$02
+097B  8D 06 C4    STA $C406
+097E  AD 1D D0    LDA $D01D
+0981  09 01       ORA #$01
+0983  8D 1D D0    STA $D01D
+0986  AD 06 C4    LDA $C406
+0989  09 04       ORA #$04
+098B  8D 06 C4    STA $C406
+098E  AD 17 D0    LDA $D017
+0991  09 01       ORA #$01
+0993  8D 17 D0    STA $D017
+0996  60          RTS
+            ; String pool
+0997        str_screen_0:
+0997  13 10 12 09 14 05 20 01 10 09 20 04 05 0D 0F 00 .byte $13, $10, $12, $09, $14, $05, $20, $01, $10, $09, $20, $04, $05, $0D, $0F, $00
+            ; User data
+09A7        sprite_data_0_0:
+09A7  00 18 00 00 3C 00 00 7E 00 00 FF 00 01 FF 80 03 FF C0 07 FF E0 0F FF F0 1F FF F8 3F FF FC 1F FF F8 0F FF F0 07 FF E0 03 FF C0 01 FF 80 00 FF 00 00 7E 00 00 3C 00 00 18 00 00 00 00 00 00 00 .byte $00, $18, $00, $00, $3C, $00, $00, $7E, $00, $00, $FF, $00, $01, $FF, $80, $03, $FF, $C0, $07, $FF, $E0, $0F, $FF, $F0, $1F, $FF, $F8, $3F, $FF, $FC, $1F, $FF, $F8, $0F, $FF, $F0, $07, $FF, $E0, $03, $FF, $C0, $01, $FF, $80, $00, $FF, $00, $00, $7E, $00, $00, $3C, $00, $00, $18, $00, $00, $00, $00, $00, $00, $00

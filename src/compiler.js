@@ -1,6 +1,6 @@
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { Assembler6502, abs, absx, acc, imm, immHi, immLo, indy, rel, zp, exportBasicData } from "./assembler6502.js";
+import { Assembler6502, abs, absx, absy, acc, imm, immHi, immLo, indy, rel, zp, exportBasicData } from "./assembler6502.js";
 import { c64, getProgramState, resetRuntime } from "./c64.js";
 import { createBasicDataProgram, createPrg } from "./prgWriter.js";
 
@@ -63,6 +63,54 @@ const WAITKEY_ROW_INDEX = 0xc762;
 const SID_PLAYER_STEP_INDEX = 0xc763;
 const SID_PLAYER_TICK_COUNT = 0xc764;
 const SID_PLAYER_PLAYING = 0xc765;
+const INPUT_JOYSTICK_1 = 0xc766;
+const INPUT_JOYSTICK_2 = 0xc767;
+const INPUT_JOYSTICK_PREV_1 = 0xc768;
+const INPUT_JOYSTICK_PREV_2 = 0xc769;
+const GAME_FRAME_COUNTER_LO = 0xc76a;
+const GAME_FRAME_COUNTER_HI = 0xc76b;
+const INPUT_SAVE_PRA = 0xc76c;
+const INPUT_SAVE_DDRA = 0xc76d;
+const INPUT_SAVE_DDRB = 0xc76e;
+const GAME_VIDEO_HZ = 0xc76f;
+const GAME_RATE_ACCUMULATOR = 0xc770;
+const KEYBOARD_CURRENT_BASE = 0xc780;
+const KEYBOARD_PREVIOUS_BASE = 0xc790;
+const MAX_KEYBOARD_ACTIONS = 16;
+const SPRITE_RUNTIME_BASE = 0xc400;
+const SPRITE_RUNTIME_STRIDE = 8;
+const SPRITE_LOGICAL_COUNT = 16;
+const SPRITE_LOGICAL_STATE_BASE = 0xc500;
+const SPRITE_LOGICAL_STATE_STRIDE = 8;
+const SPRITE_MUX_SORTED_BASE = 0xc580;
+const SPRITE_MUX_SORTED_COUNT = 0xc590;
+const SPRITE_MUX_OUTER_OFFSET = 0xc591;
+const SPRITE_MUX_NEW_OFFSET = 0xc592;
+const SPRITE_MUX_NEW_Y = 0xc593;
+const SPRITE_MUX_LIST_POSITION = 0xc594;
+const SPRITE_MUX_HARDWARE_SLOT = 0xc595;
+const SPRITE_MUX_MIN_END = 0xc596;
+const SPRITE_MUX_LOGICAL_OFFSET = 0xc597;
+const SPRITE_MUX_COORD_OFFSET = 0xc598;
+const SPRITE_MUX_BIT_MASK = 0xc599;
+const SPRITE_MUX_INVERSE_MASK = 0xc59a;
+const SPRITE_MUX_SLOT_END_BASE = 0xc5a0;
+const SPRITE_MUX_FRAME_RASTER = 200;
+const COLLISION_TEMP_BASE = 0xc7a0;
+const VIC_SPRITE_COLLISION_SNAPSHOT = 0xc7b0;
+const VIC_BACKGROUND_COLLISION_SNAPSHOT = 0xc7b1;
+const AUTO_VARIABLE_START = 0xc100;
+const AUTO_VARIABLE_END = 0xc2ff;
+const RESERVED_RUNTIME_RANGES = Object.freeze([
+  { start: c64.IRQ_STATE_INDEX, end: c64.IRQ_STATE_INDEX, name: "IRQ state" },
+  { start: 0xc300, end: 0xc33f, name: "sprite animator" },
+  { start: 0xc738, end: GAME_RATE_ACCUMULATOR, name: "compiler runtime" },
+  { start: KEYBOARD_CURRENT_BASE, end: KEYBOARD_PREVIOUS_BASE + MAX_KEYBOARD_ACTIONS - 1, name: "keyboard input runtime" },
+  { start: SPRITE_RUNTIME_BASE, end: SPRITE_RUNTIME_BASE + SPRITE_RUNTIME_STRIDE * SPRITE_LOGICAL_COUNT - 1, name: "sprite gameplay runtime" },
+  { start: SPRITE_LOGICAL_STATE_BASE, end: SPRITE_LOGICAL_STATE_BASE + SPRITE_LOGICAL_STATE_STRIDE * SPRITE_LOGICAL_COUNT - 1, name: "sprite logical state" },
+  { start: SPRITE_MUX_SORTED_BASE, end: SPRITE_MUX_SLOT_END_BASE + 7, name: "Y-sorted sprite multiplexer" },
+  { start: COLLISION_TEMP_BASE, end: VIC_BACKGROUND_COLLISION_SNAPSHOT, name: "collision runtime" }
+]);
 
 // The compiler uses a fixed internal RAM layout for long-running systems such
 // as waitKey, hires helpers and the SID player. Keeping these addresses grouped
@@ -79,6 +127,20 @@ const RUNTIME_RAM_LAYOUT = Object.freeze({
     stepIndex: SID_PLAYER_STEP_INDEX,
     tickCount: SID_PLAYER_TICK_COUNT,
     playing: SID_PLAYER_PLAYING
+  },
+  input: {
+    joystick1: INPUT_JOYSTICK_1,
+    joystick2: INPUT_JOYSTICK_2,
+    previousJoystick1: INPUT_JOYSTICK_PREV_1,
+    previousJoystick2: INPUT_JOYSTICK_PREV_2,
+    keyboardCurrentBase: KEYBOARD_CURRENT_BASE,
+    keyboardPreviousBase: KEYBOARD_PREVIOUS_BASE
+  },
+  game: {
+    frameCounterLo: GAME_FRAME_COUNTER_LO,
+    frameCounterHi: GAME_FRAME_COUNTER_HI,
+    videoHz: GAME_VIDEO_HZ,
+    rateAccumulator: GAME_RATE_ACCUMULATOR
   },
   spriteAnimatorBase: 0xc300,
   hires: {
@@ -207,6 +269,22 @@ function ensurePositiveByte(value, label) {
     throw new Error(`${label} must be between 1 and 255`);
   }
   return value;
+}
+
+function ensureLogicalSpriteIndex(value) {
+  if (!Number.isInteger(value) || value < 0 || value >= SPRITE_LOGICAL_COUNT) {
+    throw new Error("sprite index must be between 0 and 15");
+  }
+}
+
+function ensureSpriteX(value, label = "sprite x") {
+  if (!Number.isInteger(value) || value < 0 || value > 511) {
+    throw new Error(`${label} must be between 0 and 511`);
+  }
+}
+
+function isRuntimeCondition(value) {
+  return value && typeof value === "object" && value.type === "runtimeCondition";
 }
 
 function ensureHiresX(value) {
@@ -595,10 +673,33 @@ function emitSidBeep(asm, compileState) {
 
 function emitSidClick(asm, compileState) {
   emitSidVolume(asm, compileState, 15);
-  emitSidVoiceWaveform(asm, compileState, 1, "triangle");
-  emitSidVoiceAttackDecay(asm, 1, 0x00);
-  emitSidVoiceSustainRelease(asm, 1, 0x00);
-  emitSidNote(asm, compileState, 1, "C7", 3);
+  compileState.sid.voiceControls[0] = 0x11;
+  if (compileState.optimization.sidClickCount > 1) {
+    // Calls keep their volume write inline because the filter-mode bits in
+    // $D418 can differ at each call site.
+    compileState.sharedRoutines.sidClick = true;
+    asm.jsr(abs("runtime_sid_click"));
+    return;
+  }
+  emitSidClickBody(asm);
+}
+
+function emitSidClickBody(asm) {
+  emitStoreImmediate(asm, sidVoiceBase(1) + 4, 0x00);
+  emitStoreImmediate(asm, sidVoiceBase(1) + 4, 0x10);
+  emitStoreImmediate(asm, sidVoiceBase(1) + 5, 0x00);
+  emitStoreImmediate(asm, sidVoiceBase(1) + 6, 0x00);
+  emitStoreImmediate(asm, sidVoiceBase(1), 0x39);
+  emitStoreImmediate(asm, sidVoiceBase(1) + 1, 0x8b);
+  emitStoreImmediate(asm, sidVoiceBase(1) + 4, 0x11);
+}
+
+function emitSharedSidClickRoutine(asm, state) {
+  if (!state.sharedRoutines.sidClick) return;
+  asm.comment("Shared non-blocking SID click");
+  asm.label("runtime_sid_click");
+  emitSidClickBody(asm);
+  asm.rts();
 }
 
 function emitSidNoise(asm, compileState, duration = 12) {
@@ -863,13 +964,13 @@ function emitSidPlayerRoutine(asm, state) {
   asm.comment("SID player IRQ");
   asm.label("sid_player_irq");
   emitIrqPrologue(asm);
+  emitVicRasterSourceGate(asm, "sid_player_vic_raster");
 
   emitSidPlayerCore(asm, runtime);
   asm.jmp(abs(runtime.doneLabel));
   asm.label(runtime.doneLabel);
   setRasterLine(asm, state.sid.player.line);
-  emitIrqAck(asm);
-  emitIrqExit(asm, true);
+  emitIrqExit(asm, false, true);
   registerSidPlayerData(state, runtime);
 }
 
@@ -2143,7 +2244,29 @@ function emitSetBitState(asm, address, bitIndex, enabled) {
 
 function emitSpriteSetX(asm, compileState, index, x) {
   ensureSpriteIndex(index);
-  ensureWord(x, "sprite x");
+  if (isVarRef(x)) {
+    const variable = resolveRuntimeVariable(compileState, x, "sprite x");
+    if (variable.size !== 1 && variable.size !== 2) throw new Error("sprite x needs a byte or word variable");
+    asm.lda(addressMode(variable.address));
+    asm.sta(abs(spriteXAddress(index)));
+    if (variable.size === 2) {
+      const setLabel = `sprite_x_word_set_${index}_${compileState.loopCounter++}`;
+      const doneLabel = `sprite_x_word_done_${index}_${compileState.loopCounter++}`;
+      asm.lda(addressMode(variable.address + 1));
+      asm.and(imm(0x01));
+      asm.bne(rel(setLabel));
+      emitSetBitState(asm, c64.VIC_SPRITE_X_MSB, index, false);
+      asm.jmp(abs(doneLabel));
+      asm.label(setLabel);
+      emitSetBitState(asm, c64.VIC_SPRITE_X_MSB, index, true);
+      asm.label(doneLabel);
+    } else {
+      emitSetBitState(asm, c64.VIC_SPRITE_X_MSB, index, false);
+    }
+    compileState.spriteState[index].x = null;
+    return;
+  }
+  ensureSpriteX(x);
   emitStoreImmediate(asm, spriteXAddress(index), x & 0xff);
   emitSetBitState(asm, c64.VIC_SPRITE_X_MSB, index, x > 255);
   compileState.spriteState[index].x = x;
@@ -2151,6 +2274,12 @@ function emitSpriteSetX(asm, compileState, index, x) {
 
 function emitSpriteSetY(asm, compileState, index, y) {
   ensureSpriteIndex(index);
+  if (isVarRef(y)) {
+    asm.lda(addressMode(resolveRuntimeByteAddress(compileState, y, "sprite y")));
+    asm.sta(abs(spriteYAddress(index)));
+    compileState.spriteState[index].y = null;
+    return;
+  }
   ensureByte(y, "sprite y");
   emitStoreImmediate(asm, spriteYAddress(index), y);
   compileState.spriteState[index].y = y;
@@ -2162,16 +2291,35 @@ function emitSpritePointer(asm, index, blockIndex) {
   emitStoreImmediate(asm, spritePointerAddress(index), blockIndex);
 }
 
-function emitSpriteData(asm, compileState, index, dataSource, explicitAddress) {
-  ensureSpriteIndex(index);
-  const targetAddress = spriteDataAddress(index, explicitAddress);
+function emitSpriteDataAsset(asm, compileState, index, dataSource, explicitAddress, logical = false) {
+  if (logical) ensureLogicalSpriteIndex(index);
+  else ensureSpriteIndex(index);
+  let targetAddress = spriteDataAddress(index, explicitAddress);
   let length = 63;
 
   if (Array.isArray(dataSource)) {
+    const bytes = dataSource.map((value) => value & 0xff);
+    const assetKey = `${bytes.length}:${bytes.join(",")}`;
+    const sharedAsset = explicitAddress === undefined
+      ? compileState.spriteDataAssets.get(assetKey)
+      : undefined;
+    if (sharedAsset) {
+      targetAddress = sharedAsset.targetAddress;
+      length = sharedAsset.length;
+      compileState.spriteState[index].dataAddress = targetAddress;
+      compileState.spriteState[index].dataLength = length;
+      return { targetAddress, length, blockIndex: Math.floor(targetAddress / 64) };
+    }
     const label = `sprite_data_${index}_${compileState.spriteDataCounter++}`;
-    registerData(compileState, label, dataSource.map((value) => value & 0xff));
-    emitCopyDataTo(asm, compileState, targetAddress, label, dataSource.length);
-    length = dataSource.length;
+    registerData(compileState, label, bytes);
+    emitCopyDataTo(asm, compileState, targetAddress, label, bytes.length);
+    length = bytes.length;
+    if (explicitAddress === undefined) {
+      // Immutable sprite constants with identical bytes share one VIC-II block.
+      // An explicit dataAddress opts out and reserves an independent block for
+      // advanced code that intends to modify the pixels at runtime.
+      compileState.spriteDataAssets.set(assetKey, { targetAddress, length });
+    }
   } else if (isDataRef(dataSource) || typeof dataSource === "string") {
     const data = resolveDataRef(compileState, dataSource);
     length = data.declaredLength ?? data.bytes?.length ?? 63;
@@ -2180,9 +2328,14 @@ function emitSpriteData(asm, compileState, index, dataSource, explicitAddress) {
     throw new Error("sprite data must be an array, dataRef, or label name");
   }
 
-  emitSpritePointer(asm, index, Math.floor(targetAddress / 64));
   compileState.spriteState[index].dataAddress = targetAddress;
   compileState.spriteState[index].dataLength = length;
+  return { targetAddress, length, blockIndex: Math.floor(targetAddress / 64) };
+}
+
+function emitSpriteData(asm, compileState, index, dataSource, explicitAddress) {
+  const asset = emitSpriteDataAsset(asm, compileState, index, dataSource, explicitAddress, false);
+  emitSpritePointer(asm, index, asset.blockIndex);
 }
 
 function getOrCreateSpriteAnimation(compileState, index) {
@@ -2240,6 +2393,452 @@ function emitSpriteAnimatorInit(asm, state) {
     registerData(state, label, initBytes);
     emitCopyDataTo(asm, state, base, label, initBytes.length);
   }
+}
+
+function spriteRuntimeInternal(index) {
+  const base = SPRITE_RUNTIME_BASE + index * SPRITE_RUNTIME_STRIDE;
+  return { sequence: base, frame: base + 1, tick: base + 2, playing: base + 3, pointer: base + 4, color: base + 5, flags: base + 6 };
+}
+
+const SPRITE_RUNTIME_FLAG_BITS = Object.freeze({ multicolor: 0, expandX: 1, expandY: 2, priority: 3 });
+
+function emitRuntimeSpriteFlag(asm, compileState, spriteRef, flagName, enabled) {
+  const bit = SPRITE_RUNTIME_FLAG_BITS[flagName];
+  if (bit === undefined) throw new Error(`Unknown runtime sprite flag: ${flagName}`);
+  emitSetBitState(asm, spriteRuntimeInternal(spriteRef.index).flags, bit, enabled);
+  if (compileState.multiplexer.enabled) return;
+  const hardwareRegister = {
+    multicolor: c64.VIC_SPRITE_MULTICOLOR,
+    expandX: c64.VIC_SPRITE_EXPAND_X,
+    expandY: c64.VIC_SPRITE_EXPAND_Y,
+    priority: c64.VIC_SPRITE_PRIORITY
+  }[flagName];
+  emitSetBitState(asm, hardwareRegister, spriteRef.index, enabled);
+}
+
+function getSpriteRuntime(compileState, spriteRef) {
+  if (!spriteRef || spriteRef.type !== "spriteRef") throw new Error("Expected a sprite created with c64.sprite.create()");
+  ensureLogicalSpriteIndex(spriteRef.index);
+  const runtime = compileState.spriteRuntime[spriteRef.index];
+  if (!runtime) throw new Error(`Sprite ${spriteRef.index} must be created before it is used`);
+  return runtime;
+}
+
+function spriteRefVariables(compileState, spriteRef) {
+  return {
+    x: resolveRuntimeVariable(compileState, spriteRef.x, "sprite x"),
+    y: resolveRuntimeVariable(compileState, spriteRef.y, "sprite y"),
+    vx: resolveRuntimeVariable(compileState, spriteRef.vx, "sprite vx"),
+    vy: resolveRuntimeVariable(compileState, spriteRef.vy, "sprite vy"),
+    active: resolveRuntimeVariable(compileState, spriteRef.active, "sprite active")
+  };
+}
+
+function emitNegateByteAt(asm, address) {
+  asm.lda(imm(0));
+  asm.sec();
+  asm.sbc(addressMode(address));
+  asm.sta(addressMode(address));
+}
+
+function emitSpriteRuntimeSync(asm, compileState, spriteRef) {
+  getSpriteRuntime(compileState, spriteRef);
+  // In multiplexed mode the logical variables are the canonical display
+  // state. The compact raster renderer copies them to the eight VIC-II slots.
+  if (compileState.multiplexer.enabled) return;
+  const callCount = compileState.optimization.spriteSyncCallCounts.get(spriteRef.index) ?? 1;
+  if (callCount > 1) {
+    compileState.sharedRoutines.spriteSyncIndexes.add(spriteRef.index);
+    asm.jsr(abs(`runtime_sprite_sync_${spriteRef.index}`));
+    return;
+  }
+  emitSpriteRuntimeSyncBody(asm, compileState, spriteRef);
+}
+
+function emitRuntimeSpritePointer(asm, compileState, spriteRef, source) {
+  const internal = spriteRuntimeInternal(spriteRef.index);
+  if (typeof source === "number") emitStoreImmediate(asm, internal.pointer, source);
+  else { asm.lda(source); asm.sta(abs(internal.pointer)); }
+  if (!compileState.multiplexer.enabled) {
+    asm.lda(abs(internal.pointer));
+    asm.sta(abs(spritePointerAddress(spriteRef.index)));
+  }
+}
+
+function emitSpriteRuntimeSyncBody(asm, compileState, spriteRef) {
+  const vars = spriteRefVariables(compileState, spriteRef);
+  const index = spriteRef.index;
+  const activeLabel = `sprite_runtime_active_${index}_${compileState.loopCounter++}`;
+  const xHighLabel = `sprite_runtime_xhigh_${index}_${compileState.loopCounter++}`;
+  const xDoneLabel = `sprite_runtime_xdone_${index}_${compileState.loopCounter++}`;
+  const doneLabel = `sprite_runtime_sync_done_${index}_${compileState.loopCounter++}`;
+  asm.lda(addressMode(vars.active.address));
+  asm.bne(rel(activeLabel));
+  emitSetBitState(asm, c64.VIC_SPRITE_ENABLE, index, false);
+  asm.jmp(abs(doneLabel));
+  asm.label(activeLabel);
+  emitSetBitState(asm, c64.VIC_SPRITE_ENABLE, index, true);
+  asm.lda(addressMode(vars.x.address));
+  asm.sta(abs(spriteXAddress(index)));
+  asm.lda(addressMode(vars.x.address + 1));
+  asm.and(imm(1));
+  asm.bne(rel(xHighLabel));
+  emitSetBitState(asm, c64.VIC_SPRITE_X_MSB, index, false);
+  asm.jmp(abs(xDoneLabel));
+  asm.label(xHighLabel);
+  emitSetBitState(asm, c64.VIC_SPRITE_X_MSB, index, true);
+  asm.label(xDoneLabel);
+  asm.lda(addressMode(vars.y.address));
+  asm.sta(abs(spriteYAddress(index)));
+  asm.label(doneLabel);
+}
+
+function emitSharedSpriteSyncRoutines(asm, state) {
+  for (const index of [...state.sharedRoutines.spriteSyncIndexes].sort((a, b) => a - b)) {
+    const runtime = state.spriteRuntime[index];
+    if (!runtime) throw new Error(`Missing runtime state for shared sprite sync ${index}`);
+    asm.comment(`Shared VIC-II synchronization for sprite ${index}`);
+    asm.label(`runtime_sprite_sync_${index}`);
+    emitSpriteRuntimeSyncBody(asm, state, runtime.ref);
+    asm.rts();
+  }
+}
+
+function emitSetWordImmediate(asm, address, value) {
+  ensureSpriteX(value, "sprite X bound");
+  emitStoreImmediate(asm, address, value & 0xff);
+  emitStoreImmediate(asm, address + 1, (value >> 8) & 0xff);
+}
+
+function emitClampSpriteBounds(asm, compileState, spriteRef, runtime) {
+  const vars = spriteRefVariables(compileState, spriteRef);
+  const id = compileState.loopCounter++;
+  const xMinOk = `sprite_x_min_ok_${id}`;
+  const xMaxOk = `sprite_x_max_ok_${id}`;
+  const yMinOk = `sprite_y_min_ok_${id}`;
+  const yMaxOk = `sprite_y_max_ok_${id}`;
+  const minX = runtime.bounds.minX;
+  const maxX = runtime.bounds.maxX;
+  // A negative signed velocity can underflow the 16-bit X value to $FFFF.
+  // Runtime sprite X is unsigned (0..511), so a set sign bit always means
+  // that the sprite crossed its left bound.
+  asm.lda(addressMode(vars.x.address + 1)); asm.bmi(rel(`sprite_x_clamp_min_${id}`)); asm.cmp(imm((minX >> 8) & 0xff));
+  asm.bcc(rel(`sprite_x_clamp_min_${id}`)); asm.bne(rel(xMinOk));
+  asm.lda(addressMode(vars.x.address)); asm.cmp(imm(minX & 0xff)); asm.bcs(rel(xMinOk));
+  asm.label(`sprite_x_clamp_min_${id}`);
+  emitSetWordImmediate(asm, vars.x.address, minX);
+  if (runtime.bounds.bounceX) emitNegateByteAt(asm, vars.vx.address);
+  asm.label(xMinOk);
+  asm.lda(addressMode(vars.x.address + 1)); asm.cmp(imm((maxX >> 8) & 0xff));
+  asm.bcc(rel(xMaxOk)); asm.bne(rel(`sprite_x_clamp_max_${id}`));
+  asm.lda(addressMode(vars.x.address)); asm.cmp(imm(maxX & 0xff)); asm.bcc(rel(xMaxOk)); asm.beq(rel(xMaxOk));
+  asm.label(`sprite_x_clamp_max_${id}`);
+  emitSetWordImmediate(asm, vars.x.address, maxX);
+  if (runtime.bounds.bounceX) emitNegateByteAt(asm, vars.vx.address);
+  asm.label(xMaxOk);
+  asm.lda(addressMode(vars.y.address)); asm.cmp(imm(runtime.bounds.minY)); asm.bcs(rel(yMinOk));
+  emitStoreImmediate(asm, vars.y.address, runtime.bounds.minY);
+  if (runtime.bounds.bounceY) emitNegateByteAt(asm, vars.vy.address);
+  asm.label(yMinOk);
+  asm.lda(addressMode(vars.y.address)); asm.cmp(imm(runtime.bounds.maxY)); asm.bcc(rel(yMaxOk)); asm.beq(rel(yMaxOk));
+  emitStoreImmediate(asm, vars.y.address, runtime.bounds.maxY);
+  if (runtime.bounds.bounceY) emitNegateByteAt(asm, vars.vy.address);
+  asm.label(yMaxOk);
+}
+
+function emitSpriteRuntimeMovement(asm, compileState, spriteRef, runtime) {
+  const vars = spriteRefVariables(compileState, spriteRef);
+  const inactiveLabel = `sprite_update_inactive_${spriteRef.index}_${compileState.loopCounter++}`;
+  const activeLabel = `sprite_update_active_${spriteRef.index}_${compileState.loopCounter++}`;
+  asm.lda(addressMode(vars.active.address));
+  asm.bne(rel(activeLabel));
+  asm.jmp(abs(inactiveLabel));
+  asm.label(activeLabel);
+  asm.clc();
+  asm.lda(addressMode(vars.x.address));
+  asm.adc(addressMode(vars.vx.address));
+  asm.sta(addressMode(vars.x.address));
+  asm.lda(addressMode(vars.vx.address));
+  asm.bpl(rel(`sprite_vx_positive_${compileState.loopCounter}`));
+  asm.lda(addressMode(vars.x.address + 1)); asm.adc(imm(0xff)); asm.jmp(abs(`sprite_vx_done_${compileState.loopCounter}`));
+  asm.label(`sprite_vx_positive_${compileState.loopCounter}`);
+  asm.lda(addressMode(vars.x.address + 1)); asm.adc(imm(0));
+  asm.label(`sprite_vx_done_${compileState.loopCounter++}`);
+  asm.sta(addressMode(vars.x.address + 1));
+  const yPositiveLabel = `sprite_vy_positive_${compileState.loopCounter}`;
+  const yStoreLabel = `sprite_vy_store_${compileState.loopCounter}`;
+  const yClampMinLabel = `sprite_vy_clamp_min_${compileState.loopCounter}`;
+  const yClampMaxLabel = `sprite_vy_clamp_max_${compileState.loopCounter}`;
+  const yDoneLabel = `sprite_vy_done_${compileState.loopCounter++}`;
+  asm.lda(addressMode(vars.vy.address)); asm.bpl(rel(yPositiveLabel));
+  asm.clc(); asm.lda(addressMode(vars.y.address)); asm.adc(addressMode(vars.vy.address)); asm.bcc(rel(yClampMinLabel)); asm.jmp(abs(yStoreLabel));
+  asm.label(yPositiveLabel);
+  asm.clc(); asm.lda(addressMode(vars.y.address)); asm.adc(addressMode(vars.vy.address)); asm.bcs(rel(yClampMaxLabel));
+  asm.label(yStoreLabel); asm.sta(addressMode(vars.y.address)); asm.jmp(abs(yDoneLabel));
+  asm.label(yClampMinLabel); emitStoreImmediate(asm, vars.y.address, runtime.bounds.minY);
+  if (runtime.bounds.bounceY) emitNegateByteAt(asm, vars.vy.address);
+  asm.jmp(abs(yDoneLabel));
+  asm.label(yClampMaxLabel); emitStoreImmediate(asm, vars.y.address, runtime.bounds.maxY);
+  if (runtime.bounds.bounceY) emitNegateByteAt(asm, vars.vy.address);
+  asm.label(yDoneLabel);
+  emitClampSpriteBounds(asm, compileState, spriteRef, runtime);
+  asm.label(inactiveLabel);
+}
+
+function emitSpriteFrames(asm, compileState, frameRef, frames, explicitAddress) {
+  if (compileState.spriteFrameAssets.has(frameRef.name)) throw new Error(`Sprite frames already defined: ${frameRef.name}`);
+  if (frames.length === 0) throw new Error("sprite.frames() needs at least one frame");
+  const address = explicitAddress ?? compileState.nextSpriteFrameAddress;
+  if (address % 64 !== 0) throw new Error("sprite frame address must be aligned to 64 bytes");
+  if (address < 0x2000 || address + frames.length * 64 > 0x4000) throw new Error("sprite frames must fit in VIC bank 0 between $2000 and $3FFF");
+  frames.forEach((frame, frameIndex) => {
+    if (frame.length > 63) throw new Error("a sprite frame can contain at most 63 bytes");
+    const bytes = [...frame.map((value) => value & 0xff), ...new Array(63 - frame.length).fill(0)];
+    const label = `sprite_frames_${frameRef.name}_${frameIndex}`;
+    registerData(compileState, label, bytes);
+    emitCopyDataTo(asm, compileState, address + frameIndex * 64, label, 63);
+    emitStoreImmediate(asm, address + frameIndex * 64 + 63, 0);
+  });
+  compileState.spriteFrameAssets.set(frameRef.name, { address, count: frames.length, firstBlock: address / 64 });
+  compileState.nextSpriteFrameAddress = Math.max(compileState.nextSpriteFrameAddress, address + frames.length * 64);
+}
+
+function emitSpritePlaySequence(asm, compileState, spriteRef, name) {
+  const runtime = getSpriteRuntime(compileState, spriteRef);
+  const sequence = runtime.sequences.get(name);
+  if (!sequence) throw new Error(`Unknown sprite sequence ${name} for sprite ${spriteRef.index}`);
+  const internal = spriteRuntimeInternal(spriteRef.index);
+  emitStoreImmediate(asm, internal.sequence, sequence.id);
+  emitStoreImmediate(asm, internal.frame, 0);
+  emitStoreImmediate(asm, internal.tick, 0);
+  emitStoreImmediate(asm, internal.playing, 1);
+  emitRuntimeSpritePointer(asm, compileState, spriteRef, abs(sequence.tableLabel));
+}
+
+function emitSpriteAnimationUpdate(asm, compileState, spriteRef, runtime) {
+  if (runtime.sequences.size === 0) return;
+  const internal = spriteRuntimeInternal(spriteRef.index);
+  const doneLabel = `sprite_anim_done_${spriteRef.index}_${compileState.loopCounter++}`;
+  const activeLabel = `sprite_anim_active_${spriteRef.index}_${compileState.loopCounter++}`;
+  asm.lda(abs(internal.playing));
+  asm.bne(rel(activeLabel));
+  asm.jmp(abs(doneLabel));
+  asm.label(activeLabel);
+  for (const sequence of runtime.sequences.values()) {
+    const nextLabel = `sprite_anim_next_seq_${spriteRef.index}_${sequence.id}_${compileState.loopCounter++}`;
+    const advanceLabel = `sprite_anim_advance_${spriteRef.index}_${sequence.id}_${compileState.loopCounter++}`;
+    const positionOkLabel = `sprite_anim_pos_ok_${spriteRef.index}_${sequence.id}_${compileState.loopCounter++}`;
+    asm.lda(abs(internal.sequence)); asm.cmp(imm(sequence.id)); asm.bne(rel(nextLabel));
+    asm.inc(abs(internal.tick)); asm.lda(abs(internal.tick)); asm.cmp(imm(sequence.speed)); asm.bcs(rel(advanceLabel)); asm.jmp(abs(doneLabel));
+    asm.label(advanceLabel); emitStoreImmediate(asm, internal.tick, 0); asm.inc(abs(internal.frame));
+    asm.lda(abs(internal.frame)); asm.cmp(imm(sequence.length)); asm.bcc(rel(positionOkLabel));
+    if (sequence.loop) emitStoreImmediate(asm, internal.frame, 0);
+    else { emitStoreImmediate(asm, internal.frame, sequence.length - 1); emitStoreImmediate(asm, internal.playing, 0); }
+    asm.label(positionOkLabel);
+    asm.ldx(abs(internal.frame));
+    emitRuntimeSpritePointer(asm, compileState, spriteRef, absx(sequence.tableLabel));
+    asm.jmp(abs(doneLabel));
+    asm.label(nextLabel);
+  }
+  asm.label(doneLabel);
+}
+
+function emitWordPlusImmediateTo(asm, sourceAddress, addValue, targetAddress) {
+  asm.clc(); asm.lda(addressMode(sourceAddress)); asm.adc(imm(addValue & 0xff)); asm.sta(abs(targetAddress));
+  asm.lda(addressMode(sourceAddress + 1)); asm.adc(imm((addValue >> 8) & 0xff)); asm.sta(abs(targetAddress + 1));
+}
+
+function emitBytePlusImmediateToWord(asm, sourceAddress, addValue, targetAddress) {
+  asm.clc(); asm.lda(addressMode(sourceAddress)); asm.adc(imm(addValue & 0xff)); asm.sta(abs(targetAddress));
+  asm.lda(imm(0)); asm.adc(imm((addValue >> 8) & 0xff)); asm.sta(abs(targetAddress + 1));
+}
+
+function emitWordGreaterOrJumpFalse(asm, leftAddress, rightAddress, falseLabel, id) {
+  const highEqualLabel = `aabb_high_equal_${id}`;
+  const passLabel = `aabb_greater_${id}`;
+  const lowNotEqualLabel = `aabb_low_not_equal_${id}`;
+  asm.lda(abs(leftAddress + 1)); asm.cmp(abs(rightAddress + 1));
+  asm.beq(rel(highEqualLabel)); asm.bcs(rel(passLabel)); asm.jmp(abs(falseLabel));
+  asm.label(highEqualLabel);
+  asm.lda(abs(leftAddress)); asm.cmp(abs(rightAddress));
+  asm.bne(rel(lowNotEqualLabel)); asm.jmp(abs(falseLabel));
+  asm.label(lowNotEqualLabel); asm.bcs(rel(passLabel)); asm.jmp(abs(falseLabel));
+  asm.label(passLabel);
+}
+
+function emitSpriteAabbOrJumpFalse(asm, compileState, pair, falseLabel) {
+  const a = pair.a;
+  const b = pair.b;
+  getSpriteRuntime(compileState, a);
+  getSpriteRuntime(compileState, b);
+  const av = spriteRefVariables(compileState, a);
+  const bv = spriteRefVariables(compileState, b);
+  const ah = a.hitbox;
+  const bh = b.hitbox;
+  asm.lda(addressMode(av.active.address));
+  const aActiveLabel = `aabb_a_active_${compileState.loopCounter++}`;
+  asm.bne(rel(aActiveLabel)); asm.jmp(abs(falseLabel)); asm.label(aActiveLabel);
+  asm.lda(addressMode(bv.active.address));
+  const bActiveLabel = `aabb_b_active_${compileState.loopCounter++}`;
+  asm.bne(rel(bActiveLabel)); asm.jmp(abs(falseLabel)); asm.label(bActiveLabel);
+  const aLeft = COLLISION_TEMP_BASE;
+  const aRight = COLLISION_TEMP_BASE + 2;
+  const bLeft = COLLISION_TEMP_BASE + 4;
+  const bRight = COLLISION_TEMP_BASE + 6;
+  const aTop = COLLISION_TEMP_BASE + 8;
+  const aBottom = COLLISION_TEMP_BASE + 10;
+  const bTop = COLLISION_TEMP_BASE + 12;
+  const bBottom = COLLISION_TEMP_BASE + 14;
+  emitWordPlusImmediateTo(asm, av.x.address, ah.offsetX, aLeft);
+  emitWordPlusImmediateTo(asm, av.x.address, ah.offsetX + ah.width, aRight);
+  emitWordPlusImmediateTo(asm, bv.x.address, bh.offsetX, bLeft);
+  emitWordPlusImmediateTo(asm, bv.x.address, bh.offsetX + bh.width, bRight);
+  emitBytePlusImmediateToWord(asm, av.y.address, ah.offsetY, aTop);
+  emitBytePlusImmediateToWord(asm, av.y.address, ah.offsetY + ah.height, aBottom);
+  emitBytePlusImmediateToWord(asm, bv.y.address, bh.offsetY, bTop);
+  emitBytePlusImmediateToWord(asm, bv.y.address, bh.offsetY + bh.height, bBottom);
+  if (compileState.game.spriteAabbCount > 1) {
+    compileState.sharedRoutines.spriteAabbCompare = true;
+    const passLabel = `sprite_aabb_pass_${compileState.loopCounter++}`;
+    asm.jsr(abs("runtime_sprite_aabb_compare"));
+    asm.bne(rel(passLabel));
+    asm.jmp(abs(falseLabel));
+    asm.label(passLabel);
+    return;
+  }
+  emitWordGreaterOrJumpFalse(asm, aRight, bLeft, falseLabel, compileState.loopCounter++);
+  emitWordGreaterOrJumpFalse(asm, bRight, aLeft, falseLabel, compileState.loopCounter++);
+  emitWordGreaterOrJumpFalse(asm, aBottom, bTop, falseLabel, compileState.loopCounter++);
+  emitWordGreaterOrJumpFalse(asm, bBottom, aTop, falseLabel, compileState.loopCounter++);
+}
+
+function emitSharedSpriteAabbCompareRoutine(asm, state) {
+  if (!state.sharedRoutines.spriteAabbCompare) return;
+  const falseLabel = "runtime_sprite_aabb_false";
+  asm.comment("Shared strict AABB bounds comparison");
+  asm.label("runtime_sprite_aabb_compare");
+  emitWordGreaterOrJumpFalse(asm, COLLISION_TEMP_BASE + 2, COLLISION_TEMP_BASE + 4, falseLabel, "runtime_0");
+  emitWordGreaterOrJumpFalse(asm, COLLISION_TEMP_BASE + 6, COLLISION_TEMP_BASE, falseLabel, "runtime_1");
+  emitWordGreaterOrJumpFalse(asm, COLLISION_TEMP_BASE + 10, COLLISION_TEMP_BASE + 12, falseLabel, "runtime_2");
+  emitWordGreaterOrJumpFalse(asm, COLLISION_TEMP_BASE + 14, COLLISION_TEMP_BASE + 8, falseLabel, "runtime_3");
+  asm.lda(imm(1));
+  asm.rts();
+  asm.label(falseLabel);
+  asm.lda(imm(0));
+  asm.rts();
+}
+
+function emitBalancedSharedRoutines(asm, state) {
+  emitSharedSidClickRoutine(asm, state);
+  emitSharedSpriteSyncRoutines(asm, state);
+  emitSharedSpriteAabbCompareRoutine(asm, state);
+  emitSpriteMultiplexerRoutine(asm, state);
+}
+
+function emitSpriteMuxRegisterBit(asm, register, logicalAddress, flagBit, label) {
+  asm.lda(abs(register)); asm.and(abs(SPRITE_MUX_INVERSE_MASK)); asm.sta(abs(register));
+  asm.ldy(abs(SPRITE_MUX_LOGICAL_OFFSET));
+  asm.lda(absy(logicalAddress)); asm.and(imm(flagBit)); asm.beq(rel(label));
+  asm.lda(abs(register)); asm.ora(abs(SPRITE_MUX_BIT_MASK)); asm.sta(abs(register));
+  asm.label(label);
+}
+
+function emitSpriteMultiplexerRoutine(asm, state) {
+  if (!state.multiplexer.enabled) return;
+
+  asm.comment("Dynamic 16-to-8 sprite multiplexer: sort active sprites by Y");
+  asm.label("runtime_sprite_mux_sort");
+  emitStoreImmediate(asm, SPRITE_MUX_SORTED_COUNT, 0);
+  emitStoreImmediate(asm, SPRITE_MUX_OUTER_OFFSET, 0);
+  asm.label("runtime_sprite_mux_sort_outer");
+  asm.ldy(abs(SPRITE_MUX_OUTER_OFFSET));
+  asm.lda(absy(SPRITE_LOGICAL_STATE_BASE + 5)); asm.beq(rel("runtime_sprite_mux_sort_next"));
+  asm.sty(abs(SPRITE_MUX_NEW_OFFSET));
+  asm.lda(absy(SPRITE_LOGICAL_STATE_BASE + 2)); asm.sta(abs(SPRITE_MUX_NEW_Y));
+  asm.ldx(abs(SPRITE_MUX_SORTED_COUNT));
+  asm.label("runtime_sprite_mux_sort_insert");
+  asm.cpx(imm(0)); asm.beq(rel("runtime_sprite_mux_sort_place"));
+  asm.dex();
+  asm.lda(absx(SPRITE_MUX_SORTED_BASE)); asm.tay();
+  asm.lda(absy(SPRITE_LOGICAL_STATE_BASE + 2)); asm.cmp(abs(SPRITE_MUX_NEW_Y));
+  asm.bcc(rel("runtime_sprite_mux_sort_after")); asm.beq(rel("runtime_sprite_mux_sort_after"));
+  asm.lda(absx(SPRITE_MUX_SORTED_BASE)); asm.sta(absx(SPRITE_MUX_SORTED_BASE + 1));
+  asm.jmp(abs("runtime_sprite_mux_sort_insert"));
+  asm.label("runtime_sprite_mux_sort_after"); asm.inx();
+  asm.label("runtime_sprite_mux_sort_place");
+  asm.lda(abs(SPRITE_MUX_NEW_OFFSET)); asm.sta(absx(SPRITE_MUX_SORTED_BASE));
+  asm.inc(abs(SPRITE_MUX_SORTED_COUNT));
+  asm.label("runtime_sprite_mux_sort_next");
+  asm.clc(); asm.lda(abs(SPRITE_MUX_OUTER_OFFSET)); asm.adc(imm(SPRITE_LOGICAL_STATE_STRIDE));
+  asm.sta(abs(SPRITE_MUX_OUTER_OFFSET)); asm.cmp(imm(SPRITE_LOGICAL_COUNT * SPRITE_LOGICAL_STATE_STRIDE));
+  asm.bne(rel("runtime_sprite_mux_sort_outer"));
+  asm.rts();
+
+  asm.comment("Copy one logical sprite to one VIC-II hardware channel");
+  asm.label("runtime_sprite_mux_draw");
+  asm.stx(abs(SPRITE_MUX_HARDWARE_SLOT)); asm.sty(abs(SPRITE_MUX_LOGICAL_OFFSET));
+  asm.txa(); asm.asl(acc()); asm.tax();
+  asm.lda(absy(SPRITE_LOGICAL_STATE_BASE)); asm.sta(absx(c64.VIC_SPRITE0_X));
+  asm.lda(absy(SPRITE_LOGICAL_STATE_BASE + 2)); asm.sta(absx(c64.VIC_SPRITE0_Y));
+  asm.ldx(abs(SPRITE_MUX_HARDWARE_SLOT));
+  asm.lda(absx("runtime_sprite_mux_bit_masks")); asm.sta(abs(SPRITE_MUX_BIT_MASK));
+  asm.lda(absx("runtime_sprite_mux_inverse_masks")); asm.sta(abs(SPRITE_MUX_INVERSE_MASK));
+  asm.lda(absy(SPRITE_RUNTIME_BASE + 4)); asm.sta(absx(0x07f8));
+  asm.lda(absy(SPRITE_RUNTIME_BASE + 5)); asm.sta(absx(0xd027));
+  asm.lda(abs(c64.VIC_SPRITE_ENABLE)); asm.ora(abs(SPRITE_MUX_BIT_MASK)); asm.sta(abs(c64.VIC_SPRITE_ENABLE));
+  emitSpriteMuxRegisterBit(asm, c64.VIC_SPRITE_X_MSB, SPRITE_LOGICAL_STATE_BASE + 1, 0x01, "runtime_sprite_mux_x_low");
+  emitSpriteMuxRegisterBit(asm, c64.VIC_SPRITE_MULTICOLOR, SPRITE_RUNTIME_BASE + 6, 0x01, "runtime_sprite_mux_no_multicolor");
+  emitSpriteMuxRegisterBit(asm, c64.VIC_SPRITE_EXPAND_X, SPRITE_RUNTIME_BASE + 6, 0x02, "runtime_sprite_mux_no_expand_x");
+  emitSpriteMuxRegisterBit(asm, c64.VIC_SPRITE_EXPAND_Y, SPRITE_RUNTIME_BASE + 6, 0x04, "runtime_sprite_mux_no_expand_y");
+  emitSpriteMuxRegisterBit(asm, c64.VIC_SPRITE_PRIORITY, SPRITE_RUNTIME_BASE + 6, 0x08, "runtime_sprite_mux_no_priority");
+  asm.ldx(abs(SPRITE_MUX_HARDWARE_SLOT)); asm.ldy(abs(SPRITE_MUX_LOGICAL_OFFSET));
+  asm.lda(absy(SPRITE_RUNTIME_BASE + 6)); asm.and(imm(0x04)); asm.beq(rel("runtime_sprite_mux_normal_height"));
+  asm.lda(imm(45)); asm.jmp(abs("runtime_sprite_mux_add_height"));
+  asm.label("runtime_sprite_mux_normal_height"); asm.lda(imm(24));
+  asm.label("runtime_sprite_mux_add_height"); asm.clc(); asm.adc(absy(SPRITE_LOGICAL_STATE_BASE + 2));
+  asm.bcc(rel("runtime_sprite_mux_end_ready")); asm.lda(imm(0xff));
+  asm.label("runtime_sprite_mux_end_ready"); asm.sta(absx(SPRITE_MUX_SLOT_END_BASE));
+  asm.rts();
+
+  asm.comment("Render the sorted display list and recycle channels after sprite end");
+  asm.label("runtime_sprite_mux_render");
+  asm.jsr(abs("runtime_sprite_mux_sort"));
+
+  // Synchronize with the real start of the next frame before touching VIC
+  // registers. If a worst-case sort ended just after the NTSC wrap, a low
+  // raster value tells us that we are already inside the new top border.
+  asm.lda(abs(c64.VIC_CONTROL_1)); asm.bmi(rel("runtime_sprite_mux_wait_low_raster"));
+  asm.lda(abs(c64.VIC_RASTER)); asm.cmp(imm(64)); asm.bcc(rel("runtime_sprite_mux_frame_ready"));
+  asm.label("runtime_sprite_mux_wait_high_raster"); asm.lda(abs(c64.VIC_CONTROL_1)); asm.bpl(rel("runtime_sprite_mux_wait_high_raster"));
+  asm.label("runtime_sprite_mux_wait_low_raster"); asm.lda(abs(c64.VIC_CONTROL_1)); asm.bmi(rel("runtime_sprite_mux_wait_low_raster"));
+  asm.label("runtime_sprite_mux_frame_ready");
+  emitStoreImmediate(asm, c64.VIC_SPRITE_ENABLE, 0);
+  asm.ldx(imm(0));
+  asm.label("runtime_sprite_mux_first_slots");
+  asm.cpx(abs(SPRITE_MUX_SORTED_COUNT)); asm.bcs(rel("runtime_sprite_mux_first_done"));
+  asm.cpx(imm(8)); asm.beq(rel("runtime_sprite_mux_first_done"));
+  asm.lda(absx(SPRITE_MUX_SORTED_BASE)); asm.tay(); asm.jsr(abs("runtime_sprite_mux_draw"));
+  asm.inx(); asm.jmp(abs("runtime_sprite_mux_first_slots"));
+  asm.label("runtime_sprite_mux_first_done"); asm.stx(abs(SPRITE_MUX_LIST_POSITION));
+  asm.cpx(abs(SPRITE_MUX_SORTED_COUNT)); asm.bcs(rel("runtime_sprite_mux_render_done"));
+
+  asm.label("runtime_sprite_mux_schedule_next");
+  asm.ldx(abs(SPRITE_MUX_LIST_POSITION)); asm.cpx(abs(SPRITE_MUX_SORTED_COUNT)); asm.bcs(rel("runtime_sprite_mux_render_done"));
+  asm.ldx(imm(0)); asm.stx(abs(SPRITE_MUX_HARDWARE_SLOT));
+  asm.lda(abs(SPRITE_MUX_SLOT_END_BASE)); asm.sta(abs(SPRITE_MUX_MIN_END));
+  asm.inx();
+  asm.label("runtime_sprite_mux_find_slot");
+  asm.lda(absx(SPRITE_MUX_SLOT_END_BASE)); asm.cmp(abs(SPRITE_MUX_MIN_END)); asm.bcs(rel("runtime_sprite_mux_find_next"));
+  asm.sta(abs(SPRITE_MUX_MIN_END)); asm.stx(abs(SPRITE_MUX_HARDWARE_SLOT));
+  asm.label("runtime_sprite_mux_find_next"); asm.inx(); asm.cpx(imm(8)); asm.bne(rel("runtime_sprite_mux_find_slot"));
+  asm.ldx(abs(SPRITE_MUX_LIST_POSITION)); asm.lda(absx(SPRITE_MUX_SORTED_BASE)); asm.sta(abs(SPRITE_MUX_LOGICAL_OFFSET)); asm.tay();
+  asm.lda(absy(SPRITE_LOGICAL_STATE_BASE + 2)); asm.cmp(abs(SPRITE_MUX_MIN_END)); asm.bcc(rel("runtime_sprite_mux_skip_overflow"));
+  asm.label("runtime_sprite_mux_wait_release"); asm.lda(abs(c64.VIC_RASTER)); asm.cmp(abs(SPRITE_MUX_MIN_END)); asm.bcc(rel("runtime_sprite_mux_wait_release"));
+  asm.ldx(abs(SPRITE_MUX_HARDWARE_SLOT)); asm.ldy(abs(SPRITE_MUX_LOGICAL_OFFSET)); asm.jsr(abs("runtime_sprite_mux_draw"));
+  asm.label("runtime_sprite_mux_skip_overflow"); asm.inc(abs(SPRITE_MUX_LIST_POSITION)); asm.jmp(abs("runtime_sprite_mux_schedule_next"));
+  asm.label("runtime_sprite_mux_render_done"); asm.rts();
+  asm.label("runtime_sprite_mux_bit_masks"); asm.byte(1, 2, 4, 8, 16, 32, 64, 128);
+  asm.label("runtime_sprite_mux_inverse_masks"); asm.byte(254, 253, 251, 247, 239, 223, 191, 127);
 }
 
 function emitSpriteAnimatorXUpdate(asm, spriteIndex, animation, base, uniqueId) {
@@ -2375,6 +2974,7 @@ function emitSpriteAnimatorRoutine(asm, state) {
   asm.comment("Sprite animator IRQ");
   asm.label("sprite_animator_irq");
   emitIrqPrologue(asm);
+  emitVicRasterSourceGate(asm, "sprite_animator_vic_raster");
 
   for (let index = 0; index < state.spriteAnimations.length; index += 1) {
     const animation = state.spriteAnimations[index];
@@ -2391,8 +2991,7 @@ function emitSpriteAnimatorRoutine(asm, state) {
   }
 
   setRasterLine(asm, state.spriteAnimator.line);
-  emitIrqAck(asm);
-  emitIrqExit(asm, true);
+  emitIrqExit(asm, false, true);
 }
 
 function emitSpriteAnimatorBody(asm, state) {
@@ -2443,13 +3042,13 @@ function emitCombinedRuntimeRoutine(asm, state) {
   asm.comment("Combined runtime IRQ");
   asm.label("runtime_combo_irq");
   emitIrqPrologue(asm);
+  emitVicRasterSourceGate(asm, "runtime_combo_vic_raster");
 
   emitSidPlayerBody(asm, state);
   emitSpriteAnimatorBody(asm, state);
 
   setRasterLine(asm, combinedLine);
-  emitIrqAck(asm);
-  emitIrqExit(asm, true);
+  emitIrqExit(asm, false, true);
 }
 
 function setRasterLine(asm, line) {
@@ -2479,7 +3078,16 @@ function emitIrqPrologue(asm) {
   asm.pha();
 }
 
-function emitIrqExit(asm, chainToKernal) {
+function emitVicRasterSourceGate(asm, rasterLabel) {
+  asm.lda(abs(c64.VIC_IRQ_STATUS));
+  asm.and(imm(0x01));
+  asm.bne(rel(rasterLabel));
+  emitIrqExit(asm, true);
+  asm.label(rasterLabel);
+  emitIrqAck(asm);
+}
+
+function emitIrqExit(asm, chainToKernal, useKernalEpilogue = false) {
   asm.pla();
   asm.tay();
   asm.pla();
@@ -2488,6 +3096,8 @@ function emitIrqExit(asm, chainToKernal) {
 
   if (chainToKernal) {
     asm.jmp(abs(c64.KERNAL_IRQ));
+  } else if (useKernalEpilogue) {
+    asm.jmp(abs(c64.KERNAL_IRQ_EXIT));
   } else {
     asm.rti();
   }
@@ -2549,11 +3159,21 @@ function createInstructionCompileState(baseState) {
     variables: baseState.variables,
     spriteState: baseState.spriteState,
     spriteAnimations: baseState.spriteAnimations,
+    spriteRuntime: baseState.spriteRuntime,
+    spriteFrameAssets: baseState.spriteFrameAssets,
+    spriteDataAssets: baseState.spriteDataAssets,
+    sharedRoutines: baseState.sharedRoutines,
+    optimization: baseState.optimization,
+    multiplexer: baseState.multiplexer,
+    nextSpriteFrameAddress: baseState.nextSpriteFrameAddress,
     spriteAnimator: baseState.spriteAnimator,
     spriteAnimationBase: baseState.spriteAnimationBase,
     spriteDataCounter: baseState.spriteDataCounter,
     stringCounter: baseState.stringCounter,
     loopCounter: baseState.loopCounter,
+    nextAutoVariableAddress: baseState.nextAutoVariableAddress,
+    input: baseState.input,
+    game: baseState.game,
     hires: { ...baseState.hires },
     sid: {
       voiceControls: [...baseState.sid.voiceControls],
@@ -2568,6 +3188,53 @@ function createInstructionCompileState(baseState) {
   };
 }
 
+const MULTIPLEX_CONFLICTING_LEGACY_OPS = new Set([
+  "spriteEnable", "spriteDisable", "spriteShow", "spriteHide", "spritePosition", "spriteSetX", "spriteSetY",
+  "spriteMoveX", "spriteMoveY", "spriteMoveToX", "spriteMoveToY", "spriteAnimateTo", "spriteStop", "spriteStopX", "spriteStopY",
+  "spriteColor", "spriteData", "spritePointer", "spriteMulticolor", "spriteExpandX", "spriteExpandY", "spritePriority", "spriteInstallAnimator"
+]);
+
+function collectBalancedOptimizationStats(instructionGroups) {
+  const stats = { sidClickCount: 0, spriteSyncCallCounts: new Map(), usesSpriteMultiplexer: false, usesLegacySpriteApi: false };
+  const addSpriteSync = (instruction) => {
+    const spriteRef = instruction.args[0];
+    if (!spriteRef || spriteRef.type !== "spriteRef") return;
+    stats.spriteSyncCallCounts.set(spriteRef.index, (stats.spriteSyncCallCounts.get(spriteRef.index) ?? 0) + 1);
+  };
+  const visit = (instructions) => {
+    for (const instruction of instructions ?? []) {
+      if (instruction.op === "sidClick") stats.sidClickCount += 1;
+      if (MULTIPLEX_CONFLICTING_LEGACY_OPS.has(instruction.op)) stats.usesLegacySpriteApi = true;
+      if (["spriteCreateRuntime", "spriteRuntimeSync", "spriteRuntimeUpdate"].includes(instruction.op)) addSpriteSync(instruction);
+      if (instruction.op === "spriteCreateRuntime" && instruction.args[0]?.index >= 8) stats.usesSpriteMultiplexer = true;
+      if (["gameInit", "gameFrame"].includes(instruction.op)) visit(instruction.args[0]);
+      if (["gameEvery", "controlRepeat", "controlWhile", "controlRoutine"].includes(instruction.op)) visit(instruction.args[1]);
+      if (instruction.op === "controlIf") {
+        visit(instruction.args[1]);
+        visit(instruction.args[2]);
+      }
+    }
+  };
+  for (const group of instructionGroups) visit(group);
+  return stats;
+}
+
+function emitSpriteMultiplexerStateInit(asm, state) {
+  if (!state.multiplexer.enabled) return;
+  const loopLabel = "sprite_mux_init_loop";
+  asm.comment("Clear all 16 logical sprite slots before user initialization");
+  asm.ldx(imm(0));
+  asm.label(loopLabel);
+  asm.lda(imm(0));
+  asm.sta(absx(SPRITE_LOGICAL_STATE_BASE + 5));
+  asm.sta(absx(SPRITE_RUNTIME_BASE + 4));
+  asm.sta(absx(SPRITE_RUNTIME_BASE + 5));
+  asm.sta(absx(SPRITE_RUNTIME_BASE + 6));
+  asm.txa(); asm.clc(); asm.adc(imm(SPRITE_LOGICAL_STATE_STRIDE)); asm.tax();
+  asm.cpx(imm(SPRITE_LOGICAL_COUNT * SPRITE_LOGICAL_STATE_STRIDE));
+  asm.bne(rel(loopLabel));
+}
+
 function syncInstructionCompileState(baseState, localState) {
   baseState.currentTextColor = localState.currentTextColor;
   baseState.screenBase = localState.screenBase;
@@ -2575,6 +3242,8 @@ function syncInstructionCompileState(baseState, localState) {
   baseState.spriteDataCounter = localState.spriteDataCounter;
   baseState.stringCounter = localState.stringCounter;
   baseState.loopCounter = localState.loopCounter;
+  baseState.nextAutoVariableAddress = localState.nextAutoVariableAddress;
+  baseState.nextSpriteFrameAddress = localState.nextSpriteFrameAddress;
   baseState.hires = { ...localState.hires };
   baseState.sid = {
     voiceControls: [...localState.sid.voiceControls],
@@ -2595,11 +3264,506 @@ function registerData(compileState, name, bytes) {
   compileState.dataPool.set(name, bytes);
 }
 
+function isCompilerSpriteVariable(name, address, size) {
+  const match = /^__sprite(\d+)_(x|y|vx|vy|active)$/.exec(name);
+  if (!match) return false;
+  const index = Number(match[1]);
+  if (index < 0 || index >= SPRITE_LOGICAL_COUNT) return false;
+  const field = match[2];
+  const offsets = { x: 0, y: 2, vx: 3, vy: 4, active: 5 };
+  const expectedSize = field === "x" ? 2 : 1;
+  return address === SPRITE_LOGICAL_STATE_BASE + index * SPRITE_LOGICAL_STATE_STRIDE + offsets[field]
+    && size === expectedSize;
+}
+
 function registerVariable(compileState, name, address, size) {
   if (compileState.variables.has(name)) {
     throw new Error(`Variable already defined: ${name}`);
   }
-  compileState.variables.set(name, { address, size });
+  ensureWord(address, `address for variable ${name}`);
+  ensureWord(address + size - 1, `end address for variable ${name}`);
+  for (const range of RESERVED_RUNTIME_RANGES) {
+    const overlapsRuntime = address <= range.end && address + size - 1 >= range.start;
+    const isInternalSpriteState = range.name === "sprite logical state" && isCompilerSpriteVariable(name, address, size);
+    if (overlapsRuntime && !isInternalSpriteState) {
+      throw new Error(`Variable ${name} overlaps reserved ${range.name} RAM ($${range.start.toString(16).toUpperCase()}-$${range.end.toString(16).toUpperCase()})`);
+    }
+  }
+  for (const [otherName, variable] of compileState.variables.entries()) {
+    const overlaps = address <= variable.address + variable.size - 1
+      && address + size - 1 >= variable.address;
+    if (overlaps) {
+      throw new Error(`Variable ${name} overlaps variable ${otherName}`);
+    }
+  }
+  compileState.variables.set(name, { address, size, valueType: size === 2 ? "word" : "byte" });
+}
+
+function allocateVariableAddress(compileState, size) {
+  let candidate = compileState.nextAutoVariableAddress;
+  while (candidate + size - 1 <= AUTO_VARIABLE_END) {
+    const overlaps = [...compileState.variables.values()].some((variable) => (
+      candidate <= variable.address + variable.size - 1
+      && candidate + size - 1 >= variable.address
+    ));
+    if (!overlaps) {
+      compileState.nextAutoVariableAddress = candidate + size;
+      return candidate;
+    }
+    candidate += 1;
+  }
+  throw new Error("Automatic variable memory is full ($C100-$C2FF)");
+}
+
+function resolveRuntimeByteAddress(compileState, value, label = "runtime value") {
+  if (!isVarRef(value)) {
+    throw new Error(`${label} must be a runtime byte variable`);
+  }
+  const variable = resolveVarRef(compileState, value);
+  if (variable.size !== 1) {
+    throw new Error(`${label} must reference a byte variable`);
+  }
+  return variable.address;
+}
+
+function resolveRuntimeVariable(compileState, value, label = "runtime value") {
+  if (!isVarRef(value)) {
+    throw new Error(`${label} must be a runtime variable`);
+  }
+  return resolveVarRef(compileState, value);
+}
+
+function normalizeRuntimeLiteral(value, size, label) {
+  if (typeof value === "boolean") {
+    value = value ? 1 : 0;
+  }
+  if (size === 2) {
+    ensureWord(value, label);
+  } else {
+    ensureByte(value, label);
+  }
+  return value;
+}
+
+function emitRuntimeValueToA(asm, compileState, value, label = "runtime value") {
+  if (isVarRef(value)) {
+    asm.lda(addressMode(resolveRuntimeByteAddress(compileState, value, label)));
+    return;
+  }
+  if (typeof value === "boolean") value = Number(value);
+  if (typeof value === "number" && value < 0) {
+    ensureSignedByte(value, label);
+    value &= 0xff;
+  }
+  ensureByte(value, label);
+  asm.lda(imm(value));
+}
+
+function runtimeValueOperand(compileState, value, label = "runtime value") {
+  if (isVarRef(value)) {
+    return addressMode(resolveRuntimeByteAddress(compileState, value, label));
+  }
+  if (typeof value === "boolean") value = Number(value);
+  if (typeof value === "number" && value < 0) {
+    ensureSignedByte(value, label);
+    value &= 0xff;
+  }
+  ensureByte(value, label);
+  return imm(value);
+}
+
+function emitRuntimeSet(asm, compileState, target, value) {
+  const targetVariable = resolveRuntimeVariable(compileState, target, "assignment target");
+  if (targetVariable.size === 1) {
+    emitRuntimeValueToA(asm, compileState, typeof value === "boolean" ? Number(value) : value, "assignment value");
+    asm.sta(addressMode(targetVariable.address));
+    return;
+  }
+  if (isVarRef(value)) {
+    const source = resolveRuntimeVariable(compileState, value, "assignment value");
+    if (source.size !== 2) throw new Error("word assignment needs a word source");
+    emitLoadAndStore(asm, source.address, targetVariable.address);
+    emitLoadAndStore(asm, source.address + 1, targetVariable.address + 1);
+    return;
+  }
+  const literal = normalizeRuntimeLiteral(value, 2, "assignment value");
+  emitStoreImmediate(asm, targetVariable.address, literal & 0xff);
+  emitStoreImmediate(asm, targetVariable.address + 1, literal >> 8);
+}
+
+function emitRuntimeMath(asm, compileState, target, value, operation) {
+  const targetVariable = resolveRuntimeVariable(compileState, target, "math target");
+  const targetAddress = targetVariable.address;
+  let effectiveOperation = operation;
+  if (targetVariable.size === 1 && typeof value === "number" && value < 0) {
+    ensureSignedByte(value, "signed math value");
+    value = -value;
+    effectiveOperation = operation === "add" ? "sub" : "add";
+  }
+  let lowOperand;
+  if (targetVariable.size === 2) {
+    if (isVarRef(value)) {
+      const source = resolveRuntimeVariable(compileState, value, "math value");
+      if (source.size !== 2) throw new Error("word math needs a word source");
+      lowOperand = addressMode(source.address);
+    } else {
+      lowOperand = imm(normalizeRuntimeLiteral(value, 2, "math value") & 0xff);
+    }
+  } else {
+    lowOperand = runtimeValueOperand(compileState, value, "math value");
+  }
+  asm.lda(addressMode(targetAddress));
+  if (effectiveOperation === "add") {
+    asm.clc();
+    asm.adc(lowOperand);
+  } else {
+    asm.sec();
+    asm.sbc(lowOperand);
+  }
+  asm.sta(addressMode(targetAddress));
+  if (targetVariable.size === 2) {
+    asm.lda(addressMode(targetAddress + 1));
+    let highOperand;
+    if (isVarRef(value)) {
+      const source = resolveRuntimeVariable(compileState, value, "math value");
+      if (source.size !== 2) throw new Error("word math needs a word source");
+      highOperand = addressMode(source.address + 1);
+    } else {
+      highOperand = imm((normalizeRuntimeLiteral(value, 2, "math value") >> 8) & 0xff);
+    }
+    if (effectiveOperation === "add") asm.adc(highOperand); else asm.sbc(highOperand);
+    asm.sta(addressMode(targetAddress + 1));
+  }
+}
+
+function emitRuntimeIncDec(asm, compileState, target, increment) {
+  const variable = resolveRuntimeVariable(compileState, target, increment ? "increment target" : "decrement target");
+  if (variable.size === 1) {
+    if (increment) asm.inc(addressMode(variable.address)); else asm.dec(addressMode(variable.address));
+    return;
+  }
+  const doneLabel = `runtime_word_${increment ? "inc" : "dec"}_done_${compileState.loopCounter++}`;
+  if (increment) {
+    asm.inc(addressMode(variable.address));
+    asm.bne(rel(doneLabel));
+    asm.inc(addressMode(variable.address + 1));
+  } else {
+    asm.lda(addressMode(variable.address));
+    asm.bne(rel(doneLabel));
+    asm.dec(addressMode(variable.address + 1));
+    asm.label(doneLabel);
+    asm.dec(addressMode(variable.address));
+    return;
+  }
+  asm.label(doneLabel);
+}
+
+function emitRuntimeBit(asm, compileState, operation, target, value) {
+  const variable = resolveRuntimeVariable(compileState, target, "bit operation target");
+  if (variable.size !== 1) throw new Error("bit operations currently require a byte or bool variable");
+  asm.lda(addressMode(variable.address));
+  const operand = runtimeValueOperand(compileState, typeof value === "boolean" ? Number(value) : value, "bit value");
+  if (operation === "and") asm.and(operand);
+  else if (operation === "or") asm.ora(operand);
+  else if (operation === "xor") asm.eor(operand);
+  else throw new Error(`Unsupported bit operation: ${operation}`);
+  asm.sta(addressMode(variable.address));
+}
+
+function joystickSnapshotAddresses(port) {
+  if (port === 1) {
+    return { current: INPUT_JOYSTICK_1, previous: INPUT_JOYSTICK_PREV_1 };
+  }
+  if (port === 2) {
+    return { current: INPUT_JOYSTICK_2, previous: INPUT_JOYSTICK_PREV_2 };
+  }
+  throw new Error("joystick port must be 1 or 2");
+}
+
+function keyboardSnapshotAddresses(compileState, keyCode) {
+  const keys = [...compileState.input.keyboardKeys];
+  const index = keys.indexOf(keyCode);
+  if (index < 0 || index >= MAX_KEYBOARD_ACTIONS) {
+    throw new Error(`Keyboard action for key ${keyCode} was not registered or exceeds the ${MAX_KEYBOARD_ACTIONS}-key limit`);
+  }
+  return { current: KEYBOARD_CURRENT_BASE + index, previous: KEYBOARD_PREVIOUS_BASE + index };
+}
+
+function wordPartOperand(compileState, value, high, label) {
+  if (isVarRef(value)) {
+    const variable = resolveRuntimeVariable(compileState, value, label);
+    if (variable.size !== 2) throw new Error(`${label} must be a word variable`);
+    return addressMode(variable.address + (high ? 1 : 0));
+  }
+  const literal = normalizeRuntimeLiteral(value, 2, label);
+  return imm(high ? ((literal >> 8) & 0xff) : (literal & 0xff));
+}
+
+function emitWordConditionOrJump(asm, compileState, runtimeCondition, falseLabel, passLabel, id) {
+  const left = resolveRuntimeVariable(compileState, runtimeCondition.left, "condition left value");
+  if (left.size !== 2) throw new Error("word comparison needs a word left value");
+  const compareLow = `word_compare_low_${id}`;
+  asm.lda(addressMode(left.address + 1));
+  asm.cmp(wordPartOperand(compileState, runtimeCondition.right, true, "condition right value"));
+  switch (runtimeCondition.operator) {
+    case "eq":
+      asm.beq(rel(compareLow)); asm.jmp(abs(falseLabel));
+      asm.label(compareLow);
+      asm.lda(addressMode(left.address)); asm.cmp(wordPartOperand(compileState, runtimeCondition.right, false, "condition right value"));
+      asm.beq(rel(passLabel)); break;
+    case "ne":
+      asm.bne(rel(passLabel));
+      asm.lda(addressMode(left.address)); asm.cmp(wordPartOperand(compileState, runtimeCondition.right, false, "condition right value"));
+      asm.bne(rel(passLabel)); break;
+    case "lt":
+      asm.bcc(rel(passLabel)); asm.bne(rel(compareLow));
+      asm.lda(addressMode(left.address)); asm.cmp(wordPartOperand(compileState, runtimeCondition.right, false, "condition right value"));
+      asm.bcc(rel(passLabel));
+      asm.label(compareLow); break;
+    case "gte":
+      asm.bcc(rel(compareLow)); asm.bne(rel(passLabel));
+      asm.lda(addressMode(left.address)); asm.cmp(wordPartOperand(compileState, runtimeCondition.right, false, "condition right value"));
+      asm.bcs(rel(passLabel));
+      asm.label(compareLow); break;
+    case "lte":
+      asm.bcc(rel(passLabel)); asm.bne(rel(compareLow));
+      asm.lda(addressMode(left.address)); asm.cmp(wordPartOperand(compileState, runtimeCondition.right, false, "condition right value"));
+      asm.bcc(rel(passLabel)); asm.beq(rel(passLabel));
+      asm.label(compareLow); break;
+    case "gt":
+      asm.bcc(rel(compareLow)); asm.bne(rel(passLabel));
+      asm.lda(addressMode(left.address)); asm.cmp(wordPartOperand(compileState, runtimeCondition.right, false, "condition right value"));
+      asm.beq(rel(compareLow)); asm.bcs(rel(passLabel));
+      asm.label(compareLow); break;
+    default:
+      throw new Error(`Unsupported word condition: ${runtimeCondition.operator}`);
+  }
+  asm.jmp(abs(falseLabel));
+  asm.label(passLabel);
+}
+
+function emitConditionOrJump(asm, compileState, runtimeCondition, falseLabel) {
+  if (!isRuntimeCondition(runtimeCondition)) {
+    throw new Error("Expected a runtime condition");
+  }
+  const id = compileState.loopCounter++;
+  const passLabel = `condition_pass_${id}`;
+
+  if (runtimeCondition.operator === "spriteAabb") {
+    emitSpriteAabbOrJumpFalse(asm, compileState, runtimeCondition.left, falseLabel);
+    return;
+  }
+
+  if (runtimeCondition.operator === "spriteVic") {
+    if (compileState.multiplexer.enabled) {
+      throw new Error("vicCollides() is unavailable when sprites 8..15 enable multiplexing; use software collides() instead");
+    }
+    const mask = (1 << runtimeCondition.left.a) | (1 << runtimeCondition.left.b);
+    asm.lda(abs(VIC_SPRITE_COLLISION_SNAPSHOT)); asm.and(imm(mask)); asm.cmp(imm(mask)); asm.beq(rel(passLabel)); asm.jmp(abs(falseLabel)); asm.label(passLabel);
+    return;
+  }
+
+  if (runtimeCondition.operator === "spriteBackground") {
+    if (compileState.multiplexer.enabled) {
+      throw new Error("collidesWithBackground() is unavailable when sprites 8..15 enable multiplexing; use software or tile collisions instead");
+    }
+    const mask = 1 << runtimeCondition.left.index;
+    asm.lda(abs(VIC_BACKGROUND_COLLISION_SNAPSHOT)); asm.and(imm(mask)); asm.bne(rel(passLabel)); asm.jmp(abs(falseLabel)); asm.label(passLabel);
+    return;
+  }
+
+  if (runtimeCondition.operator === "joystick") {
+    const input = runtimeCondition.left;
+    const addresses = joystickSnapshotAddresses(input.port);
+    ensureByte(input.mask, "joystick mask");
+    asm.lda(abs(addresses.current));
+    asm.and(imm(input.mask));
+    if (input.event === "held") {
+      asm.beq(rel(passLabel));
+      asm.jmp(abs(falseLabel));
+    } else if (input.event === "pressed") {
+      const currentPressedLabel = `joystick_current_pressed_${id}`;
+      asm.beq(rel(currentPressedLabel));
+      asm.jmp(abs(falseLabel));
+      asm.label(currentPressedLabel);
+      asm.lda(abs(addresses.previous));
+      asm.and(imm(input.mask));
+      asm.bne(rel(passLabel));
+      asm.jmp(abs(falseLabel));
+    } else if (input.event === "released") {
+      const currentReleasedLabel = `joystick_current_released_${id}`;
+      asm.bne(rel(currentReleasedLabel));
+      asm.jmp(abs(falseLabel));
+      asm.label(currentReleasedLabel);
+      asm.lda(abs(addresses.previous));
+      asm.and(imm(input.mask));
+      asm.beq(rel(passLabel));
+      asm.jmp(abs(falseLabel));
+    } else {
+      throw new Error(`Unsupported joystick event: ${input.event}`);
+    }
+    asm.label(passLabel);
+    return;
+  }
+
+  if (runtimeCondition.operator === "keyboard") {
+    const input = runtimeCondition.left;
+    const addresses = keyboardSnapshotAddresses(compileState, input.keyCode);
+    asm.lda(abs(addresses.current));
+    if (input.event === "held") {
+      asm.beq(rel(passLabel));
+    } else if (input.event === "pressed") {
+      const pressedLabel = `keyboard_pressed_${id}`;
+      asm.beq(rel(pressedLabel)); asm.jmp(abs(falseLabel)); asm.label(pressedLabel);
+      asm.lda(abs(addresses.previous)); asm.bne(rel(passLabel));
+    } else if (input.event === "released") {
+      const releasedLabel = `keyboard_released_${id}`;
+      asm.bne(rel(releasedLabel)); asm.jmp(abs(falseLabel)); asm.label(releasedLabel);
+      asm.lda(abs(addresses.previous)); asm.beq(rel(passLabel));
+    }
+    asm.jmp(abs(falseLabel));
+    asm.label(passLabel);
+    return;
+  }
+
+  if (isVarRef(runtimeCondition.left) && resolveRuntimeVariable(compileState, runtimeCondition.left).size === 2) {
+    emitWordConditionOrJump(asm, compileState, runtimeCondition, falseLabel, passLabel, id);
+    return;
+  }
+
+  emitRuntimeValueToA(asm, compileState, runtimeCondition.left, "condition left value");
+  asm.cmp(runtimeValueOperand(compileState, runtimeCondition.right, "condition right value"));
+  switch (runtimeCondition.operator) {
+    case "eq":
+      asm.beq(rel(passLabel));
+      break;
+    case "ne":
+      asm.bne(rel(passLabel));
+      break;
+    case "lt":
+      asm.bcc(rel(passLabel));
+      break;
+    case "gte":
+      asm.bcs(rel(passLabel));
+      break;
+    case "lte":
+      asm.bcc(rel(passLabel));
+      asm.beq(rel(passLabel));
+      break;
+    case "gt": {
+      const notEqualLabel = `condition_not_equal_${id}`;
+      asm.bne(rel(notEqualLabel));
+      asm.jmp(abs(falseLabel));
+      asm.label(notEqualLabel);
+      asm.bcs(rel(passLabel));
+      break;
+    }
+    default:
+      throw new Error(`Unsupported runtime condition: ${runtimeCondition.operator}`);
+  }
+  asm.jmp(abs(falseLabel));
+  asm.label(passLabel);
+}
+
+function emitControlIf(asm, compileState, runtimeCondition, thenInstructions, elseInstructions) {
+  const id = compileState.loopCounter++;
+  const elseLabel = `control_if_else_${id}`;
+  const endLabel = `control_if_end_${id}`;
+  emitConditionOrJump(asm, compileState, runtimeCondition, elseLabel);
+  for (const nestedInstruction of thenInstructions) {
+    compileHighLevelInstruction(asm, nestedInstruction, compileState);
+  }
+  asm.jmp(abs(endLabel));
+  asm.label(elseLabel);
+  for (const nestedInstruction of elseInstructions) {
+    compileHighLevelInstruction(asm, nestedInstruction, compileState);
+  }
+  asm.label(endLabel);
+}
+
+function emitControlRepeat(asm, compileState, count, instructions) {
+  const counterAddress = allocateVariableAddress(compileState, 1);
+  const id = compileState.loopCounter++;
+  const loopLabel = `control_repeat_${id}`;
+  const doneLabel = `control_repeat_done_${id}`;
+  emitRuntimeValueToA(asm, compileState, count, "repeat count");
+  asm.sta(abs(counterAddress));
+  asm.label(loopLabel);
+  asm.lda(abs(counterAddress));
+  asm.beq(rel(doneLabel));
+  for (const instruction of instructions) compileHighLevelInstruction(asm, instruction, compileState);
+  asm.dec(abs(counterAddress));
+  asm.jmp(abs(loopLabel));
+  asm.label(doneLabel);
+}
+
+function emitControlWhile(asm, compileState, runtimeCondition, instructions, maxIterations) {
+  ensurePositiveByte(maxIterations, "while maxIterations");
+  const counterAddress = allocateVariableAddress(compileState, 1);
+  const id = compileState.loopCounter++;
+  const loopLabel = `control_while_${id}`;
+  const doneLabel = `control_while_done_${id}`;
+  emitStoreImmediate(asm, counterAddress, maxIterations);
+  asm.label(loopLabel);
+  asm.lda(abs(counterAddress));
+  asm.beq(rel(doneLabel));
+  emitConditionOrJump(asm, compileState, runtimeCondition, doneLabel);
+  for (const instruction of instructions) compileHighLevelInstruction(asm, instruction, compileState);
+  asm.dec(abs(counterAddress));
+  asm.jmp(abs(loopLabel));
+  asm.label(doneLabel);
+}
+
+function safeRoutineLabel(name) {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
+    throw new Error(`Invalid routine name: ${name}`);
+  }
+  return `user_routine_${name}`;
+}
+
+const GAME_FRAME_COMPILE_TIME_ONLY_OPS = new Set([
+  "dataByte", "dataWord", "dataString", "dataScreenString",
+  "varByte", "varWord", "screen", "colorRam",
+  "sidPlaySong", "sidInstallPlayer", "spriteInstallAnimator",
+  "spriteMoveX", "spriteMoveY", "spriteMoveToX", "spriteMoveToY",
+  "spriteAnimateTo", "spriteStop", "spriteStopX", "spriteStopY",
+  "irqInstall", "irqChainToKernal", "irqDisableKernalTimer", "irqEnableKernalTimer",
+  "gameFrame", "gameInit", "controlRoutine",
+  "spriteCreateRuntime", "spriteRuntimeData", "spriteRuntimeColor", "spriteRuntimeFlag",
+  "spriteFrames", "spriteUseFrames", "spriteSequence", "spriteRuntimeBounds"
+]);
+
+function prepareGameFrameInstructions(instructions, compileState) {
+  for (const instruction of instructions) {
+    if (GAME_FRAME_COMPILE_TIME_ONLY_OPS.has(instruction.op)) {
+      throw new Error(`${instruction.op} cannot be used inside c64.game.frame(); declare resources before the frame loop and update runtime variables inside it`);
+    }
+    if (instruction.op === "inputUseJoystick") {
+      compileState.input.joystickPorts.add(instruction.args[0]);
+    }
+    if (instruction.op === "inputUseKeyboardKey") {
+      compileState.input.keyboardKeys.add(instruction.args[0]);
+    }
+    if (instruction.op === "gameEvery") {
+      ensurePositiveByte(instruction.args[0], "game.every count");
+      instruction.runtimeCounterAddress ??= allocateVariableAddress(compileState, 1);
+      compileState.game.everyTasks.push(instruction);
+      prepareGameFrameInstructions(instruction.args[1], compileState);
+    }
+    if (instruction.op === "controlIf") {
+      if (instruction.args[0]?.operator === "spriteAabb") compileState.game.spriteAabbCount += 1;
+      if (instruction.args[0]?.operator === "spriteVic") compileState.game.usesVicSpriteCollision = true;
+      if (instruction.args[0]?.operator === "spriteBackground") compileState.game.usesVicBackgroundCollision = true;
+      prepareGameFrameInstructions(instruction.args[1], compileState);
+      prepareGameFrameInstructions(instruction.args[2], compileState);
+    }
+    if (instruction.op === "controlRepeat" || instruction.op === "controlWhile") {
+      if (instruction.op === "controlWhile" && instruction.args[0]?.operator === "spriteAabb") compileState.game.spriteAabbCount += 1;
+      if (instruction.op === "controlWhile" && instruction.args[0]?.operator === "spriteVic") compileState.game.usesVicSpriteCollision = true;
+      if (instruction.op === "controlWhile" && instruction.args[0]?.operator === "spriteBackground") compileState.game.usesVicBackgroundCollision = true;
+      prepareGameFrameInstructions(instruction.args[1], compileState);
+    }
+  }
 }
 
 function compileHighLevelInstruction(asm, instruction, compileState) {
@@ -2637,6 +3801,11 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
     case "poke":
       if (isPeekRef(instruction.args[1])) {
         emitLoadAndStore(asm, resolveAddress(compileState, instruction.args[1].address, "peek address"), resolveAddress(compileState, instruction.args[0], "destination address"));
+      } else if (isVarRef(instruction.args[1])) {
+        const source = resolveRuntimeVariable(compileState, instruction.args[1], "poke value");
+        if (source.size !== 1) throw new Error("poke value must be a byte variable");
+        asm.lda(addressMode(source.address));
+        asm.sta(addressMode(resolveAddress(compileState, instruction.args[0], "destination address")));
       } else {
         emitStoreImmediate(asm, resolveAddress(compileState, instruction.args[0], "address"), resolveByteValue(instruction.args[1]));
       }
@@ -2802,18 +3971,217 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
       registerData(compileState, instruction.args[0], [...getStringBytes(instruction.args[1], asciiToScreenCode), 0x00]);
       break;
     case "varByte":
+      instruction.args[1] ??= allocateVariableAddress(compileState, 1);
       registerVariable(compileState, instruction.args[0], instruction.args[1], 1);
-      emitStoreImmediate(asm, instruction.args[1], instruction.args[2]);
+      if (!Number.isInteger(instruction.args[2]) || instruction.args[2] < -128 || instruction.args[2] > 255) {
+        throw new Error("initialValue must be a byte (-128..255)");
+      }
+      emitStoreImmediate(asm, instruction.args[1], instruction.args[2] & 0xff);
       break;
     case "varWord":
+      instruction.args[1] ??= allocateVariableAddress(compileState, 2);
       registerVariable(compileState, instruction.args[0], instruction.args[1], 2);
       ensureWord(instruction.args[2], "initialValue");
       emitStoreImmediate(asm, instruction.args[1], instruction.args[2] & 0xff);
       emitStoreImmediate(asm, instruction.args[1] + 1, (instruction.args[2] >> 8) & 0xff);
       break;
+    case "varBool":
+      instruction.args[1] ??= allocateVariableAddress(compileState, 1);
+      registerVariable(compileState, instruction.args[0], instruction.args[1], 1);
+      compileState.variables.get(instruction.args[0]).valueType = "bool";
+      emitStoreImmediate(asm, instruction.args[1], instruction.args[2] ? 1 : 0);
+      break;
+    case "runtimeSet":
+      emitRuntimeSet(asm, compileState, instruction.args[0], instruction.args[1]);
+      break;
+    case "runtimeAdd":
+      emitRuntimeMath(asm, compileState, instruction.args[0], instruction.args[1], "add");
+      break;
+    case "runtimeSub":
+      emitRuntimeMath(asm, compileState, instruction.args[0], instruction.args[1], "sub");
+      break;
+    case "runtimeInc":
+      emitRuntimeIncDec(asm, compileState, instruction.args[0], true);
+      break;
+    case "runtimeDec":
+      emitRuntimeIncDec(asm, compileState, instruction.args[0], false);
+      break;
+    case "runtimeBit":
+      emitRuntimeBit(asm, compileState, instruction.args[0], instruction.args[1], instruction.args[2]);
+      break;
+    case "controlIf":
+      emitControlIf(asm, compileState, instruction.args[0], instruction.args[1], instruction.args[2]);
+      break;
+    case "controlRepeat":
+      emitControlRepeat(asm, compileState, instruction.args[0], instruction.args[1]);
+      break;
+    case "controlWhile":
+      emitControlWhile(asm, compileState, instruction.args[0], instruction.args[1], instruction.args[2]);
+      break;
+    case "controlRoutine": {
+      const label = safeRoutineLabel(instruction.args[0]);
+      const afterLabel = `${label}_after`;
+      asm.jmp(abs(afterLabel));
+      asm.label(label);
+      for (const nestedInstruction of instruction.args[1]) compileHighLevelInstruction(asm, nestedInstruction, compileState);
+      asm.rts();
+      asm.label(afterLabel);
+      break;
+    }
+    case "controlCall":
+      asm.jsr(abs(safeRoutineLabel(instruction.args[0])));
+      break;
+    case "inputUseJoystick":
+      compileState.input.joystickPorts.add(instruction.args[0]);
+      break;
+    case "inputUseKeyboardKey":
+      compileState.input.keyboardKeys.add(instruction.args[0]);
+      break;
+    case "gameInit":
+      for (const nestedInstruction of instruction.args[0]) compileHighLevelInstruction(asm, nestedInstruction, compileState);
+      break;
+    case "gameEvery": {
+      const counterAddress = instruction.runtimeCounterAddress;
+      if (counterAddress === undefined) throw new Error("c64.game.every() must be declared inside c64.game.frame()");
+      const runLabel = `game_every_run_${compileState.loopCounter++}`;
+      const doneLabel = `game_every_done_${compileState.loopCounter++}`;
+      asm.inc(abs(counterAddress));
+      asm.lda(abs(counterAddress));
+      asm.cmp(imm(instruction.args[0]));
+      asm.bcs(rel(runLabel));
+      asm.jmp(abs(doneLabel));
+      asm.label(runLabel);
+      emitStoreImmediate(asm, counterAddress, 0);
+      for (const nestedInstruction of instruction.args[1]) compileHighLevelInstruction(asm, nestedInstruction, compileState);
+      asm.label(doneLabel);
+      break;
+    }
+    case "runtimeTableLoad": {
+      const index = instruction.args[1];
+      if (isVarRef(index)) asm.ldx(addressMode(resolveRuntimeByteAddress(compileState, index, "table index")));
+      else { ensureByte(index, "table index"); asm.ldx(imm(index)); }
+      asm.lda(absx(instruction.args[0]));
+      asm.sta(addressMode(resolveRuntimeByteAddress(compileState, instruction.args[2], "table load target")));
+      break;
+    }
+    case "runtimeTableStore": {
+      const index = instruction.args[1];
+      if (isVarRef(index)) asm.ldx(addressMode(resolveRuntimeByteAddress(compileState, index, "table index")));
+      else { ensureByte(index, "table index"); asm.ldx(imm(index)); }
+      emitRuntimeValueToA(asm, compileState, instruction.args[2], "table store value");
+      asm.sta(absx(instruction.args[0]));
+      break;
+    }
+    case "gameFrame":
+      if (compileState.game.frame) {
+        throw new Error("Only one c64.game.frame() loop can be declared");
+      }
+      compileState.game.frame = {
+        instructions: instruction.args[0],
+        options: instruction.args[1]
+      };
+      prepareGameFrameInstructions(instruction.args[0], compileState);
+      break;
     case "spriteEnable":
       emitSetBitState(asm, c64.VIC_SPRITE_ENABLE, instruction.args[0], true);
       break;
+    case "spriteFrames":
+      emitSpriteFrames(asm, compileState, instruction.args[0], instruction.args[1], instruction.args[2]);
+      break;
+    case "spriteCreateRuntime": {
+      const spriteRef = instruction.args[0];
+      ensureLogicalSpriteIndex(spriteRef.index);
+      if (compileState.spriteRuntime[spriteRef.index]) throw new Error(`Sprite ${spriteRef.index} is already created`);
+      const vars = spriteRefVariables(compileState, spriteRef);
+      if (vars.x.size !== 2 || vars.y.size !== 1 || vars.vx.size !== 1 || vars.vy.size !== 1) throw new Error("Invalid runtime sprite variable layout");
+      const bounds = { ...instruction.args[1] };
+      ensureSpriteX(bounds.minX, "sprite minX"); ensureSpriteX(bounds.maxX, "sprite maxX");
+      ensureByte(bounds.minY, "sprite minY"); ensureByte(bounds.maxY, "sprite maxY");
+      if (bounds.minX > bounds.maxX || bounds.minY > bounds.maxY) throw new Error("sprite bounds minimum must not exceed maximum");
+      const hitbox = spriteRef.hitbox;
+      ensureByte(hitbox.offsetX, "hitbox offsetX"); ensureByte(hitbox.offsetY, "hitbox offsetY");
+      ensurePositiveByte(hitbox.width, "hitbox width"); ensurePositiveByte(hitbox.height, "hitbox height");
+      compileState.spriteRuntime[spriteRef.index] = { ref: spriteRef, bounds, frames: null, sequences: new Map() };
+      if (compileState.multiplexer.enabled) emitStoreImmediate(asm, spriteRuntimeInternal(spriteRef.index).color, c64.COLOR_WHITE);
+      emitSpriteRuntimeSync(asm, compileState, spriteRef);
+      break;
+    }
+    case "spriteRuntimeData": {
+      const spriteRef = instruction.args[0];
+      getSpriteRuntime(compileState, spriteRef);
+      const asset = emitSpriteDataAsset(asm, compileState, spriteRef.index, instruction.args[1], instruction.args[2], true);
+      emitRuntimeSpritePointer(asm, compileState, spriteRef, asset.blockIndex);
+      break;
+    }
+    case "spriteRuntimeColor": {
+      const spriteRef = instruction.args[0];
+      getSpriteRuntime(compileState, spriteRef);
+      ensureByte(instruction.args[1], "sprite color");
+      emitStoreImmediate(asm, spriteRuntimeInternal(spriteRef.index).color, instruction.args[1]);
+      if (!compileState.multiplexer.enabled) emitStoreImmediate(asm, spriteColorAddress(spriteRef.index), instruction.args[1]);
+      break;
+    }
+    case "spriteRuntimeFlag":
+      getSpriteRuntime(compileState, instruction.args[0]);
+      emitRuntimeSpriteFlag(asm, compileState, instruction.args[0], instruction.args[1], Boolean(instruction.args[2]));
+      break;
+    case "spriteRuntimeBounds": {
+      const runtime = getSpriteRuntime(compileState, instruction.args[0]);
+      const bounds = instruction.args[1];
+      ensureSpriteX(bounds.minX, "sprite minX"); ensureSpriteX(bounds.maxX, "sprite maxX");
+      ensureByte(bounds.minY, "sprite minY"); ensureByte(bounds.maxY, "sprite maxY");
+      runtime.bounds = { ...bounds };
+      break;
+    }
+    case "spriteUseFrames": {
+      const runtime = getSpriteRuntime(compileState, instruction.args[0]);
+      const frameRef = instruction.args[1];
+      const asset = compileState.spriteFrameAssets.get(frameRef.name);
+      if (!asset) throw new Error(`Unknown sprite frames: ${frameRef.name}`);
+      runtime.frames = asset;
+      emitRuntimeSpritePointer(asm, compileState, instruction.args[0], asset.firstBlock);
+      break;
+    }
+    case "spriteSequence": {
+      const runtime = getSpriteRuntime(compileState, instruction.args[0]);
+      if (!runtime.frames) throw new Error("sprite sequence needs a frames asset");
+      const name = instruction.args[1];
+      if (runtime.sequences.has(name)) throw new Error(`Sprite sequence already defined: ${name}`);
+      const indexes = instruction.args[2];
+      if (indexes.length === 0) throw new Error("sprite sequence needs at least one frame index");
+      indexes.forEach((index) => { if (!Number.isInteger(index) || index < 0 || index >= runtime.frames.count) throw new Error(`Invalid sprite frame index: ${index}`); });
+      const options = instruction.args[3];
+      ensurePositiveByte(options.speed, "sprite animation speed");
+      const id = runtime.sequences.size;
+      const tableLabel = `sprite_sequence_${instruction.args[0].index}_${name}`;
+      registerData(compileState, tableLabel, indexes.map((index) => runtime.frames.firstBlock + index));
+      runtime.sequences.set(name, { id, tableLabel, length: indexes.length, speed: options.speed, loop: options.loop });
+      break;
+    }
+    case "spritePlaySequence":
+      emitSpritePlaySequence(asm, compileState, instruction.args[0], instruction.args[1]);
+      break;
+    case "spritePauseSequence":
+      emitStoreImmediate(asm, spriteRuntimeInternal(instruction.args[0].index).playing, 0);
+      break;
+    case "spriteResumeSequence":
+      emitStoreImmediate(asm, spriteRuntimeInternal(instruction.args[0].index).playing, 1);
+      break;
+    case "spriteRuntimeSync":
+      emitSpriteRuntimeSync(asm, compileState, instruction.args[0]);
+      break;
+    case "spriteRuntimeUpdate": {
+      const runtime = getSpriteRuntime(compileState, instruction.args[0]);
+      emitSpriteRuntimeMovement(asm, compileState, instruction.args[0], runtime);
+      emitSpriteAnimationUpdate(asm, compileState, instruction.args[0], runtime);
+      emitSpriteRuntimeSync(asm, compileState, instruction.args[0]);
+      break;
+    }
+    case "spriteReverseVelocity": {
+      const vars = spriteRefVariables(compileState, instruction.args[0]);
+      emitNegateByteAt(asm, instruction.args[1] === "x" ? vars.vx.address : vars.vy.address);
+      break;
+    }
     case "spriteDisable":
       emitSetBitState(asm, c64.VIC_SPRITE_ENABLE, instruction.args[0], false);
       break;
@@ -3008,6 +4376,28 @@ function emitRasterHandlers(asm, state) {
   asm.label("irq_dispatch");
   emitIrqPrologue(asm);
 
+  // The vector at $0314 is shared by VIC-II raster IRQs and CIA IRQs.  A CIA
+  // timer hit must never advance the raster state machine: doing so changes a
+  // colour at an arbitrary scanline and makes split-screen effects flicker.
+  // Acknowledge VIC immediately, then dispatch only when raster IRQ bit 0 is
+  // actually set.  CIA IRQs are left to the KERNAL when chaining is enabled.
+  asm.lda(abs(c64.VIC_IRQ_STATUS));
+  asm.and(imm(0x01));
+  asm.bne(rel("irq_dispatch_vic_raster"));
+
+  if (state.irq.chainToKernal) {
+    emitIrqExit(asm, true);
+  } else {
+    // No KERNAL chain was requested, so acknowledge both CIAs ourselves.  The
+    // reads clear their pending interrupt flags and avoid an IRQ retrigger loop.
+    asm.lda(abs(c64.CIA1_IRQ_CONTROL));
+    asm.lda(abs(c64.CIA2_IRQ_CONTROL));
+    emitIrqExit(asm, false, true);
+  }
+
+  asm.label("irq_dispatch_vic_raster");
+  emitIrqAck(asm);
+
   asm.lda(abs(c64.IRQ_STATE_INDEX));
 
   for (let index = 0; index < handlers.length; index += 1) {
@@ -3048,9 +4438,180 @@ function emitRasterHandlers(asm, state) {
     asm.lda(imm(nextIndex));
     asm.sta(abs(c64.IRQ_STATE_INDEX));
     setRasterLine(asm, nextLine);
-    emitIrqAck(asm);
-    emitIrqExit(asm, state.irq.chainToKernal);
+    // The ROM IRQ trampoline already saved A/X/Y before jumping through $0314.
+    // Raster IRQs therefore leave through the KERNAL epilogue at $EA81.  The
+    // full $EA31 handler is intentionally used only for CIA IRQs above: running
+    // it once per raster split creates variable work and disturbs timing.
+    emitIrqExit(asm, false, true);
   });
+}
+
+function emitGameFrameLoop(asm, state) {
+  const frame = state.game.frame;
+  if (!frame) {
+    return;
+  }
+  // Multiplexed games update logical state late in the visible frame. Sorting
+  // follows, but VIC registers are not touched until the next raster wrap.
+  const rasterLine = state.multiplexer.enabled ? SPRITE_MUX_FRAME_RASTER : (frame.options?.rasterLine ?? 240);
+  const hz = frame.options?.hz ?? 50;
+  ensureByte(rasterLine, "game frame raster line");
+  if (hz !== 50 && hz !== "video") {
+    throw new Error("c64.game.frame() supports hz: 50 or hz: \"video\"");
+  }
+
+  asm.comment("Deterministic game frame loop");
+  emitStoreImmediate(asm, GAME_FRAME_COUNTER_LO, 0);
+  emitStoreImmediate(asm, GAME_FRAME_COUNTER_HI, 0);
+  emitStoreImmediate(asm, GAME_RATE_ACCUMULATOR, 0);
+  emitStoreImmediate(asm, GAME_VIDEO_HZ, 60);
+  for (const task of state.game.everyTasks) emitStoreImmediate(asm, task.runtimeCounterAddress, 0);
+  for (const port of state.input.joystickPorts) {
+    const addresses = joystickSnapshotAddresses(port);
+    emitStoreImmediate(asm, addresses.current, 0xff);
+    emitStoreImmediate(asm, addresses.previous, 0xff);
+  }
+  for (const keyCode of state.input.keyboardKeys) {
+    const addresses = keyboardSnapshotAddresses(state, keyCode);
+    emitStoreImmediate(asm, addresses.current, 1);
+    emitStoreImmediate(asm, addresses.previous, 1);
+  }
+
+  // Detect whether the VIC-II reaches raster lines above 287. PAL does, while
+  // NTSC leaves the high-raster phase before $D012 reaches $20.
+  const detectLowLabel = "game_video_detect_low";
+  const detectHighLabel = "game_video_detect_high";
+  const detectScanLabel = "game_video_detect_scan";
+  const detectPalLabel = "game_video_detect_pal";
+  const detectDoneLabel = "game_video_detect_done";
+  asm.label(detectLowLabel);
+  asm.lda(abs(c64.VIC_CONTROL_1));
+  asm.bmi(rel(detectLowLabel));
+  asm.label(detectHighLabel);
+  asm.lda(abs(c64.VIC_CONTROL_1));
+  asm.bpl(rel(detectHighLabel));
+  asm.label(detectScanLabel);
+  asm.lda(abs(c64.VIC_CONTROL_1));
+  asm.bpl(rel(detectDoneLabel));
+  asm.lda(abs(c64.VIC_RASTER));
+  asm.cmp(imm(0x20));
+  asm.bcs(rel(detectPalLabel));
+  asm.jmp(abs(detectScanLabel));
+  asm.label(detectPalLabel);
+  emitStoreImmediate(asm, GAME_VIDEO_HZ, 50);
+  asm.label(detectDoneLabel);
+
+  const loopLabel = "game_frame_loop";
+  const waitLeaveLabel = "game_frame_wait_leave";
+  const waitTargetLabel = "game_frame_wait_target";
+  asm.label(loopLabel);
+  // First leave the target line, then wait until it is reached again. This
+  // guarantees one logical update per video frame rather than many iterations
+  // while $D012 still contains the same line number.
+  asm.label(waitLeaveLabel);
+  asm.lda(abs(c64.VIC_RASTER));
+  asm.cmp(imm(rasterLine));
+  asm.beq(rel(waitLeaveLabel));
+  asm.label(waitTargetLabel);
+  asm.lda(abs(c64.VIC_RASTER));
+  asm.cmp(imm(rasterLine));
+  asm.bne(rel(waitTargetLabel));
+
+  if (hz === 50) {
+    const logicalFrameLabel = "game_frame_logical_tick";
+    asm.clc();
+    asm.lda(abs(GAME_RATE_ACCUMULATOR));
+    asm.adc(imm(50));
+    asm.sta(abs(GAME_RATE_ACCUMULATOR));
+    asm.cmp(abs(GAME_VIDEO_HZ));
+    asm.bcs(rel(logicalFrameLabel));
+    asm.jmp(abs(loopLabel));
+    asm.label(logicalFrameLabel);
+    asm.sec();
+    asm.lda(abs(GAME_RATE_ACCUMULATOR));
+    asm.sbc(abs(GAME_VIDEO_HZ));
+    asm.sta(abs(GAME_RATE_ACCUMULATOR));
+  }
+
+  for (const port of state.input.joystickPorts) {
+    const addresses = joystickSnapshotAddresses(port);
+    asm.lda(abs(addresses.current));
+    asm.sta(abs(addresses.previous));
+    if (port === 1) {
+      // Joystick 1 shares CIA1 port B with the keyboard matrix. Temporarily
+      // release every keyboard row, read PRB, then restore the exact CIA setup.
+      asm.lda(abs(c64.CIA1_PRA));
+      asm.sta(abs(INPUT_SAVE_PRA));
+      asm.lda(abs(c64.CIA1_DDRA));
+      asm.sta(abs(INPUT_SAVE_DDRA));
+      asm.lda(abs(c64.CIA1_DDRB));
+      asm.sta(abs(INPUT_SAVE_DDRB));
+      asm.lda(imm(0xff));
+      asm.sta(abs(c64.CIA1_DDRA));
+      asm.sta(abs(c64.CIA1_PRA));
+      asm.lda(imm(0x00));
+      asm.sta(abs(c64.CIA1_DDRB));
+      asm.lda(abs(c64.JOYSTICK_PORT_1));
+      asm.sta(abs(addresses.current));
+      asm.lda(abs(INPUT_SAVE_PRA));
+      asm.sta(abs(c64.CIA1_PRA));
+      asm.lda(abs(INPUT_SAVE_DDRA));
+      asm.sta(abs(c64.CIA1_DDRA));
+      asm.lda(abs(INPUT_SAVE_DDRB));
+      asm.sta(abs(c64.CIA1_DDRB));
+      continue;
+    }
+    asm.lda(abs(c64.JOYSTICK_PORT_2));
+    asm.sta(abs(addresses.current));
+  }
+
+  if (state.input.keyboardKeys.size > 0) {
+    asm.lda(abs(c64.CIA1_PRA)); asm.sta(abs(INPUT_SAVE_PRA));
+    asm.lda(abs(c64.CIA1_DDRA)); asm.sta(abs(INPUT_SAVE_DDRA));
+    asm.lda(abs(c64.CIA1_DDRB)); asm.sta(abs(INPUT_SAVE_DDRB));
+    asm.lda(imm(0xff)); asm.sta(abs(c64.CIA1_DDRA));
+    asm.lda(imm(0x00)); asm.sta(abs(c64.CIA1_DDRB));
+    for (const keyCode of state.input.keyboardKeys) {
+      const addresses = keyboardSnapshotAddresses(state, keyCode);
+      const row = Math.floor(keyCode / 8);
+      const columnMask = 1 << (keyCode % 8);
+      const pressedLabel = `keyboard_scan_pressed_${keyCode}`;
+      const storedLabel = `keyboard_scan_stored_${keyCode}`;
+      asm.lda(abs(addresses.current)); asm.sta(abs(addresses.previous));
+      asm.lda(imm(0xff ^ (1 << row))); asm.sta(abs(c64.CIA1_PRA));
+      asm.lda(abs(c64.CIA1_PRB)); asm.and(imm(columnMask));
+      asm.beq(rel(pressedLabel));
+      asm.lda(imm(1)); asm.jmp(abs(storedLabel));
+      asm.label(pressedLabel); asm.lda(imm(0));
+      asm.label(storedLabel); asm.sta(abs(addresses.current));
+    }
+    asm.lda(abs(INPUT_SAVE_PRA)); asm.sta(abs(c64.CIA1_PRA));
+    asm.lda(abs(INPUT_SAVE_DDRA)); asm.sta(abs(c64.CIA1_DDRA));
+    asm.lda(abs(INPUT_SAVE_DDRB)); asm.sta(abs(c64.CIA1_DDRB));
+  }
+  if (state.game.usesVicSpriteCollision) {
+    asm.lda(abs(c64.VIC_SPRITE_SPRITE_COLLISION));
+    asm.sta(abs(VIC_SPRITE_COLLISION_SNAPSHOT));
+  }
+  if (state.game.usesVicBackgroundCollision) {
+    asm.lda(abs(c64.VIC_SPRITE_BACKGROUND_COLLISION));
+    asm.sta(abs(VIC_BACKGROUND_COLLISION_SNAPSHOT));
+  }
+
+  asm.inc(abs(GAME_FRAME_COUNTER_LO));
+  const counterDoneLabel = `game_frame_counter_done_${state.loopCounter++}`;
+  asm.bne(rel(counterDoneLabel));
+  asm.inc(abs(GAME_FRAME_COUNTER_HI));
+  asm.label(counterDoneLabel);
+
+  for (const instruction of frame.instructions) {
+    compileHighLevelInstruction(asm, instruction, state);
+  }
+
+  if (state.multiplexer.enabled) {
+    asm.jsr(abs("runtime_sprite_mux_render"));
+  }
+  asm.jmp(abs(loopLabel));
 }
 
 function emitStringPool(asm, state) {
@@ -3144,6 +4705,10 @@ export function compileInstructions(instructions, options = {}) {
   const codeStart = options.codeStart ?? DEFAULT_CODE_START;
   const sysAddress = options.sysAddress ?? DEFAULT_SYS_ADDRESS;
   const asm = new Assembler6502(codeStart);
+  const optimization = collectBalancedOptimizationStats([
+    instructions,
+    ...(options.irqHandlers ?? []).map((handler) => handler.instructions)
+  ]);
   // compileState is the compiler's working memory. It tracks the current text
   // color, string/data pools, user variables, sprite state and optional IRQs.
   const state = {
@@ -3153,8 +4718,22 @@ export function compileInstructions(instructions, options = {}) {
     stringPool: new Map(),
     dataPool: new Map(),
     variables: new Map(),
-    spriteState: Array.from({ length: 8 }, () => ({ x: null, y: null, dataAddress: null, dataLength: null })),
-    spriteAnimations: Array.from({ length: 8 }, () => null),
+    nextAutoVariableAddress: AUTO_VARIABLE_START,
+    spriteState: Array.from({ length: SPRITE_LOGICAL_COUNT }, () => ({ x: null, y: null, dataAddress: null, dataLength: null })),
+    spriteAnimations: Array.from({ length: SPRITE_LOGICAL_COUNT }, () => null),
+    spriteRuntime: Array.from({ length: SPRITE_LOGICAL_COUNT }, () => null),
+    spriteFrameAssets: new Map(),
+    spriteDataAssets: new Map(),
+    nextSpriteFrameAddress: 0x3000,
+    sharedRoutines: {
+      sidClick: false,
+      spriteSyncIndexes: new Set(),
+      spriteAabbCompare: false
+    },
+    optimization,
+    multiplexer: {
+      enabled: optimization.usesSpriteMultiplexer
+    },
     spriteAnimator: {
       installRequested: false,
       line: 250
@@ -3163,6 +4742,17 @@ export function compileInstructions(instructions, options = {}) {
     spriteDataCounter: 0,
     stringCounter: 0,
     loopCounter: 0,
+    input: {
+      joystickPorts: new Set(),
+      keyboardKeys: new Set()
+    },
+    game: {
+      frame: null,
+      everyTasks: [],
+      usesVicSpriteCollision: false,
+      usesVicBackgroundCollision: false,
+      spriteAabbCount: 0
+    },
     hires: {
       screenBase: c64.HIRES_SCREEN_RAM,
       bitmapBase: c64.HIRES_BITMAP_RAM,
@@ -3192,6 +4782,8 @@ export function compileInstructions(instructions, options = {}) {
     }
   };
 
+  emitSpriteMultiplexerStateInit(asm, state);
+
   for (const instruction of instructions) {
     if (instruction.op === "irqInstall") {
       emitIrqInstall(asm, state);
@@ -3214,6 +4806,13 @@ export function compileInstructions(instructions, options = {}) {
     }
 
     compileHighLevelInstruction(asm, instruction, state);
+  }
+
+  if (state.multiplexer.enabled && !state.game.frame) {
+    throw new Error("sprites 8..15 require one c64.game.frame() loop for raster-synchronized multiplexing");
+  }
+  if (state.multiplexer.enabled && state.optimization.usesLegacySpriteApi) {
+    throw new Error("sprites 8..15 cannot be mixed with the legacy direct c64.sprite.* hardware API; use sprite objects returned by c64.sprite.create()");
   }
 
   if (state.sid.player.installRequested && !state.sid.player.song) {
@@ -3257,7 +4856,12 @@ export function compileInstructions(instructions, options = {}) {
     asm.label("program_end_after_sid_player");
   }
 
-  asm.rts();
+  if (state.game.frame) {
+    emitGameFrameLoop(asm, state);
+  } else {
+    asm.rts();
+  }
+  emitBalancedSharedRoutines(asm, state);
   emitHiresRoutines(asm, state);
   // Strings and user data are emitted after code, then referenced by labels.
   emitStringPool(asm, state);

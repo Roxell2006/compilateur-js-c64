@@ -7,6 +7,10 @@ const initialState = () => ({
   screenBase: 0x0400,
   colorBase: 0xd800,
   dataDefinitions: new Map(),
+  input: {
+    joystickPorts: [],
+    keyboardKeys: []
+  },
   irq: {
     handlers: [],
     disableKernalTimer: false,
@@ -33,6 +37,7 @@ export function resetRuntime() {
   state.screenBase = fresh.screenBase;
   state.colorBase = fresh.colorBase;
   state.dataDefinitions = fresh.dataDefinitions;
+  state.input = fresh.input;
   state.irq = fresh.irq;
 }
 
@@ -59,6 +64,10 @@ export function getProgramState() {
     screenBase: state.screenBase,
     colorBase: state.colorBase,
     dataDefinitions: Object.fromEntries(state.dataDefinitions.entries()),
+    input: {
+      joystickPorts: [...state.input.joystickPorts],
+      keyboardKeys: [...state.input.keyboardKeys]
+    },
     irq: {
       handlers: state.irq.handlers.map((handler) => ({
         line: handler.line,
@@ -96,6 +105,26 @@ export function setColorBase(address) {
 export function addRasterHandler(line, callback) {
   const instructions = captureBlock(callback);
   state.irq.handlers.push({ line, instructions });
+}
+
+export function useJoystickPort(port) {
+  if (!Number.isInteger(port) || port < 1 || port > 2) {
+    throw new Error("joystick port must be 1 or 2");
+  }
+  if (!state.input.joystickPorts.includes(port)) {
+    state.input.joystickPorts.push(port);
+    pushInstruction("inputUseJoystick", port);
+  }
+}
+
+export function useKeyboardKey(keyCode) {
+  if (!Number.isInteger(keyCode) || keyCode < 0 || keyCode > 63) {
+    throw new Error("keyboard matrix key code must be between 0 and 63");
+  }
+  if (!state.input.keyboardKeys.includes(keyCode)) {
+    state.input.keyboardKeys.push(keyCode);
+    pushInstruction("inputUseKeyboardKey", keyCode);
+  }
 }
 
 export function disableKernalTimerIrq() {

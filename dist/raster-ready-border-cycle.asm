@@ -14,7 +14,7 @@ printat_loop_0:
   LDA #$01
   STA $D800,X
   INX
-  JMP printat_loop_0
+  BNE printat_loop_0
 printat_done_1:
   LDX #$00
 printat_loop_2:
@@ -24,7 +24,7 @@ printat_loop_2:
   LDA #$01
   STA $D850,X
   INX
-  JMP printat_loop_2
+  BNE printat_loop_2
 printat_done_3:
   LDX #$00
 printat_loop_4:
@@ -34,11 +34,11 @@ printat_loop_4:
   LDA #$01
   STA $D8A0,X
   INX
-  JMP printat_loop_4
+  BNE printat_loop_4
 printat_done_5:
-  SEI
   LDA #$00
   STA $C0FE
+  SEI
   LDA #$01
   STA $D01A
   LDA #$01
@@ -63,9 +63,25 @@ irq_dispatch:
   PHA
   TYA
   PHA
+  LDA $D019
+  AND #$01
+  BNE irq_dispatch_vic_raster
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  JMP $EA31
+irq_dispatch_vic_raster:
+  LDA #$01
+  STA $D019
   LDA $C0FE
   CMP #$00
-  BEQ irq_handler_0
+  BEQ irq_dispatch_match_0
+  JMP irq_dispatch_next_0
+irq_dispatch_match_0:
+  JMP irq_handler_0
+irq_dispatch_next_0:
   JMP irq_handler_0
 irq_handler_0:
   LDA $C000
@@ -81,14 +97,12 @@ irq_handler_0:
   LDA $D011
   AND #$7F
   STA $D011
-  LDA #$01
-  STA $D019
   PLA
   TAY
   PLA
   TAX
   PLA
-  JMP $EA31
+  JMP $EA81
 program_end:
   RTS
 ; String pool

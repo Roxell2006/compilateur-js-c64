@@ -8,15 +8,15 @@
 0821  8D 86 02    STA $0286
 0824  A2 00       LDX #$00
 0826        printat_loop_0:
-0826  BD 38 08    LDA str_screen_0,X
-0829  F0 0C       BEQ printat_done_1
+0826  BD 37 08    LDA str_screen_0,X
+0829  F0 0B       BEQ printat_done_1
 082B  9D 00 04    STA $0400,X
 082E  A9 01       LDA #$01
 0830  9D 00 D8    STA $D800,X
 0833  E8          INX
-0834  4C 26 08    JMP printat_loop_0
-0837        printat_done_1:
-0837  60          RTS
+0834  D0 F0       BNE printat_loop_0
+0836        printat_done_1:
+0836  60          RTS
             ; String pool
-0838        str_screen_0:
-0838  08 05 0C 0C 0F 2C 20 03 36 34 21 00 .byte $08, $05, $0C, $0C, $0F, $2C, $20, $03, $36, $34, $21, $00
+0837        str_screen_0:
+0837  08 05 0C 0C 0F 2C 20 03 36 34 21 00 .byte $08, $05, $0C, $0C, $0F, $2C, $20, $03, $36, $34, $21, $00

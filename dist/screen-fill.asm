@@ -4,356 +4,62 @@
   STA $D020
   LDA #$06
   STA $D021
-  LDX #$00
-memset_400_81_40:
   LDA #$51
+  LDX #$00
+memset_400_81_255:
   STA $0400,X
   INX
-  CPX #$28
-  BNE memset_400_81_40
+  CPX #$FF
+  BNE memset_400_81_255
+  LDA #$51
   LDX #$00
-memset_d800_14_40:
+memset_4ff_81_255:
+  STA $04FF,X
+  INX
+  CPX #$FF
+  BNE memset_4ff_81_255
+  LDA #$51
+  LDX #$00
+memset_5fe_81_255:
+  STA $05FE,X
+  INX
+  CPX #$FF
+  BNE memset_5fe_81_255
+  LDA #$51
+  LDX #$00
+memset_6fd_81_235:
+  STA $06FD,X
+  INX
+  CPX #$EB
+  BNE memset_6fd_81_235
   LDA #$0E
+  LDX #$00
+memset_d800_14_255:
   STA $D800,X
   INX
-  CPX #$28
-  BNE memset_d800_14_40
-  LDX #$00
-memset_428_81_40:
-  LDA #$51
-  STA $0428,X
-  INX
-  CPX #$28
-  BNE memset_428_81_40
-  LDX #$00
-memset_d828_14_40:
+  CPX #$FF
+  BNE memset_d800_14_255
   LDA #$0E
-  STA $D828,X
-  INX
-  CPX #$28
-  BNE memset_d828_14_40
   LDX #$00
-memset_450_81_40:
-  LDA #$51
-  STA $0450,X
+memset_d8ff_14_255:
+  STA $D8FF,X
   INX
-  CPX #$28
-  BNE memset_450_81_40
-  LDX #$00
-memset_d850_14_40:
+  CPX #$FF
+  BNE memset_d8ff_14_255
   LDA #$0E
-  STA $D850,X
-  INX
-  CPX #$28
-  BNE memset_d850_14_40
   LDX #$00
-memset_478_81_40:
-  LDA #$51
-  STA $0478,X
+memset_d9fe_14_255:
+  STA $D9FE,X
   INX
-  CPX #$28
-  BNE memset_478_81_40
-  LDX #$00
-memset_d878_14_40:
+  CPX #$FF
+  BNE memset_d9fe_14_255
   LDA #$0E
-  STA $D878,X
-  INX
-  CPX #$28
-  BNE memset_d878_14_40
   LDX #$00
-memset_4a0_81_40:
-  LDA #$51
-  STA $04A0,X
+memset_dafd_14_235:
+  STA $DAFD,X
   INX
-  CPX #$28
-  BNE memset_4a0_81_40
-  LDX #$00
-memset_d8a0_14_40:
-  LDA #$0E
-  STA $D8A0,X
-  INX
-  CPX #$28
-  BNE memset_d8a0_14_40
-  LDX #$00
-memset_4c8_81_40:
-  LDA #$51
-  STA $04C8,X
-  INX
-  CPX #$28
-  BNE memset_4c8_81_40
-  LDX #$00
-memset_d8c8_14_40:
-  LDA #$0E
-  STA $D8C8,X
-  INX
-  CPX #$28
-  BNE memset_d8c8_14_40
-  LDX #$00
-memset_4f0_81_40:
-  LDA #$51
-  STA $04F0,X
-  INX
-  CPX #$28
-  BNE memset_4f0_81_40
-  LDX #$00
-memset_d8f0_14_40:
-  LDA #$0E
-  STA $D8F0,X
-  INX
-  CPX #$28
-  BNE memset_d8f0_14_40
-  LDX #$00
-memset_518_81_40:
-  LDA #$51
-  STA $0518,X
-  INX
-  CPX #$28
-  BNE memset_518_81_40
-  LDX #$00
-memset_d918_14_40:
-  LDA #$0E
-  STA $D918,X
-  INX
-  CPX #$28
-  BNE memset_d918_14_40
-  LDX #$00
-memset_540_81_40:
-  LDA #$51
-  STA $0540,X
-  INX
-  CPX #$28
-  BNE memset_540_81_40
-  LDX #$00
-memset_d940_14_40:
-  LDA #$0E
-  STA $D940,X
-  INX
-  CPX #$28
-  BNE memset_d940_14_40
-  LDX #$00
-memset_568_81_40:
-  LDA #$51
-  STA $0568,X
-  INX
-  CPX #$28
-  BNE memset_568_81_40
-  LDX #$00
-memset_d968_14_40:
-  LDA #$0E
-  STA $D968,X
-  INX
-  CPX #$28
-  BNE memset_d968_14_40
-  LDX #$00
-memset_590_81_40:
-  LDA #$51
-  STA $0590,X
-  INX
-  CPX #$28
-  BNE memset_590_81_40
-  LDX #$00
-memset_d990_14_40:
-  LDA #$0E
-  STA $D990,X
-  INX
-  CPX #$28
-  BNE memset_d990_14_40
-  LDX #$00
-memset_5b8_81_40:
-  LDA #$51
-  STA $05B8,X
-  INX
-  CPX #$28
-  BNE memset_5b8_81_40
-  LDX #$00
-memset_d9b8_14_40:
-  LDA #$0E
-  STA $D9B8,X
-  INX
-  CPX #$28
-  BNE memset_d9b8_14_40
-  LDX #$00
-memset_5e0_81_40:
-  LDA #$51
-  STA $05E0,X
-  INX
-  CPX #$28
-  BNE memset_5e0_81_40
-  LDX #$00
-memset_d9e0_14_40:
-  LDA #$0E
-  STA $D9E0,X
-  INX
-  CPX #$28
-  BNE memset_d9e0_14_40
-  LDX #$00
-memset_608_81_40:
-  LDA #$51
-  STA $0608,X
-  INX
-  CPX #$28
-  BNE memset_608_81_40
-  LDX #$00
-memset_da08_14_40:
-  LDA #$0E
-  STA $DA08,X
-  INX
-  CPX #$28
-  BNE memset_da08_14_40
-  LDX #$00
-memset_630_81_40:
-  LDA #$51
-  STA $0630,X
-  INX
-  CPX #$28
-  BNE memset_630_81_40
-  LDX #$00
-memset_da30_14_40:
-  LDA #$0E
-  STA $DA30,X
-  INX
-  CPX #$28
-  BNE memset_da30_14_40
-  LDX #$00
-memset_658_81_40:
-  LDA #$51
-  STA $0658,X
-  INX
-  CPX #$28
-  BNE memset_658_81_40
-  LDX #$00
-memset_da58_14_40:
-  LDA #$0E
-  STA $DA58,X
-  INX
-  CPX #$28
-  BNE memset_da58_14_40
-  LDX #$00
-memset_680_81_40:
-  LDA #$51
-  STA $0680,X
-  INX
-  CPX #$28
-  BNE memset_680_81_40
-  LDX #$00
-memset_da80_14_40:
-  LDA #$0E
-  STA $DA80,X
-  INX
-  CPX #$28
-  BNE memset_da80_14_40
-  LDX #$00
-memset_6a8_81_40:
-  LDA #$51
-  STA $06A8,X
-  INX
-  CPX #$28
-  BNE memset_6a8_81_40
-  LDX #$00
-memset_daa8_14_40:
-  LDA #$0E
-  STA $DAA8,X
-  INX
-  CPX #$28
-  BNE memset_daa8_14_40
-  LDX #$00
-memset_6d0_81_40:
-  LDA #$51
-  STA $06D0,X
-  INX
-  CPX #$28
-  BNE memset_6d0_81_40
-  LDX #$00
-memset_dad0_14_40:
-  LDA #$0E
-  STA $DAD0,X
-  INX
-  CPX #$28
-  BNE memset_dad0_14_40
-  LDX #$00
-memset_6f8_81_40:
-  LDA #$51
-  STA $06F8,X
-  INX
-  CPX #$28
-  BNE memset_6f8_81_40
-  LDX #$00
-memset_daf8_14_40:
-  LDA #$0E
-  STA $DAF8,X
-  INX
-  CPX #$28
-  BNE memset_daf8_14_40
-  LDX #$00
-memset_720_81_40:
-  LDA #$51
-  STA $0720,X
-  INX
-  CPX #$28
-  BNE memset_720_81_40
-  LDX #$00
-memset_db20_14_40:
-  LDA #$0E
-  STA $DB20,X
-  INX
-  CPX #$28
-  BNE memset_db20_14_40
-  LDX #$00
-memset_748_81_40:
-  LDA #$51
-  STA $0748,X
-  INX
-  CPX #$28
-  BNE memset_748_81_40
-  LDX #$00
-memset_db48_14_40:
-  LDA #$0E
-  STA $DB48,X
-  INX
-  CPX #$28
-  BNE memset_db48_14_40
-  LDX #$00
-memset_770_81_40:
-  LDA #$51
-  STA $0770,X
-  INX
-  CPX #$28
-  BNE memset_770_81_40
-  LDX #$00
-memset_db70_14_40:
-  LDA #$0E
-  STA $DB70,X
-  INX
-  CPX #$28
-  BNE memset_db70_14_40
-  LDX #$00
-memset_798_81_40:
-  LDA #$51
-  STA $0798,X
-  INX
-  CPX #$28
-  BNE memset_798_81_40
-  LDX #$00
-memset_db98_14_40:
-  LDA #$0E
-  STA $DB98,X
-  INX
-  CPX #$28
-  BNE memset_db98_14_40
-  LDX #$00
-memset_7c0_81_40:
-  LDA #$51
-  STA $07C0,X
-  INX
-  CPX #$28
-  BNE memset_7c0_81_40
-  LDX #$00
-memset_dbc0_14_40:
-  LDA #$0E
-  STA $DBC0,X
-  INX
-  CPX #$28
-  BNE memset_dbc0_14_40
+  CPX #$EB
+  BNE memset_dafd_14_235
   LDX #$00
 printat_loop_0:
   LDA str_screen_0,X
@@ -362,7 +68,7 @@ printat_loop_0:
   LDA #$01
   STA $D9ED,X
   INX
-  JMP printat_loop_0
+  BNE printat_loop_0
 printat_done_1:
   RTS
 ; String pool

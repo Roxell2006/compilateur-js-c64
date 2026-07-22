@@ -4,367 +4,73 @@
 0817  8D 20 D0    STA $D020
 081A  A9 06       LDA #$06
 081C  8D 21 D0    STA $D021
-081F  A2 00       LDX #$00
-0821        memset_400_81_40:
-0821  A9 51       LDA #$51
+081F  A9 51       LDA #$51
+0821  A2 00       LDX #$00
+0823        memset_400_81_255:
 0823  9D 00 04    STA $0400,X
 0826  E8          INX
-0827  E0 28       CPX #$28
-0829  D0 F6       BNE memset_400_81_40
-082B  A2 00       LDX #$00
-082D        memset_d800_14_40:
-082D  A9 0E       LDA #$0E
-082F  9D 00 D8    STA $D800,X
+0827  E0 FF       CPX #$FF
+0829  D0 F8       BNE memset_400_81_255
+082B  A9 51       LDA #$51
+082D  A2 00       LDX #$00
+082F        memset_4ff_81_255:
+082F  9D FF 04    STA $04FF,X
 0832  E8          INX
-0833  E0 28       CPX #$28
-0835  D0 F6       BNE memset_d800_14_40
-0837  A2 00       LDX #$00
-0839        memset_428_81_40:
-0839  A9 51       LDA #$51
-083B  9D 28 04    STA $0428,X
+0833  E0 FF       CPX #$FF
+0835  D0 F8       BNE memset_4ff_81_255
+0837  A9 51       LDA #$51
+0839  A2 00       LDX #$00
+083B        memset_5fe_81_255:
+083B  9D FE 05    STA $05FE,X
 083E  E8          INX
-083F  E0 28       CPX #$28
-0841  D0 F6       BNE memset_428_81_40
-0843  A2 00       LDX #$00
-0845        memset_d828_14_40:
-0845  A9 0E       LDA #$0E
-0847  9D 28 D8    STA $D828,X
+083F  E0 FF       CPX #$FF
+0841  D0 F8       BNE memset_5fe_81_255
+0843  A9 51       LDA #$51
+0845  A2 00       LDX #$00
+0847        memset_6fd_81_235:
+0847  9D FD 06    STA $06FD,X
 084A  E8          INX
-084B  E0 28       CPX #$28
-084D  D0 F6       BNE memset_d828_14_40
-084F  A2 00       LDX #$00
-0851        memset_450_81_40:
-0851  A9 51       LDA #$51
-0853  9D 50 04    STA $0450,X
+084B  E0 EB       CPX #$EB
+084D  D0 F8       BNE memset_6fd_81_235
+084F  A9 0E       LDA #$0E
+0851  A2 00       LDX #$00
+0853        memset_d800_14_255:
+0853  9D 00 D8    STA $D800,X
 0856  E8          INX
-0857  E0 28       CPX #$28
-0859  D0 F6       BNE memset_450_81_40
-085B  A2 00       LDX #$00
-085D        memset_d850_14_40:
-085D  A9 0E       LDA #$0E
-085F  9D 50 D8    STA $D850,X
+0857  E0 FF       CPX #$FF
+0859  D0 F8       BNE memset_d800_14_255
+085B  A9 0E       LDA #$0E
+085D  A2 00       LDX #$00
+085F        memset_d8ff_14_255:
+085F  9D FF D8    STA $D8FF,X
 0862  E8          INX
-0863  E0 28       CPX #$28
-0865  D0 F6       BNE memset_d850_14_40
-0867  A2 00       LDX #$00
-0869        memset_478_81_40:
-0869  A9 51       LDA #$51
-086B  9D 78 04    STA $0478,X
+0863  E0 FF       CPX #$FF
+0865  D0 F8       BNE memset_d8ff_14_255
+0867  A9 0E       LDA #$0E
+0869  A2 00       LDX #$00
+086B        memset_d9fe_14_255:
+086B  9D FE D9    STA $D9FE,X
 086E  E8          INX
-086F  E0 28       CPX #$28
-0871  D0 F6       BNE memset_478_81_40
-0873  A2 00       LDX #$00
-0875        memset_d878_14_40:
-0875  A9 0E       LDA #$0E
-0877  9D 78 D8    STA $D878,X
+086F  E0 FF       CPX #$FF
+0871  D0 F8       BNE memset_d9fe_14_255
+0873  A9 0E       LDA #$0E
+0875  A2 00       LDX #$00
+0877        memset_dafd_14_235:
+0877  9D FD DA    STA $DAFD,X
 087A  E8          INX
-087B  E0 28       CPX #$28
-087D  D0 F6       BNE memset_d878_14_40
+087B  E0 EB       CPX #$EB
+087D  D0 F8       BNE memset_dafd_14_235
 087F  A2 00       LDX #$00
-0881        memset_4a0_81_40:
-0881  A9 51       LDA #$51
-0883  9D A0 04    STA $04A0,X
-0886  E8          INX
-0887  E0 28       CPX #$28
-0889  D0 F6       BNE memset_4a0_81_40
-088B  A2 00       LDX #$00
-088D        memset_d8a0_14_40:
-088D  A9 0E       LDA #$0E
-088F  9D A0 D8    STA $D8A0,X
-0892  E8          INX
-0893  E0 28       CPX #$28
-0895  D0 F6       BNE memset_d8a0_14_40
-0897  A2 00       LDX #$00
-0899        memset_4c8_81_40:
-0899  A9 51       LDA #$51
-089B  9D C8 04    STA $04C8,X
-089E  E8          INX
-089F  E0 28       CPX #$28
-08A1  D0 F6       BNE memset_4c8_81_40
-08A3  A2 00       LDX #$00
-08A5        memset_d8c8_14_40:
-08A5  A9 0E       LDA #$0E
-08A7  9D C8 D8    STA $D8C8,X
-08AA  E8          INX
-08AB  E0 28       CPX #$28
-08AD  D0 F6       BNE memset_d8c8_14_40
-08AF  A2 00       LDX #$00
-08B1        memset_4f0_81_40:
-08B1  A9 51       LDA #$51
-08B3  9D F0 04    STA $04F0,X
-08B6  E8          INX
-08B7  E0 28       CPX #$28
-08B9  D0 F6       BNE memset_4f0_81_40
-08BB  A2 00       LDX #$00
-08BD        memset_d8f0_14_40:
-08BD  A9 0E       LDA #$0E
-08BF  9D F0 D8    STA $D8F0,X
-08C2  E8          INX
-08C3  E0 28       CPX #$28
-08C5  D0 F6       BNE memset_d8f0_14_40
-08C7  A2 00       LDX #$00
-08C9        memset_518_81_40:
-08C9  A9 51       LDA #$51
-08CB  9D 18 05    STA $0518,X
-08CE  E8          INX
-08CF  E0 28       CPX #$28
-08D1  D0 F6       BNE memset_518_81_40
-08D3  A2 00       LDX #$00
-08D5        memset_d918_14_40:
-08D5  A9 0E       LDA #$0E
-08D7  9D 18 D9    STA $D918,X
-08DA  E8          INX
-08DB  E0 28       CPX #$28
-08DD  D0 F6       BNE memset_d918_14_40
-08DF  A2 00       LDX #$00
-08E1        memset_540_81_40:
-08E1  A9 51       LDA #$51
-08E3  9D 40 05    STA $0540,X
-08E6  E8          INX
-08E7  E0 28       CPX #$28
-08E9  D0 F6       BNE memset_540_81_40
-08EB  A2 00       LDX #$00
-08ED        memset_d940_14_40:
-08ED  A9 0E       LDA #$0E
-08EF  9D 40 D9    STA $D940,X
-08F2  E8          INX
-08F3  E0 28       CPX #$28
-08F5  D0 F6       BNE memset_d940_14_40
-08F7  A2 00       LDX #$00
-08F9        memset_568_81_40:
-08F9  A9 51       LDA #$51
-08FB  9D 68 05    STA $0568,X
-08FE  E8          INX
-08FF  E0 28       CPX #$28
-0901  D0 F6       BNE memset_568_81_40
-0903  A2 00       LDX #$00
-0905        memset_d968_14_40:
-0905  A9 0E       LDA #$0E
-0907  9D 68 D9    STA $D968,X
-090A  E8          INX
-090B  E0 28       CPX #$28
-090D  D0 F6       BNE memset_d968_14_40
-090F  A2 00       LDX #$00
-0911        memset_590_81_40:
-0911  A9 51       LDA #$51
-0913  9D 90 05    STA $0590,X
-0916  E8          INX
-0917  E0 28       CPX #$28
-0919  D0 F6       BNE memset_590_81_40
-091B  A2 00       LDX #$00
-091D        memset_d990_14_40:
-091D  A9 0E       LDA #$0E
-091F  9D 90 D9    STA $D990,X
-0922  E8          INX
-0923  E0 28       CPX #$28
-0925  D0 F6       BNE memset_d990_14_40
-0927  A2 00       LDX #$00
-0929        memset_5b8_81_40:
-0929  A9 51       LDA #$51
-092B  9D B8 05    STA $05B8,X
-092E  E8          INX
-092F  E0 28       CPX #$28
-0931  D0 F6       BNE memset_5b8_81_40
-0933  A2 00       LDX #$00
-0935        memset_d9b8_14_40:
-0935  A9 0E       LDA #$0E
-0937  9D B8 D9    STA $D9B8,X
-093A  E8          INX
-093B  E0 28       CPX #$28
-093D  D0 F6       BNE memset_d9b8_14_40
-093F  A2 00       LDX #$00
-0941        memset_5e0_81_40:
-0941  A9 51       LDA #$51
-0943  9D E0 05    STA $05E0,X
-0946  E8          INX
-0947  E0 28       CPX #$28
-0949  D0 F6       BNE memset_5e0_81_40
-094B  A2 00       LDX #$00
-094D        memset_d9e0_14_40:
-094D  A9 0E       LDA #$0E
-094F  9D E0 D9    STA $D9E0,X
-0952  E8          INX
-0953  E0 28       CPX #$28
-0955  D0 F6       BNE memset_d9e0_14_40
-0957  A2 00       LDX #$00
-0959        memset_608_81_40:
-0959  A9 51       LDA #$51
-095B  9D 08 06    STA $0608,X
-095E  E8          INX
-095F  E0 28       CPX #$28
-0961  D0 F6       BNE memset_608_81_40
-0963  A2 00       LDX #$00
-0965        memset_da08_14_40:
-0965  A9 0E       LDA #$0E
-0967  9D 08 DA    STA $DA08,X
-096A  E8          INX
-096B  E0 28       CPX #$28
-096D  D0 F6       BNE memset_da08_14_40
-096F  A2 00       LDX #$00
-0971        memset_630_81_40:
-0971  A9 51       LDA #$51
-0973  9D 30 06    STA $0630,X
-0976  E8          INX
-0977  E0 28       CPX #$28
-0979  D0 F6       BNE memset_630_81_40
-097B  A2 00       LDX #$00
-097D        memset_da30_14_40:
-097D  A9 0E       LDA #$0E
-097F  9D 30 DA    STA $DA30,X
-0982  E8          INX
-0983  E0 28       CPX #$28
-0985  D0 F6       BNE memset_da30_14_40
-0987  A2 00       LDX #$00
-0989        memset_658_81_40:
-0989  A9 51       LDA #$51
-098B  9D 58 06    STA $0658,X
-098E  E8          INX
-098F  E0 28       CPX #$28
-0991  D0 F6       BNE memset_658_81_40
-0993  A2 00       LDX #$00
-0995        memset_da58_14_40:
-0995  A9 0E       LDA #$0E
-0997  9D 58 DA    STA $DA58,X
-099A  E8          INX
-099B  E0 28       CPX #$28
-099D  D0 F6       BNE memset_da58_14_40
-099F  A2 00       LDX #$00
-09A1        memset_680_81_40:
-09A1  A9 51       LDA #$51
-09A3  9D 80 06    STA $0680,X
-09A6  E8          INX
-09A7  E0 28       CPX #$28
-09A9  D0 F6       BNE memset_680_81_40
-09AB  A2 00       LDX #$00
-09AD        memset_da80_14_40:
-09AD  A9 0E       LDA #$0E
-09AF  9D 80 DA    STA $DA80,X
-09B2  E8          INX
-09B3  E0 28       CPX #$28
-09B5  D0 F6       BNE memset_da80_14_40
-09B7  A2 00       LDX #$00
-09B9        memset_6a8_81_40:
-09B9  A9 51       LDA #$51
-09BB  9D A8 06    STA $06A8,X
-09BE  E8          INX
-09BF  E0 28       CPX #$28
-09C1  D0 F6       BNE memset_6a8_81_40
-09C3  A2 00       LDX #$00
-09C5        memset_daa8_14_40:
-09C5  A9 0E       LDA #$0E
-09C7  9D A8 DA    STA $DAA8,X
-09CA  E8          INX
-09CB  E0 28       CPX #$28
-09CD  D0 F6       BNE memset_daa8_14_40
-09CF  A2 00       LDX #$00
-09D1        memset_6d0_81_40:
-09D1  A9 51       LDA #$51
-09D3  9D D0 06    STA $06D0,X
-09D6  E8          INX
-09D7  E0 28       CPX #$28
-09D9  D0 F6       BNE memset_6d0_81_40
-09DB  A2 00       LDX #$00
-09DD        memset_dad0_14_40:
-09DD  A9 0E       LDA #$0E
-09DF  9D D0 DA    STA $DAD0,X
-09E2  E8          INX
-09E3  E0 28       CPX #$28
-09E5  D0 F6       BNE memset_dad0_14_40
-09E7  A2 00       LDX #$00
-09E9        memset_6f8_81_40:
-09E9  A9 51       LDA #$51
-09EB  9D F8 06    STA $06F8,X
-09EE  E8          INX
-09EF  E0 28       CPX #$28
-09F1  D0 F6       BNE memset_6f8_81_40
-09F3  A2 00       LDX #$00
-09F5        memset_daf8_14_40:
-09F5  A9 0E       LDA #$0E
-09F7  9D F8 DA    STA $DAF8,X
-09FA  E8          INX
-09FB  E0 28       CPX #$28
-09FD  D0 F6       BNE memset_daf8_14_40
-09FF  A2 00       LDX #$00
-0A01        memset_720_81_40:
-0A01  A9 51       LDA #$51
-0A03  9D 20 07    STA $0720,X
-0A06  E8          INX
-0A07  E0 28       CPX #$28
-0A09  D0 F6       BNE memset_720_81_40
-0A0B  A2 00       LDX #$00
-0A0D        memset_db20_14_40:
-0A0D  A9 0E       LDA #$0E
-0A0F  9D 20 DB    STA $DB20,X
-0A12  E8          INX
-0A13  E0 28       CPX #$28
-0A15  D0 F6       BNE memset_db20_14_40
-0A17  A2 00       LDX #$00
-0A19        memset_748_81_40:
-0A19  A9 51       LDA #$51
-0A1B  9D 48 07    STA $0748,X
-0A1E  E8          INX
-0A1F  E0 28       CPX #$28
-0A21  D0 F6       BNE memset_748_81_40
-0A23  A2 00       LDX #$00
-0A25        memset_db48_14_40:
-0A25  A9 0E       LDA #$0E
-0A27  9D 48 DB    STA $DB48,X
-0A2A  E8          INX
-0A2B  E0 28       CPX #$28
-0A2D  D0 F6       BNE memset_db48_14_40
-0A2F  A2 00       LDX #$00
-0A31        memset_770_81_40:
-0A31  A9 51       LDA #$51
-0A33  9D 70 07    STA $0770,X
-0A36  E8          INX
-0A37  E0 28       CPX #$28
-0A39  D0 F6       BNE memset_770_81_40
-0A3B  A2 00       LDX #$00
-0A3D        memset_db70_14_40:
-0A3D  A9 0E       LDA #$0E
-0A3F  9D 70 DB    STA $DB70,X
-0A42  E8          INX
-0A43  E0 28       CPX #$28
-0A45  D0 F6       BNE memset_db70_14_40
-0A47  A2 00       LDX #$00
-0A49        memset_798_81_40:
-0A49  A9 51       LDA #$51
-0A4B  9D 98 07    STA $0798,X
-0A4E  E8          INX
-0A4F  E0 28       CPX #$28
-0A51  D0 F6       BNE memset_798_81_40
-0A53  A2 00       LDX #$00
-0A55        memset_db98_14_40:
-0A55  A9 0E       LDA #$0E
-0A57  9D 98 DB    STA $DB98,X
-0A5A  E8          INX
-0A5B  E0 28       CPX #$28
-0A5D  D0 F6       BNE memset_db98_14_40
-0A5F  A2 00       LDX #$00
-0A61        memset_7c0_81_40:
-0A61  A9 51       LDA #$51
-0A63  9D C0 07    STA $07C0,X
-0A66  E8          INX
-0A67  E0 28       CPX #$28
-0A69  D0 F6       BNE memset_7c0_81_40
-0A6B  A2 00       LDX #$00
-0A6D        memset_dbc0_14_40:
-0A6D  A9 0E       LDA #$0E
-0A6F  9D C0 DB    STA $DBC0,X
-0A72  E8          INX
-0A73  E0 28       CPX #$28
-0A75  D0 F6       BNE memset_dbc0_14_40
-0A77  A2 00       LDX #$00
-0A79        printat_loop_0:
-0A79  BD 8B 0A    LDA str_screen_0,X
-0A7C  F0 0C       BEQ printat_done_1
-0A7E  9D ED 05    STA $05ED,X
-0A81  A9 01       LDA #$01
-0A83  9D ED D9    STA $D9ED,X
-0A86  E8          INX
-0A87  4C 79 0A    JMP printat_loop_0
-0A8A        printat_done_1:
-0A8A  60          RTS
+0881        printat_loop_0:
+0881  BD 92 08    LDA str_screen_0,X
+0884  F0 0B       BEQ printat_done_1
+0886  9D ED 05    STA $05ED,X
+0889  A9 01       LDA #$01
+088B  9D ED D9    STA $D9ED,X
+088E  E8          INX
+088F  D0 F0       BNE printat_loop_0
+0891        printat_done_1:
+0891  60          RTS
             ; String pool
-0A8B        str_screen_0:
-0A8B  13 03 12 05 05 0E 20 06 09 0C 0C 05 04 00 .byte $13, $03, $12, $05, $05, $0E, $20, $06, $09, $0C, $0C, $05, $04, $00
+0892        str_screen_0:
+0892  13 03 12 05 05 0E 20 06 09 0C 0C 05 04 00 .byte $13, $03, $12, $05, $05, $0E, $20, $06, $09, $0C, $0C, $05, $04, $00

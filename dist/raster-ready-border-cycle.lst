@@ -8,93 +8,107 @@
 0821  8D 86 02    STA $0286
 0824  A2 00       LDX #$00
 0826        printat_loop_0:
-0826  BD CA 08    LDA str_screen_0,X
-0829  F0 0C       BEQ printat_done_1
+0826  BD DC 08    LDA str_screen_0,X
+0829  F0 0B       BEQ printat_done_1
 082B  9D 00 04    STA $0400,X
 082E  A9 01       LDA #$01
 0830  9D 00 D8    STA $D800,X
 0833  E8          INX
-0834  4C 26 08    JMP printat_loop_0
-0837        printat_done_1:
-0837  A2 00       LDX #$00
-0839        printat_loop_2:
-0839  BD E3 08    LDA str_screen_1,X
-083C  F0 0C       BEQ printat_done_3
-083E  9D 50 04    STA $0450,X
-0841  A9 01       LDA #$01
-0843  9D 50 D8    STA $D850,X
-0846  E8          INX
-0847  4C 39 08    JMP printat_loop_2
-084A        printat_done_3:
-084A  A2 00       LDX #$00
-084C        printat_loop_4:
-084C  BD F7 08    LDA str_screen_2,X
-084F  F0 0C       BEQ printat_done_5
-0851  9D A0 04    STA $04A0,X
-0854  A9 01       LDA #$01
-0856  9D A0 D8    STA $D8A0,X
-0859  E8          INX
-085A  4C 4C 08    JMP printat_loop_4
-085D        printat_done_5:
-085D  78          SEI
-085E  A9 00       LDA #$00
-0860  8D FE C0    STA $C0FE
-0863  A9 01       LDA #$01
-0865  8D 1A D0    STA $D01A
-0868  A9 01       LDA #$01
-086A  8D 19 D0    STA $D019
-086D  A9 FA       LDA #$FA
-086F  8D 12 D0    STA $D012
-0872  AD 11 D0    LDA $D011
-0875  29 7F       AND #$7F
-0877  8D 11 D0    STA $D011
-087A  A9 8D       LDA #<irq_dispatch
-087C  8D 14 03    STA $0314
-087F  A9 08       LDA #>irq_dispatch
-0881  8D 15 03    STA $0315
-0884  58          CLI
-0885  A9 FF       LDA #$FF
-0887  8D 00 C0    STA $C000
-088A  4C C9 08    JMP program_end
+0834  D0 F0       BNE printat_loop_0
+0836        printat_done_1:
+0836  A2 00       LDX #$00
+0838        printat_loop_2:
+0838  BD F5 08    LDA str_screen_1,X
+083B  F0 0B       BEQ printat_done_3
+083D  9D 50 04    STA $0450,X
+0840  A9 01       LDA #$01
+0842  9D 50 D8    STA $D850,X
+0845  E8          INX
+0846  D0 F0       BNE printat_loop_2
+0848        printat_done_3:
+0848  A2 00       LDX #$00
+084A        printat_loop_4:
+084A  BD 09 09    LDA str_screen_2,X
+084D  F0 0B       BEQ printat_done_5
+084F  9D A0 04    STA $04A0,X
+0852  A9 01       LDA #$01
+0854  9D A0 D8    STA $D8A0,X
+0857  E8          INX
+0858  D0 F0       BNE printat_loop_4
+085A        printat_done_5:
+085A  A9 00       LDA #$00
+085C  8D FE C0    STA $C0FE
+085F  78          SEI
+0860  A9 01       LDA #$01
+0862  8D 1A D0    STA $D01A
+0865  A9 01       LDA #$01
+0867  8D 19 D0    STA $D019
+086A  A9 FA       LDA #$FA
+086C  8D 12 D0    STA $D012
+086F  AD 11 D0    LDA $D011
+0872  29 7F       AND #$7F
+0874  8D 11 D0    STA $D011
+0877  A9 8A       LDA #<irq_dispatch
+0879  8D 14 03    STA $0314
+087C  A9 08       LDA #>irq_dispatch
+087E  8D 15 03    STA $0315
+0881  58          CLI
+0882  A9 FF       LDA #$FF
+0884  8D 00 C0    STA $C000
+0887  4C DB 08    JMP program_end
             ; Raster IRQ dispatcher
-088D        irq_dispatch:
-088D  48          PHA
-088E  8A          TXA
-088F  48          PHA
-0890  98          TYA
-0891  48          PHA
-0892  AD FE C0    LDA $C0FE
-0895  C9 00       CMP #$00
-0897  F0 03       BEQ irq_handler_0
-0899  4C 9C 08    JMP irq_handler_0
-089C        irq_handler_0:
-089C  AD 00 C0    LDA $C000
-089F  18          CLC
-08A0  69 01       ADC #$01
-08A2  29 0F       AND #$0F
-08A4  8D 00 C0    STA $C000
-08A7  8D 20 D0    STA $D020
-08AA  A9 00       LDA #$00
-08AC  8D FE C0    STA $C0FE
-08AF  A9 FA       LDA #$FA
-08B1  8D 12 D0    STA $D012
-08B4  AD 11 D0    LDA $D011
-08B7  29 7F       AND #$7F
-08B9  8D 11 D0    STA $D011
-08BC  A9 01       LDA #$01
-08BE  8D 19 D0    STA $D019
-08C1  68          PLA
-08C2  A8          TAY
-08C3  68          PLA
-08C4  AA          TAX
-08C5  68          PLA
-08C6  4C 31 EA    JMP $EA31
-08C9        program_end:
-08C9  60          RTS
+088A        irq_dispatch:
+088A  48          PHA
+088B  8A          TXA
+088C  48          PHA
+088D  98          TYA
+088E  48          PHA
+088F  AD 19 D0    LDA $D019
+0892  29 01       AND #$01
+0894  D0 08       BNE irq_dispatch_vic_raster
+0896  68          PLA
+0897  A8          TAY
+0898  68          PLA
+0899  AA          TAX
+089A  68          PLA
+089B  4C 31 EA    JMP $EA31
+089E        irq_dispatch_vic_raster:
+089E  A9 01       LDA #$01
+08A0  8D 19 D0    STA $D019
+08A3  AD FE C0    LDA $C0FE
+08A6  C9 00       CMP #$00
+08A8  F0 03       BEQ irq_dispatch_match_0
+08AA  4C B0 08    JMP irq_dispatch_next_0
+08AD        irq_dispatch_match_0:
+08AD  4C B3 08    JMP irq_handler_0
+08B0        irq_dispatch_next_0:
+08B0  4C B3 08    JMP irq_handler_0
+08B3        irq_handler_0:
+08B3  AD 00 C0    LDA $C000
+08B6  18          CLC
+08B7  69 01       ADC #$01
+08B9  29 0F       AND #$0F
+08BB  8D 00 C0    STA $C000
+08BE  8D 20 D0    STA $D020
+08C1  A9 00       LDA #$00
+08C3  8D FE C0    STA $C0FE
+08C6  A9 FA       LDA #$FA
+08C8  8D 12 D0    STA $D012
+08CB  AD 11 D0    LDA $D011
+08CE  29 7F       AND #$7F
+08D0  8D 11 D0    STA $D011
+08D3  68          PLA
+08D4  A8          TAY
+08D5  68          PLA
+08D6  AA          TAX
+08D7  68          PLA
+08D8  4C 81 EA    JMP $EA81
+08DB        program_end:
+08DB  60          RTS
             ; String pool
-08CA        str_screen_0:
-08CA  12 05 01 04 19 2D 13 01 06 05 20 12 01 13 14 05 12 20 02 0F 12 04 05 12 00 .byte $12, $05, $01, $04, $19, $2D, $13, $01, $06, $05, $20, $12, $01, $13, $14, $05, $12, $20, $02, $0F, $12, $04, $05, $12, $00
-08E3        str_screen_1:
-08E3  02 0F 12 04 05 12 20 03 19 03 0C 05 13 20 30 2E 2E 31 35 00 .byte $02, $0F, $12, $04, $05, $12, $20, $03, $19, $03, $0C, $05, $13, $20, $30, $2E, $2E, $31, $35, $00
-08F7        str_screen_2:
-08F7  02 01 13 09 03 20 12 05 01 04 19 20 13 08 0F 15 0C 04 20 13 14 01 19 20 01 0C 09 16 05 00 .byte $02, $01, $13, $09, $03, $20, $12, $05, $01, $04, $19, $20, $13, $08, $0F, $15, $0C, $04, $20, $13, $14, $01, $19, $20, $01, $0C, $09, $16, $05, $00
+08DC        str_screen_0:
+08DC  12 05 01 04 19 2D 13 01 06 05 20 12 01 13 14 05 12 20 02 0F 12 04 05 12 00 .byte $12, $05, $01, $04, $19, $2D, $13, $01, $06, $05, $20, $12, $01, $13, $14, $05, $12, $20, $02, $0F, $12, $04, $05, $12, $00
+08F5        str_screen_1:
+08F5  02 0F 12 04 05 12 20 03 19 03 0C 05 13 20 30 2E 2E 31 35 00 .byte $02, $0F, $12, $04, $05, $12, $20, $03, $19, $03, $0C, $05, $13, $20, $30, $2E, $2E, $31, $35, $00
+0909        str_screen_2:
+0909  02 01 13 09 03 20 12 05 01 04 19 20 13 08 0F 15 0C 04 20 13 14 01 19 20 01 0C 09 16 05 00 .byte $02, $01, $13, $09, $03, $20, $12, $05, $01, $04, $19, $20, $13, $08, $0F, $15, $0C, $04, $20, $13, $14, $01, $19, $20, $01, $0C, $09, $16, $05, $00

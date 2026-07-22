@@ -2,17 +2,17 @@
 0812  20 D2 FF    JSR $FFD2
 0815  A2 00       LDX #$00
 0817        printat_loop_0:
-0817  BD 2F 08    LDA str_screen_0,X
-081A  F0 0C       BEQ printat_done_1
+0817  BD 2E 08    LDA str_screen_0,X
+081A  F0 0B       BEQ printat_done_1
 081C  9D 00 04    STA $0400,X
 081F  A9 01       LDA #$01
 0821  9D 00 D8    STA $D800,X
 0824  E8          INX
-0825  4C 17 08    JMP printat_loop_0
-0828        printat_done_1:
-0828  AD 00 DC    LDA $DC00
-082B  8D 28 04    STA $0428
-082E  60          RTS
+0825  D0 F0       BNE printat_loop_0
+0827        printat_done_1:
+0827  AD 00 DC    LDA $DC00
+082A  8D 28 04    STA $0428
+082D  60          RTS
             ; String pool
-082F        str_screen_0:
-082F  0A 0F 19 13 14 09 03 0B 20 10 0F 12 14 20 32 00 .byte $0A, $0F, $19, $13, $14, $09, $03, $0B, $20, $10, $0F, $12, $14, $20, $32, $00
+082E        str_screen_0:
+082E  0A 0F 19 13 14 09 03 0B 20 10 0F 12 14 20 32 00 .byte $0A, $0F, $19, $13, $14, $09, $03, $0B, $20, $10, $0F, $12, $14, $20, $32, $00

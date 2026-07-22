@@ -1,11 +1,14 @@
 {
   "printat_loop_0": 2086,
-  "printat_done_1": 2103,
-  "printat_loop_2": 2105,
-  "printat_done_3": 2122,
-  "balloon_sprite_data": 2125,
-  "sprite_setup": 2188,
-  "copy_balloon_sprite": 2190,
-  "str_screen_0": 2227,
-  "str_screen_1": 2247
+  "printat_done_1": 2102,
+  "printat_loop_2": 2104,
+  "printat_done_3": 2120,
+  "sprite_runtime_active_0_4": 2166,
+  "sprite_runtime_xhigh_0_5": 2198,
+  "sprite_runtime_xdone_0_6": 2206,
+  "sprite_runtime_sync_done_0_7": 2212,
+  "copydata_2000_sprite_data_0_0_63_8": 2214,
+  "str_screen_0": 2247,
+  "str_screen_1": 2267,
+  "sprite_data_0_0": 2297
 }

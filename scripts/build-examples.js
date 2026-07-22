@@ -3,22 +3,10 @@ import path from "node:path";
 import { compileFile } from "../src/compiler.js";
 import { createBasicDataProgram, createPrg } from "../src/prgWriter.js";
 
-const EXAMPLES = [
-  "hello",
-  "colors",
-  "comfort-frame",
-  "comfort-data-vars",
-  "screen-fill",
-  "keyboard",
-  "joystick",
-  "raster-bars",
-  "raster-ready-border-cycle",
-  "vice-showcase",
-  "sprite-api",
-  "sprite-animate",
-  "sid-beep",
-  "sprite-basic"
-];
+const EXAMPLES = (await fs.readdir(path.resolve("examples")))
+  .filter((fileName) => fileName.endsWith(".js") && fileName !== "c64.js")
+  .map((fileName) => path.basename(fileName, ".js"))
+  .sort();
 
 async function writeOutput(filePath, content, encoding) {
   await fs.mkdir(path.dirname(filePath), { recursive: true });

@@ -110,55 +110,43 @@ console.log(basicText);
 - `c64.data.string(name, text)`
 - `c64.data.screenString(name, text)`
 - `c64.data.length(name)`
-- `c64.var.byte(name, address, initialValue)`
+- `c64.var.byte(name, address, initialValue)` (legacy explicit address)
+- `c64.var.byte(name, { initial, address? })` (typed runtime reference)
 - `c64.var.word(name, address, initialValue)`
 - `c64.varRef(name)`
 - `c64.dataRef(name, length?)`
 
 ### Sprite API
 
-- `c64.sprite.enable(n)`
-- `c64.sprite.disable(n)`
-- `c64.sprite.show(n, x, y, color)`
-- `c64.sprite.hide(n)`
-- `c64.sprite.position(n, x, y)`
-- `c64.sprite.setX(n, x)`
-- `c64.sprite.setY(n, y)`
-- `c64.sprite.moveX(n, dx)`
-- `c64.sprite.moveY(n, dy)`
-- `c64.sprite.moveToX(n, targetX, speed)`
-- `c64.sprite.moveToY(n, targetY, speed)`
-- `c64.sprite.animateTo(n, { x?, y?, speedX?, speedY? })`
-- `c64.sprite.stop(n)`
-- `c64.sprite.stopX(n)`
-- `c64.sprite.stopY(n)`
-- `c64.sprite.color(n, color)`
-- `c64.sprite.data(n, bytesOrLabel, address?)`
-- `c64.sprite.pointer(n, blockIndex)`
-- `c64.sprite.multicolor(n, enabled)`
-- `c64.sprite.expandX(n, enabled)`
-- `c64.sprite.expandY(n, enabled)`
-- `c64.sprite.priority(n, behindBackground)`
-- `c64.sprite.sharedColor1(color)`
-- `c64.sprite.sharedColor2(color)`
-- `c64.sprite.installAnimator(line = 250)`
+The gameplay API represents a sprite as one object. Its X coordinate is a
+9-bit runtime value, so positions from `0` through `511` work and the compiler
+updates both `$D000..$D00E` and the matching bit in `$D010`.
 
 Example:
 
 ```js
 import { c64 } from "js-c64";
 
-c64.sprite.position(0, 32, 90);
-c64.sprite.animateTo(0, {
-  x: 240,
-  y: 60,
-  speedX: 2,
-  speedY: 1
+const pixels = Array(63).fill(0xff);
+const player = c64.sprite.create(0, {
+  x: 100, y: 120, data: pixels, color: c64.COLOR_RED,
+  minX: 24, maxX: 320, minY: 50, maxY: 220,
+  bounceX: true
 });
-c64.sprite.installAnimator(250);
+
+player.setVelocity(2, 0);
+c64.game.frame(() => player.update());
 ```
 
-The sprite animator installs a small raster IRQ update loop that keeps the BASIC environment responsive by chaining back to the KERNAL IRQ when the frame update is done.
+`player.x`, `y`, `vx`, `vy` and `active` are runtime variables. Use
+`setPosition()`, `setVelocity()`, `setBounds()`, `update()`, `sync()`,
+`enable()`, `disable()`, `reverseX()` and `reverseY()` to control them.
+
+Animations use `c64.sprite.frames()`, then `sequence()`, `play()`,
+`pauseAnimation()` and `resumeAnimation()`. Software hitboxes use
+`a.collides(b)`. Hardware collision snapshots are available through
+`vicCollides()` and `collidesWithBackground()`; the compiler reads the VIC-II
+collision registers only once per frame because reading them clears them.
 
 ### Hires bitmap API
 
@@ -219,6 +207,129 @@ c64.clearScreen();
 
 `waitKey()` blocks the generated program until the user presses and releases a key on the C64 keyboard matrix.
 
+### v0.7 gameplay language and loop
+
+The v0.7 gameplay layer provides typed runtime variables, explicit conditions,
+bounded control flow, frame-snapshot input and a normalized game loop:
+
+```js
+import { c64 } from "js-c64";
+
+const joystick = c64.input.joystick(2);
+const player = c64.sprite.create(0, {
+  x: 100, y: 120, data: Array(63).fill(255),
+  minX: 24, maxX: 320
+});
+
+c64.game.frame(() => {
+  player.setVelocity(0, 0);
+  c64.control.if(joystick.left(), () => player.setVelocity(-2, 0));
+  c64.control.if(joystick.right(), () => player.setVelocity(2, 0));
+  player.update();
+});
+```
+
+Runtime types are `c64.var.byte()`, `word()` and `bool()`. Operations include
+`set`, `add`, `sub`, `inc`, `dec`, `and`, `or`, `xor` and `toggle`. Comparisons
+are `eq`, `ne`, `lt`, `lte`, `gt` and `gte`. Joystick directions and fire expose
+held conditions such as `left()`, edge conditions such as `firePressed()`, and
+release conditions such as `fireReleased()`.
+
+Additional v0.7 helpers include:
+
+- `c64.game.init(fn)` and `c64.game.every(frameCount, fn)`
+- `c64.control.repeat()`, bounded `while()`, named `routine()` and `call()`
+- `c64.input.keyboard({ action: matrixKeyCode })`
+- `c64.table.byte()` with runtime indexed `load()` and `store()`
+- automatic PAL/NTSC detection
+
+Runtime decisions must use `c64.control.if()`. A normal JavaScript `if` is
+evaluated by Node.js while compiling and therefore does not represent a decision
+made by the C64.
+
+Only one `c64.game.frame()` loop may be declared. `{ hz: 50 }` produces 50
+logical updates per second on PAL and NTSC; `{ hz: "video" }` follows the native
+video rate (50 PAL, 60 NTSC). Frame tasks must always be bounded.
+See [examples/game-loop-input.js](./examples/game-loop-input.js).
+
+### v0.8 sprites, animation and collisions
+
+Multiple 64-byte frames can be shared by sprites and arranged into named
+sequences:
+
+```js
+const frames = c64.sprite.frames("hero", [idlePixels, walkPixels]);
+const hero = c64.sprite.create(0, {
+  x: 80, y: 120, frames,
+  hitbox: { width: 16, height: 20 }
+});
+
+hero.sequence("walk", [0, 1], { speed: 5, loop: true });
+hero.play("walk");
+
+c64.game.frame(() => {
+  hero.update();
+  c64.control.if(hero.collides(enemy), () => hero.reverseX());
+});
+```
+
+The ordinary eight-sprite movement path has a conservative static budget of at
+most about 1,760 CPU cycles per frame (220 per active sprite, without AABB
+tests). That is below 9% of a PAL frame's 19,656 cycles. Game logic, collision
+tests, raster effects and SID work consume additional budget, so expensive work
+should be distributed across frames. See
+[examples/sprite-animate.js](./examples/sprite-animate.js) and the playable
+[examples/breakout-mini.js](./examples/breakout-mini.js).
+
+The compiler uses balanced size optimization by default. Repeated sprite
+synchronization, AABB comparisons and `sid.click()` effects are emitted once as
+shared 6502 subroutines when sharing is smaller than inline code. Reusing the
+identical sprite pixels also share one VIC-II data block. Passing an explicit
+`dataAddress` keeps a private writable block instead. These optimizations
+require no change to normal user JavaScript. On `breakout-mini`, they reduce the PRG from 4,644 to
+3,335 bytes (about 28%) while retaining the logical state needed for 16 sprites. A shared `JSR`/`RTS` costs 12 additional CPU cycles per
+call, which is the intended balanced tradeoff between speed and size.
+
+### v0.8.2 virtual sprites 8..15
+
+`c64.sprite.create()` accepts logical indexes `0..15`. Creating index 8 or
+higher automatically enables a compact Y-sorted multiplexer; no additional API
+call is required. Logical indexes no longer determine an upper or lower zone.
+Every active sprite is sorted from its current Y coordinate once per frame and
+assigned to an available VIC-II channel.
+
+```js
+const sprite0 = c64.sprite.create(0, { x: 80, y: 190, frames });
+const sprite8 = c64.sprite.create(8, { x: 180, y: 60, frames });
+
+c64.game.frame(() => {
+  sprite0.update();
+  sprite8.update();
+});
+```
+
+The generated scheduler keeps each sprite assigned for its complete 21-line
+height, or 42 lines with `expandY`. A sprite crossing the middle of the screen
+is therefore not cut and does not need to be duplicated in two fixed banks.
+Its limits are:
+
+- one `c64.game.frame()` loop is required;
+- the logical update starts near raster line 200; only logical RAM is changed,
+  and VIC registers are left untouched until the real start of the next frame;
+- all indexes `0..15` may move freely between the top, middle and bottom;
+- no more than eight sprites can overlap the same raster lines;
+- when a ninth sprite overlaps the same vertical interval, that sprite is
+  omitted for the frame because the VIC-II has no ninth physical channel;
+- software `collides()` works across all 16 logical sprites;
+- `vicCollides()` and `collidesWithBackground()` are unavailable because VIC
+  collision bits refer to reused physical channels;
+- do not mix virtual sprites with the legacy direct `c64.sprite.position()` and
+  related hardware API; use the returned sprite objects;
+- frame work must stay bounded so sorting and the first eight channel writes
+  finish before the next visible frame.
+
+See [examples/sprite-multiplex-16.js](./examples/sprite-multiplex-16.js).
+
 ### SID audio API
 
 Current `v0.6.0` layer includes:
@@ -238,7 +349,7 @@ Current `v0.6.0` layer includes:
 - `c64.sid.installPlayer(line = 250)`
 - `c64.sid.stopSong()`
 - `c64.sid.beep()`
-- `c64.sid.click()`
+- `c64.sid.click()` (non-blocking envelope retrigger, safe inside the game loop)
 - `c64.sid.noise(duration = 12)`
 - `c64.sid.explosion()`
 - `c64.sid.laser()`
@@ -374,7 +485,7 @@ c64.asm.byte(0x00);
 `rasterLoop()` is a convenience helper:
 
 - it registers one raster handler
-- it chains to the KERNAL IRQ by default
+- it keeps the KERNAL CIA timer IRQ active by default
 - it installs the IRQ automatically unless disabled in options
 
 This emits IRQ setup code including:
@@ -386,7 +497,9 @@ This emits IRQ setup code including:
 - high raster bit management through `$D011`
 - VIC IRQ enable via `$D01A`
 - IRQ acknowledge via `$D019`
-- `RTI` or optional chaining to the KERNAL IRQ routine
+- VIC/CIA source filtering through `$D019`
+- a fast raster exit through the KERNAL epilogue at `$EA81`
+- optional chaining of CIA timer IRQs to the KERNAL routine at `$EA31`
 
 ## CLI
 
@@ -416,19 +529,25 @@ c64js init my-c64-demo
 - [examples/screen-fill.js](./examples/screen-fill.js)
 - [examples/keyboard.js](./examples/keyboard.js)
 - [examples/joystick.js](./examples/joystick.js)
+- [examples/game-loop-input.js](./examples/game-loop-input.js)
+- [examples/breakout-mini.js](./examples/breakout-mini.js)
 - [examples/raster-bars.js](./examples/raster-bars.js)
 - [examples/raster-ready-border-cycle.js](./examples/raster-ready-border-cycle.js)
 - [examples/vice-showcase.js](./examples/vice-showcase.js)
 - [examples/sprite-api.js](./examples/sprite-api.js)
 - [examples/sprite-animate.js](./examples/sprite-animate.js)
+- [examples/sprite-multiplex-16.js](./examples/sprite-multiplex-16.js)
 - [examples/sid-beep.js](./examples/sid-beep.js)
 - [examples/combo-irq.js](./examples/combo-irq.js)
 - [examples/sprite-basic.js](./examples/sprite-basic.js)
 
-`examples/raster-bars.js` is the reference IRQ demo to try in VICE first.
+`examples/raster-bars.js` is the stable-timing IRQ reference to try in VICE
+first. It disables the CIA timer so nothing can delay its two raster splits.
 `examples/raster-ready-border-cycle.js` shows a single raster IRQ that cycles the border color from `0` to `15` forever while chaining back to the KERNAL IRQ so the `READY.` prompt remains responsive.
 `examples/vice-showcase.js` is the more presentation-oriented demo for VICE with animated border and background colors.
-`examples/sprite-animate.js` shows the new `v0.4.0` sprite animator moving a balloon smoothly with an internal raster IRQ updater.
+`examples/sprite-animate.js` shows v0.8 multi-frame animation and bounded movement.
+`examples/sprite-multiplex-16.js` shows the dynamic Y-sorted renderer displaying all 16 logical sprites.
+`examples/breakout-mini.js` combines seven sprites, AABB collisions, sound and a minimal score.
 `examples/combo-irq.js` shows the current `v0.6.0` direction: background SID music plus raster color changes on the same IRQ system.
 
 ## Keeping READY Alive
@@ -441,6 +560,10 @@ If you want an IRQ effect to continue after `SYS 2064` returns to BASIC, prefer 
 - store effect state in your own program variable or RAM location instead of relying on fragile temporary zero-page values
 
 The `examples/raster-ready-border-cycle.js` demo follows this model.
+
+Raster hits themselves use the short KERNAL exit at `$EA81`; only CIA timer
+hits run the full `$EA31` handler. This keeps raster splits deterministic while
+the keyboard, clock and `READY.` prompt continue to work normally.
 
 ## Development
 
@@ -465,6 +588,6 @@ Known limits in `0.1.0`:
 - high-level operations are intentionally small and direct
 - `peek()` is mainly useful together with `poke()` or custom low-level assembly flows
 - IRQ helpers focus on raster setup and dispatch, not full interrupt framework abstraction
-- the current sprite animator focuses on `moveTo`-style motion and does not yet include paths, bounce helpers, or callbacks on arrival
+- sprite AABB collisions are rectangle-based; generic pixel-perfect collision and tilemap collision are not part of v0.8
 - screen text conversion is intentionally simple
 - hires bitmap support is currently focused on the standard monochrome `320x200` mode with per-cell `8x8` color limits

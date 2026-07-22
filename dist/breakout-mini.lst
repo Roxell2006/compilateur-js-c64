@@ -1,0 +1,1388 @@
+0810  A2 00       LDX #$00
+0812        copydata_3000_sprite_frames_breakout_ball_0_63_0:
+0812  BD 08 14    LDA sprite_frames_breakout_ball_0,X
+0815  9D 00 30    STA $3000,X
+0818  E8          INX
+0819  E0 3F       CPX #$3F
+081B  D0 F5       BNE copydata_3000_sprite_frames_breakout_ball_0_63_0
+081D  A9 00       LDA #$00
+081F  8D 3F 30    STA $303F
+0822  A2 00       LDX #$00
+0824        copydata_3040_sprite_frames_breakout_ball_1_63_1:
+0824  BD 47 14    LDA sprite_frames_breakout_ball_1,X
+0827  9D 40 30    STA $3040,X
+082A  E8          INX
+082B  E0 3F       CPX #$3F
+082D  D0 F5       BNE copydata_3040_sprite_frames_breakout_ball_1_63_1
+082F  A9 00       LDA #$00
+0831  8D 7F 30    STA $307F
+0834  A9 05       LDA #$05
+0836  8D 00 C1    STA $C100
+0839  A9 35       LDA #$35
+083B  8D 01 C1    STA $C101
+083E  A9 A0       LDA #$A0
+0840  8D 00 C5    STA $C500
+0843  A9 00       LDA #$00
+0845  8D 01 C5    STA $C501
+0848  A9 E6       LDA #$E6
+084A  8D 02 C5    STA $C502
+084D  A9 00       LDA #$00
+084F  8D 03 C5    STA $C503
+0852  A9 00       LDA #$00
+0854  8D 04 C5    STA $C504
+0857  A9 01       LDA #$01
+0859  8D 05 C5    STA $C505
+085C  20 B0 11    JSR runtime_sprite_sync_0
+085F  A2 00       LDX #$00
+0861        copydata_2000_sprite_data_0_0_63_2:
+0861  BD 86 14    LDA sprite_data_0_0,X
+0864  9D 00 20    STA $2000,X
+0867  E8          INX
+0868  E0 3F       CPX #$3F
+086A  D0 F5       BNE copydata_2000_sprite_data_0_0_63_2
+086C  A9 80       LDA #$80
+086E  8D 04 C4    STA $C404
+0871  AD 04 C4    LDA $C404
+0874  8D F8 07    STA $07F8
+0877  A9 07       LDA #$07
+0879  8D 05 C4    STA $C405
+087C  A9 07       LDA #$07
+087E  8D 27 D0    STA $D027
+0881  A9 A0       LDA #$A0
+0883  8D 08 C5    STA $C508
+0886  A9 00       LDA #$00
+0888  8D 09 C5    STA $C509
+088B  A9 96       LDA #$96
+088D  8D 0A C5    STA $C50A
+0890  A9 02       LDA #$02
+0892  8D 0B C5    STA $C50B
+0895  A9 FE       LDA #$FE
+0897  8D 0C C5    STA $C50C
+089A  A9 01       LDA #$01
+089C  8D 0D C5    STA $C50D
+089F  20 EF 11    JSR runtime_sprite_sync_1
+08A2  A9 C0       LDA #$C0
+08A4  8D 0C C4    STA $C40C
+08A7  AD 0C C4    LDA $C40C
+08AA  8D F9 07    STA $07F9
+08AD  A9 01       LDA #$01
+08AF  8D 0D C4    STA $C40D
+08B2  A9 01       LDA #$01
+08B4  8D 28 D0    STA $D028
+08B7  A9 00       LDA #$00
+08B9  8D 08 C4    STA $C408
+08BC  A9 00       LDA #$00
+08BE  8D 09 C4    STA $C409
+08C1  A9 00       LDA #$00
+08C3  8D 0A C4    STA $C40A
+08C6  A9 01       LDA #$01
+08C8  8D 0B C4    STA $C40B
+08CB  AD C5 14    LDA sprite_sequence_1_spin
+08CE  8D 0C C4    STA $C40C
+08D1  AD 0C C4    LDA $C40C
+08D4  8D F9 07    STA $07F9
+08D7  A9 2D       LDA #$2D
+08D9  8D 10 C5    STA $C510
+08DC  A9 00       LDA #$00
+08DE  8D 11 C5    STA $C511
+08E1  A9 55       LDA #$55
+08E3  8D 12 C5    STA $C512
+08E6  A9 00       LDA #$00
+08E8  8D 13 C5    STA $C513
+08EB  A9 00       LDA #$00
+08ED  8D 14 C5    STA $C514
+08F0  A9 01       LDA #$01
+08F2  8D 15 C5    STA $C515
+08F5  20 2E 12    JSR runtime_sprite_sync_2
+08F8  A2 00       LDX #$00
+08FA        copydata_2080_sprite_data_2_1_63_3:
+08FA  BD C7 14    LDA sprite_data_2_1,X
+08FD  9D 80 20    STA $2080,X
+0900  E8          INX
+0901  E0 3F       CPX #$3F
+0903  D0 F5       BNE copydata_2080_sprite_data_2_1_63_3
+0905  A9 82       LDA #$82
+0907  8D 14 C4    STA $C414
+090A  AD 14 C4    LDA $C414
+090D  8D FA 07    STA $07FA
+0910  A9 02       LDA #$02
+0912  8D 15 C4    STA $C415
+0915  A9 02       LDA #$02
+0917  8D 29 D0    STA $D029
+091A  A9 69       LDA #$69
+091C  8D 18 C5    STA $C518
+091F  A9 00       LDA #$00
+0921  8D 19 C5    STA $C519
+0924  A9 55       LDA #$55
+0926  8D 1A C5    STA $C51A
+0929  A9 00       LDA #$00
+092B  8D 1B C5    STA $C51B
+092E  A9 00       LDA #$00
+0930  8D 1C C5    STA $C51C
+0933  A9 01       LDA #$01
+0935  8D 1D C5    STA $C51D
+0938  20 6D 12    JSR runtime_sprite_sync_3
+093B  A9 82       LDA #$82
+093D  8D 1C C4    STA $C41C
+0940  AD 1C C4    LDA $C41C
+0943  8D FB 07    STA $07FB
+0946  A9 08       LDA #$08
+0948  8D 1D C4    STA $C41D
+094B  A9 08       LDA #$08
+094D  8D 2A D0    STA $D02A
+0950  A9 A5       LDA #$A5
+0952  8D 20 C5    STA $C520
+0955  A9 00       LDA #$00
+0957  8D 21 C5    STA $C521
+095A  A9 55       LDA #$55
+095C  8D 22 C5    STA $C522
+095F  A9 00       LDA #$00
+0961  8D 23 C5    STA $C523
+0964  A9 00       LDA #$00
+0966  8D 24 C5    STA $C524
+0969  A9 01       LDA #$01
+096B  8D 25 C5    STA $C525
+096E  20 AC 12    JSR runtime_sprite_sync_4
+0971  A9 82       LDA #$82
+0973  8D 24 C4    STA $C424
+0976  AD 24 C4    LDA $C424
+0979  8D FC 07    STA $07FC
+097C  A9 05       LDA #$05
+097E  8D 25 C4    STA $C425
+0981  A9 05       LDA #$05
+0983  8D 2B D0    STA $D02B
+0986  A9 E1       LDA #$E1
+0988  8D 28 C5    STA $C528
+098B  A9 00       LDA #$00
+098D  8D 29 C5    STA $C529
+0990  A9 55       LDA #$55
+0992  8D 2A C5    STA $C52A
+0995  A9 00       LDA #$00
+0997  8D 2B C5    STA $C52B
+099A  A9 00       LDA #$00
+099C  8D 2C C5    STA $C52C
+099F  A9 01       LDA #$01
+09A1  8D 2D C5    STA $C52D
+09A4  20 EB 12    JSR runtime_sprite_sync_5
+09A7  A9 82       LDA #$82
+09A9  8D 2C C4    STA $C42C
+09AC  AD 2C C4    LDA $C42C
+09AF  8D FD 07    STA $07FD
+09B2  A9 03       LDA #$03
+09B4  8D 2D C4    STA $C42D
+09B7  A9 03       LDA #$03
+09B9  8D 2C D0    STA $D02C
+09BC  A9 1D       LDA #$1D
+09BE  8D 30 C5    STA $C530
+09C1  A9 01       LDA #$01
+09C3  8D 31 C5    STA $C531
+09C6  A9 55       LDA #$55
+09C8  8D 32 C5    STA $C532
+09CB  A9 00       LDA #$00
+09CD  8D 33 C5    STA $C533
+09D0  A9 00       LDA #$00
+09D2  8D 34 C5    STA $C534
+09D5  A9 01       LDA #$01
+09D7  8D 35 C5    STA $C535
+09DA  20 2A 13    JSR runtime_sprite_sync_6
+09DD  A9 82       LDA #$82
+09DF  8D 34 C4    STA $C434
+09E2  AD 34 C4    LDA $C434
+09E5  8D FE 07    STA $07FE
+09E8  A9 04       LDA #$04
+09EA  8D 35 C4    STA $C435
+09ED  A9 04       LDA #$04
+09EF  8D 2D D0    STA $D02D
+09F2  A9 93       LDA #$93
+09F4  20 D2 FF    JSR $FFD2
+09F7  A9 00       LDA #$00
+09F9  8D 20 D0    STA $D020
+09FC  A9 06       LDA #$06
+09FE  8D 21 D0    STA $D021
+0A01  A9 01       LDA #$01
+0A03  8D 86 02    STA $0286
+0A06  A2 00       LDX #$00
+0A08        printat_loop_4:
+0A08  BD E3 13    LDA str_screen_0,X
+0A0B  F0 0B       BEQ printat_done_5
+0A0D  9D 00 04    STA $0400,X
+0A10  A9 01       LDA #$01
+0A12  9D 00 D8    STA $D800,X
+0A15  E8          INX
+0A16  D0 F0       BNE printat_loop_4
+0A18        printat_done_5:
+0A18  A2 00       LDX #$00
+0A1A        printat_loop_6:
+0A1A  BD FE 13    LDA str_screen_1,X
+0A1D  F0 0B       BEQ printat_done_7
+0A1F  9D 28 04    STA $0428,X
+0A22  A9 01       LDA #$01
+0A24  9D 28 D8    STA $D828,X
+0A27  E8          INX
+0A28  D0 F0       BNE printat_loop_6
+0A2A        printat_done_7:
+0A2A  A9 0C       LDA #$0C
+0A2C  8D 18 D4    STA $D418
+            ; Deterministic game frame loop
+0A2F  A9 00       LDA #$00
+0A31  8D 6A C7    STA $C76A
+0A34  A9 00       LDA #$00
+0A36  8D 6B C7    STA $C76B
+0A39  A9 00       LDA #$00
+0A3B  8D 70 C7    STA $C770
+0A3E  A9 3C       LDA #$3C
+0A40  8D 6F C7    STA $C76F
+0A43  A9 FF       LDA #$FF
+0A45  8D 67 C7    STA $C767
+0A48  A9 FF       LDA #$FF
+0A4A  8D 69 C7    STA $C769
+0A4D        game_video_detect_low:
+0A4D  AD 11 D0    LDA $D011
+0A50  30 FB       BMI game_video_detect_low
+0A52        game_video_detect_high:
+0A52  AD 11 D0    LDA $D011
+0A55  10 FB       BPL game_video_detect_high
+0A57        game_video_detect_scan:
+0A57  AD 11 D0    LDA $D011
+0A5A  10 0F       BPL game_video_detect_done
+0A5C  AD 12 D0    LDA $D012
+0A5F  C9 20       CMP #$20
+0A61  B0 03       BCS game_video_detect_pal
+0A63  4C 57 0A    JMP game_video_detect_scan
+0A66        game_video_detect_pal:
+0A66  A9 32       LDA #$32
+0A68  8D 6F C7    STA $C76F
+0A6B        game_video_detect_done:
+0A6B        game_frame_loop:
+0A6B        game_frame_wait_leave:
+0A6B  AD 12 D0    LDA $D012
+0A6E  C9 F0       CMP #$F0
+0A70  F0 F9       BEQ game_frame_wait_leave
+0A72        game_frame_wait_target:
+0A72  AD 12 D0    LDA $D012
+0A75  C9 F0       CMP #$F0
+0A77  D0 F9       BNE game_frame_wait_target
+0A79  18          CLC
+0A7A  AD 70 C7    LDA $C770
+0A7D  69 32       ADC #$32
+0A7F  8D 70 C7    STA $C770
+0A82  CD 6F C7    CMP $C76F
+0A85  B0 03       BCS game_frame_logical_tick
+0A87  4C 6B 0A    JMP game_frame_loop
+0A8A        game_frame_logical_tick:
+0A8A  38          SEC
+0A8B  AD 70 C7    LDA $C770
+0A8E  ED 6F C7    SBC $C76F
+0A91  8D 70 C7    STA $C770
+0A94  AD 67 C7    LDA $C767
+0A97  8D 69 C7    STA $C769
+0A9A  AD 00 DC    LDA $DC00
+0A9D  8D 67 C7    STA $C767
+0AA0  EE 6A C7    INC $C76A
+0AA3  D0 03       BNE game_frame_counter_done_8
+0AA5  EE 6B C7    INC $C76B
+0AA8        game_frame_counter_done_8:
+0AA8  A9 00       LDA #$00
+0AAA  8D 03 C5    STA $C503
+0AAD  A9 00       LDA #$00
+0AAF  8D 04 C5    STA $C504
+0AB2  AD 67 C7    LDA $C767
+0AB5  29 04       AND #$04
+0AB7  F0 03       BEQ condition_pass_10
+0AB9  4C C9 0A    JMP control_if_else_9
+0ABC        condition_pass_10:
+0ABC  A9 FC       LDA #$FC
+0ABE  8D 03 C5    STA $C503
+0AC1  A9 00       LDA #$00
+0AC3  8D 04 C5    STA $C504
+0AC6  4C C9 0A    JMP control_if_end_9
+0AC9        control_if_else_9:
+0AC9        control_if_end_9:
+0AC9  AD 67 C7    LDA $C767
+0ACC  29 08       AND #$08
+0ACE  F0 03       BEQ condition_pass_12
+0AD0  4C E0 0A    JMP control_if_else_11
+0AD3        condition_pass_12:
+0AD3  A9 04       LDA #$04
+0AD5  8D 03 C5    STA $C503
+0AD8  A9 00       LDA #$00
+0ADA  8D 04 C5    STA $C504
+0ADD  4C E0 0A    JMP control_if_end_11
+0AE0        control_if_else_11:
+0AE0        control_if_end_11:
+0AE0  AD 05 C5    LDA $C505
+0AE3  D0 03       BNE sprite_update_active_0_14
+0AE5  4C 86 0B    JMP sprite_update_inactive_0_13
+0AE8        sprite_update_active_0_14:
+0AE8  18          CLC
+0AE9  AD 00 C5    LDA $C500
+0AEC  6D 03 C5    ADC $C503
+0AEF  8D 00 C5    STA $C500
+0AF2  AD 03 C5    LDA $C503
+0AF5  10 08       BPL sprite_vx_positive_15
+0AF7  AD 01 C5    LDA $C501
+0AFA  69 FF       ADC #$FF
+0AFC  4C 04 0B    JMP sprite_vx_done_15
+0AFF        sprite_vx_positive_15:
+0AFF  AD 01 C5    LDA $C501
+0B02  69 00       ADC #$00
+0B04        sprite_vx_done_15:
+0B04  8D 01 C5    STA $C501
+0B07  AD 04 C5    LDA $C504
+0B0A  10 0C       BPL sprite_vy_positive_16
+0B0C  18          CLC
+0B0D  AD 02 C5    LDA $C502
+0B10  6D 04 C5    ADC $C504
+0B13  90 12       BCC sprite_vy_clamp_min_16
+0B15  4C 21 0B    JMP sprite_vy_store_16
+0B18        sprite_vy_positive_16:
+0B18  18          CLC
+0B19  AD 02 C5    LDA $C502
+0B1C  6D 04 C5    ADC $C504
+0B1F  B0 0E       BCS sprite_vy_clamp_max_16
+0B21        sprite_vy_store_16:
+0B21  8D 02 C5    STA $C502
+0B24  4C 34 0B    JMP sprite_vy_done_16
+0B27        sprite_vy_clamp_min_16:
+0B27  A9 E6       LDA #$E6
+0B29  8D 02 C5    STA $C502
+0B2C  4C 34 0B    JMP sprite_vy_done_16
+0B2F        sprite_vy_clamp_max_16:
+0B2F  A9 E6       LDA #$E6
+0B31  8D 02 C5    STA $C502
+0B34        sprite_vy_done_16:
+0B34  AD 01 C5    LDA $C501
+0B37  30 0D       BMI sprite_x_clamp_min_17
+0B39  C9 00       CMP #$00
+0B3B  90 09       BCC sprite_x_clamp_min_17
+0B3D  D0 11       BNE sprite_x_min_ok_17
+0B3F  AD 00 C5    LDA $C500
+0B42  C9 18       CMP #$18
+0B44  B0 0A       BCS sprite_x_min_ok_17
+0B46        sprite_x_clamp_min_17:
+0B46  A9 18       LDA #$18
+0B48  8D 00 C5    STA $C500
+0B4B  A9 00       LDA #$00
+0B4D  8D 01 C5    STA $C501
+0B50        sprite_x_min_ok_17:
+0B50  AD 01 C5    LDA $C501
+0B53  C9 01       CMP #$01
+0B55  90 15       BCC sprite_x_max_ok_17
+0B57  D0 09       BNE sprite_x_clamp_max_17
+0B59  AD 00 C5    LDA $C500
+0B5C  C9 40       CMP #$40
+0B5E  90 0C       BCC sprite_x_max_ok_17
+0B60  F0 0A       BEQ sprite_x_max_ok_17
+0B62        sprite_x_clamp_max_17:
+0B62  A9 40       LDA #$40
+0B64  8D 00 C5    STA $C500
+0B67  A9 01       LDA #$01
+0B69  8D 01 C5    STA $C501
+0B6C        sprite_x_max_ok_17:
+0B6C  AD 02 C5    LDA $C502
+0B6F  C9 E6       CMP #$E6
+0B71  B0 05       BCS sprite_y_min_ok_17
+0B73  A9 E6       LDA #$E6
+0B75  8D 02 C5    STA $C502
+0B78        sprite_y_min_ok_17:
+0B78  AD 02 C5    LDA $C502
+0B7B  C9 E6       CMP #$E6
+0B7D  90 07       BCC sprite_y_max_ok_17
+0B7F  F0 05       BEQ sprite_y_max_ok_17
+0B81  A9 E6       LDA #$E6
+0B83  8D 02 C5    STA $C502
+0B86        sprite_y_max_ok_17:
+0B86        sprite_update_inactive_0_13:
+0B86  20 B0 11    JSR runtime_sprite_sync_0
+0B89  AD 0D C5    LDA $C50D
+0B8C  D0 03       BNE sprite_update_active_1_19
+0B8E  4C 41 0C    JMP sprite_update_inactive_1_18
+0B91        sprite_update_active_1_19:
+0B91  18          CLC
+0B92  AD 08 C5    LDA $C508
+0B95  6D 0B C5    ADC $C50B
+0B98  8D 08 C5    STA $C508
+0B9B  AD 0B C5    LDA $C50B
+0B9E  10 08       BPL sprite_vx_positive_20
+0BA0  AD 09 C5    LDA $C509
+0BA3  69 FF       ADC #$FF
+0BA5  4C AD 0B    JMP sprite_vx_done_20
+0BA8        sprite_vx_positive_20:
+0BA8  AD 09 C5    LDA $C509
+0BAB  69 00       ADC #$00
+0BAD        sprite_vx_done_20:
+0BAD  8D 09 C5    STA $C509
+0BB0  AD 0C C5    LDA $C50C
+0BB3  10 0C       BPL sprite_vy_positive_21
+0BB5  18          CLC
+0BB6  AD 0A C5    LDA $C50A
+0BB9  6D 0C C5    ADC $C50C
+0BBC  90 12       BCC sprite_vy_clamp_min_21
+0BBE  4C CA 0B    JMP sprite_vy_store_21
+0BC1        sprite_vy_positive_21:
+0BC1  18          CLC
+0BC2  AD 0A C5    LDA $C50A
+0BC5  6D 0C C5    ADC $C50C
+0BC8  B0 0E       BCS sprite_vy_clamp_max_21
+0BCA        sprite_vy_store_21:
+0BCA  8D 0A C5    STA $C50A
+0BCD  4C DD 0B    JMP sprite_vy_done_21
+0BD0        sprite_vy_clamp_min_21:
+0BD0  A9 37       LDA #$37
+0BD2  8D 0A C5    STA $C50A
+0BD5  4C DD 0B    JMP sprite_vy_done_21
+0BD8        sprite_vy_clamp_max_21:
+0BD8  A9 FA       LDA #$FA
+0BDA  8D 0A C5    STA $C50A
+0BDD        sprite_vy_done_21:
+0BDD  AD 09 C5    LDA $C509
+0BE0  30 0D       BMI sprite_x_clamp_min_22
+0BE2  C9 00       CMP #$00
+0BE4  90 09       BCC sprite_x_clamp_min_22
+0BE6  D0 1A       BNE sprite_x_min_ok_22
+0BE8  AD 08 C5    LDA $C508
+0BEB  C9 18       CMP #$18
+0BED  B0 13       BCS sprite_x_min_ok_22
+0BEF        sprite_x_clamp_min_22:
+0BEF  A9 18       LDA #$18
+0BF1  8D 08 C5    STA $C508
+0BF4  A9 00       LDA #$00
+0BF6  8D 09 C5    STA $C509
+0BF9  A9 00       LDA #$00
+0BFB  38          SEC
+0BFC  ED 0B C5    SBC $C50B
+0BFF  8D 0B C5    STA $C50B
+0C02        sprite_x_min_ok_22:
+0C02  AD 09 C5    LDA $C509
+0C05  C9 01       CMP #$01
+0C07  90 1E       BCC sprite_x_max_ok_22
+0C09  D0 09       BNE sprite_x_clamp_max_22
+0C0B  AD 08 C5    LDA $C508
+0C0E  C9 50       CMP #$50
+0C10  90 15       BCC sprite_x_max_ok_22
+0C12  F0 13       BEQ sprite_x_max_ok_22
+0C14        sprite_x_clamp_max_22:
+0C14  A9 50       LDA #$50
+0C16  8D 08 C5    STA $C508
+0C19  A9 01       LDA #$01
+0C1B  8D 09 C5    STA $C509
+0C1E  A9 00       LDA #$00
+0C20  38          SEC
+0C21  ED 0B C5    SBC $C50B
+0C24  8D 0B C5    STA $C50B
+0C27        sprite_x_max_ok_22:
+0C27  AD 0A C5    LDA $C50A
+0C2A  C9 37       CMP #$37
+0C2C  B0 05       BCS sprite_y_min_ok_22
+0C2E  A9 37       LDA #$37
+0C30  8D 0A C5    STA $C50A
+0C33        sprite_y_min_ok_22:
+0C33  AD 0A C5    LDA $C50A
+0C36  C9 FA       CMP #$FA
+0C38  90 07       BCC sprite_y_max_ok_22
+0C3A  F0 05       BEQ sprite_y_max_ok_22
+0C3C  A9 FA       LDA #$FA
+0C3E  8D 0A C5    STA $C50A
+0C41        sprite_y_max_ok_22:
+0C41        sprite_update_inactive_1_18:
+0C41  AD 0B C4    LDA $C40B
+0C44  D0 03       BNE sprite_anim_active_1_24
+0C46  4C 83 0C    JMP sprite_anim_done_1_23
+0C49        sprite_anim_active_1_24:
+0C49  AD 08 C4    LDA $C408
+0C4C  C9 00       CMP #$00
+0C4E  D0 33       BNE sprite_anim_next_seq_1_0_25
+0C50  EE 0A C4    INC $C40A
+0C53  AD 0A C4    LDA $C40A
+0C56  C9 04       CMP #$04
+0C58  B0 03       BCS sprite_anim_advance_1_0_26
+0C5A  4C 83 0C    JMP sprite_anim_done_1_23
+0C5D        sprite_anim_advance_1_0_26:
+0C5D  A9 00       LDA #$00
+0C5F  8D 0A C4    STA $C40A
+0C62  EE 09 C4    INC $C409
+0C65  AD 09 C4    LDA $C409
+0C68  C9 02       CMP #$02
+0C6A  90 05       BCC sprite_anim_pos_ok_1_0_27
+0C6C  A9 00       LDA #$00
+0C6E  8D 09 C4    STA $C409
+0C71        sprite_anim_pos_ok_1_0_27:
+0C71  AE 09 C4    LDX $C409
+0C74  BD C5 14    LDA sprite_sequence_1_spin,X
+0C77  8D 0C C4    STA $C40C
+0C7A  AD 0C C4    LDA $C40C
+0C7D  8D F9 07    STA $07F9
+0C80  4C 83 0C    JMP sprite_anim_done_1_23
+0C83        sprite_anim_next_seq_1_0_25:
+0C83        sprite_anim_done_1_23:
+0C83  20 EF 11    JSR runtime_sprite_sync_1
+0C86  AD 0A C5    LDA $C50A
+0C89  C9 37       CMP #$37
+0C8B  90 05       BCC condition_pass_29
+0C8D  F0 03       BEQ condition_pass_29
+0C8F  4C 9A 0C    JMP control_if_else_28
+0C92        condition_pass_29:
+0C92  A9 02       LDA #$02
+0C94  8D 0C C5    STA $C50C
+0C97  4C 9A 0C    JMP control_if_end_28
+0C9A        control_if_else_28:
+0C9A        control_if_end_28:
+0C9A  AD 0D C5    LDA $C50D
+0C9D  D0 03       BNE aabb_a_active_32
+0C9F  4C 3E 0D    JMP control_if_else_30
+0CA2        aabb_a_active_32:
+0CA2  AD 05 C5    LDA $C505
+0CA5  D0 03       BNE aabb_b_active_33
+0CA7  4C 3E 0D    JMP control_if_else_30
+0CAA        aabb_b_active_33:
+0CAA  18          CLC
+0CAB  AD 08 C5    LDA $C508
+0CAE  69 00       ADC #$00
+0CB0  8D A0 C7    STA $C7A0
+0CB3  AD 09 C5    LDA $C509
+0CB6  69 00       ADC #$00
+0CB8  8D A1 C7    STA $C7A1
+0CBB  18          CLC
+0CBC  AD 08 C5    LDA $C508
+0CBF  69 08       ADC #$08
+0CC1  8D A2 C7    STA $C7A2
+0CC4  AD 09 C5    LDA $C509
+0CC7  69 00       ADC #$00
+0CC9  8D A3 C7    STA $C7A3
+0CCC  18          CLC
+0CCD  AD 00 C5    LDA $C500
+0CD0  69 00       ADC #$00
+0CD2  8D A4 C7    STA $C7A4
+0CD5  AD 01 C5    LDA $C501
+0CD8  69 00       ADC #$00
+0CDA  8D A5 C7    STA $C7A5
+0CDD  18          CLC
+0CDE  AD 00 C5    LDA $C500
+0CE1  69 18       ADC #$18
+0CE3  8D A6 C7    STA $C7A6
+0CE6  AD 01 C5    LDA $C501
+0CE9  69 00       ADC #$00
+0CEB  8D A7 C7    STA $C7A7
+0CEE  18          CLC
+0CEF  AD 0A C5    LDA $C50A
+0CF2  69 00       ADC #$00
+0CF4  8D A8 C7    STA $C7A8
+0CF7  A9 00       LDA #$00
+0CF9  69 00       ADC #$00
+0CFB  8D A9 C7    STA $C7A9
+0CFE  18          CLC
+0CFF  AD 0A C5    LDA $C50A
+0D02  69 08       ADC #$08
+0D04  8D AA C7    STA $C7AA
+0D07  A9 00       LDA #$00
+0D09  69 00       ADC #$00
+0D0B  8D AB C7    STA $C7AB
+0D0E  18          CLC
+0D0F  AD 02 C5    LDA $C502
+0D12  69 00       ADC #$00
+0D14  8D AC C7    STA $C7AC
+0D17  A9 00       LDA #$00
+0D19  69 00       ADC #$00
+0D1B  8D AD C7    STA $C7AD
+0D1E  18          CLC
+0D1F  AD 02 C5    LDA $C502
+0D22  69 05       ADC #$05
+0D24  8D AE C7    STA $C7AE
+0D27  A9 00       LDA #$00
+0D29  69 00       ADC #$00
+0D2B  8D AF C7    STA $C7AF
+0D2E  20 69 13    JSR runtime_sprite_aabb_compare
+0D31  D0 03       BNE sprite_aabb_pass_34
+0D33  4C 3E 0D    JMP control_if_else_30
+0D36        sprite_aabb_pass_34:
+0D36  A9 FE       LDA #$FE
+0D38  8D 0C C5    STA $C50C
+0D3B  4C 3E 0D    JMP control_if_end_30
+0D3E        control_if_else_30:
+0D3E        control_if_end_30:
+0D3E  AD 0A C5    LDA $C50A
+0D41  C9 FA       CMP #$FA
+0D43  B0 03       BCS condition_pass_36
+0D45  4C 67 0D    JMP control_if_else_35
+0D48        condition_pass_36:
+0D48  A9 A0       LDA #$A0
+0D4A  8D 08 C5    STA $C508
+0D4D  A9 00       LDA #$00
+0D4F  8D 09 C5    STA $C509
+0D52  A9 96       LDA #$96
+0D54  8D 0A C5    STA $C50A
+0D57  20 EF 11    JSR runtime_sprite_sync_1
+0D5A  A9 02       LDA #$02
+0D5C  8D 0B C5    STA $C50B
+0D5F  A9 FE       LDA #$FE
+0D61  8D 0C C5    STA $C50C
+0D64  4C 67 0D    JMP control_if_end_35
+0D67        control_if_else_35:
+0D67        control_if_end_35:
+0D67  AD 0D C5    LDA $C50D
+0D6A  D0 03       BNE aabb_a_active_39
+0D6C  4C 37 0E    JMP control_if_else_37
+0D6F        aabb_a_active_39:
+0D6F  AD 15 C5    LDA $C515
+0D72  D0 03       BNE aabb_b_active_40
+0D74  4C 37 0E    JMP control_if_else_37
+0D77        aabb_b_active_40:
+0D77  18          CLC
+0D78  AD 08 C5    LDA $C508
+0D7B  69 00       ADC #$00
+0D7D  8D A0 C7    STA $C7A0
+0D80  AD 09 C5    LDA $C509
+0D83  69 00       ADC #$00
+0D85  8D A1 C7    STA $C7A1
+0D88  18          CLC
+0D89  AD 08 C5    LDA $C508
+0D8C  69 08       ADC #$08
+0D8E  8D A2 C7    STA $C7A2
+0D91  AD 09 C5    LDA $C509
+0D94  69 00       ADC #$00
+0D96  8D A3 C7    STA $C7A3
+0D99  18          CLC
+0D9A  AD 10 C5    LDA $C510
+0D9D  69 00       ADC #$00
+0D9F  8D A4 C7    STA $C7A4
+0DA2  AD 11 C5    LDA $C511
+0DA5  69 00       ADC #$00
+0DA7  8D A5 C7    STA $C7A5
+0DAA  18          CLC
+0DAB  AD 10 C5    LDA $C510
+0DAE  69 18       ADC #$18
+0DB0  8D A6 C7    STA $C7A6
+0DB3  AD 11 C5    LDA $C511
+0DB6  69 00       ADC #$00
+0DB8  8D A7 C7    STA $C7A7
+0DBB  18          CLC
+0DBC  AD 0A C5    LDA $C50A
+0DBF  69 00       ADC #$00
+0DC1  8D A8 C7    STA $C7A8
+0DC4  A9 00       LDA #$00
+0DC6  69 00       ADC #$00
+0DC8  8D A9 C7    STA $C7A9
+0DCB  18          CLC
+0DCC  AD 0A C5    LDA $C50A
+0DCF  69 08       ADC #$08
+0DD1  8D AA C7    STA $C7AA
+0DD4  A9 00       LDA #$00
+0DD6  69 00       ADC #$00
+0DD8  8D AB C7    STA $C7AB
+0DDB  18          CLC
+0DDC  AD 12 C5    LDA $C512
+0DDF  69 00       ADC #$00
+0DE1  8D AC C7    STA $C7AC
+0DE4  A9 00       LDA #$00
+0DE6  69 00       ADC #$00
+0DE8  8D AD C7    STA $C7AD
+0DEB  18          CLC
+0DEC  AD 12 C5    LDA $C512
+0DEF  69 07       ADC #$07
+0DF1  8D AE C7    STA $C7AE
+0DF4  A9 00       LDA #$00
+0DF6  69 00       ADC #$00
+0DF8  8D AF C7    STA $C7AF
+0DFB  20 69 13    JSR runtime_sprite_aabb_compare
+0DFE  D0 03       BNE sprite_aabb_pass_41
+0E00  4C 37 0E    JMP control_if_else_37
+0E03        sprite_aabb_pass_41:
+0E03  A9 00       LDA #$00
+0E05  8D 15 C5    STA $C515
+0E08  20 2E 12    JSR runtime_sprite_sync_2
+0E0B  A9 00       LDA #$00
+0E0D  38          SEC
+0E0E  ED 0C C5    SBC $C50C
+0E11  8D 0C C5    STA $C50C
+0E14  CE 00 C1    DEC $C100
+0E17  AD 00 C1    LDA $C100
+0E1A  8D 01 C1    STA $C101
+0E1D  AD 01 C1    LDA $C101
+0E20  18          CLC
+0E21  69 30       ADC #$30
+0E23  8D 01 C1    STA $C101
+0E26  AD 01 C1    LDA $C101
+0E29  8D 30 04    STA $0430
+0E2C  A9 0F       LDA #$0F
+0E2E  8D 18 D4    STA $D418
+0E31  20 8C 11    JSR runtime_sid_click
+0E34  4C 37 0E    JMP control_if_end_37
+0E37        control_if_else_37:
+0E37        control_if_end_37:
+0E37  AD 0D C5    LDA $C50D
+0E3A  D0 03       BNE aabb_a_active_44
+0E3C  4C 07 0F    JMP control_if_else_42
+0E3F        aabb_a_active_44:
+0E3F  AD 1D C5    LDA $C51D
+0E42  D0 03       BNE aabb_b_active_45
+0E44  4C 07 0F    JMP control_if_else_42
+0E47        aabb_b_active_45:
+0E47  18          CLC
+0E48  AD 08 C5    LDA $C508
+0E4B  69 00       ADC #$00
+0E4D  8D A0 C7    STA $C7A0
+0E50  AD 09 C5    LDA $C509
+0E53  69 00       ADC #$00
+0E55  8D A1 C7    STA $C7A1
+0E58  18          CLC
+0E59  AD 08 C5    LDA $C508
+0E5C  69 08       ADC #$08
+0E5E  8D A2 C7    STA $C7A2
+0E61  AD 09 C5    LDA $C509
+0E64  69 00       ADC #$00
+0E66  8D A3 C7    STA $C7A3
+0E69  18          CLC
+0E6A  AD 18 C5    LDA $C518
+0E6D  69 00       ADC #$00
+0E6F  8D A4 C7    STA $C7A4
+0E72  AD 19 C5    LDA $C519
+0E75  69 00       ADC #$00
+0E77  8D A5 C7    STA $C7A5
+0E7A  18          CLC
+0E7B  AD 18 C5    LDA $C518
+0E7E  69 18       ADC #$18
+0E80  8D A6 C7    STA $C7A6
+0E83  AD 19 C5    LDA $C519
+0E86  69 00       ADC #$00
+0E88  8D A7 C7    STA $C7A7
+0E8B  18          CLC
+0E8C  AD 0A C5    LDA $C50A
+0E8F  69 00       ADC #$00
+0E91  8D A8 C7    STA $C7A8
+0E94  A9 00       LDA #$00
+0E96  69 00       ADC #$00
+0E98  8D A9 C7    STA $C7A9
+0E9B  18          CLC
+0E9C  AD 0A C5    LDA $C50A
+0E9F  69 08       ADC #$08
+0EA1  8D AA C7    STA $C7AA
+0EA4  A9 00       LDA #$00
+0EA6  69 00       ADC #$00
+0EA8  8D AB C7    STA $C7AB
+0EAB  18          CLC
+0EAC  AD 1A C5    LDA $C51A
+0EAF  69 00       ADC #$00
+0EB1  8D AC C7    STA $C7AC
+0EB4  A9 00       LDA #$00
+0EB6  69 00       ADC #$00
+0EB8  8D AD C7    STA $C7AD
+0EBB  18          CLC
+0EBC  AD 1A C5    LDA $C51A
+0EBF  69 07       ADC #$07
+0EC1  8D AE C7    STA $C7AE
+0EC4  A9 00       LDA #$00
+0EC6  69 00       ADC #$00
+0EC8  8D AF C7    STA $C7AF
+0ECB  20 69 13    JSR runtime_sprite_aabb_compare
+0ECE  D0 03       BNE sprite_aabb_pass_46
+0ED0  4C 07 0F    JMP control_if_else_42
+0ED3        sprite_aabb_pass_46:
+0ED3  A9 00       LDA #$00
+0ED5  8D 1D C5    STA $C51D
+0ED8  20 6D 12    JSR runtime_sprite_sync_3
+0EDB  A9 00       LDA #$00
+0EDD  38          SEC
+0EDE  ED 0C C5    SBC $C50C
+0EE1  8D 0C C5    STA $C50C
+0EE4  CE 00 C1    DEC $C100
+0EE7  AD 00 C1    LDA $C100
+0EEA  8D 01 C1    STA $C101
+0EED  AD 01 C1    LDA $C101
+0EF0  18          CLC
+0EF1  69 30       ADC #$30
+0EF3  8D 01 C1    STA $C101
+0EF6  AD 01 C1    LDA $C101
+0EF9  8D 30 04    STA $0430
+0EFC  A9 0F       LDA #$0F
+0EFE  8D 18 D4    STA $D418
+0F01  20 8C 11    JSR runtime_sid_click
+0F04  4C 07 0F    JMP control_if_end_42
+0F07        control_if_else_42:
+0F07        control_if_end_42:
+0F07  AD 0D C5    LDA $C50D
+0F0A  D0 03       BNE aabb_a_active_49
+0F0C  4C D7 0F    JMP control_if_else_47
+0F0F        aabb_a_active_49:
+0F0F  AD 25 C5    LDA $C525
+0F12  D0 03       BNE aabb_b_active_50
+0F14  4C D7 0F    JMP control_if_else_47
+0F17        aabb_b_active_50:
+0F17  18          CLC
+0F18  AD 08 C5    LDA $C508
+0F1B  69 00       ADC #$00
+0F1D  8D A0 C7    STA $C7A0
+0F20  AD 09 C5    LDA $C509
+0F23  69 00       ADC #$00
+0F25  8D A1 C7    STA $C7A1
+0F28  18          CLC
+0F29  AD 08 C5    LDA $C508
+0F2C  69 08       ADC #$08
+0F2E  8D A2 C7    STA $C7A2
+0F31  AD 09 C5    LDA $C509
+0F34  69 00       ADC #$00
+0F36  8D A3 C7    STA $C7A3
+0F39  18          CLC
+0F3A  AD 20 C5    LDA $C520
+0F3D  69 00       ADC #$00
+0F3F  8D A4 C7    STA $C7A4
+0F42  AD 21 C5    LDA $C521
+0F45  69 00       ADC #$00
+0F47  8D A5 C7    STA $C7A5
+0F4A  18          CLC
+0F4B  AD 20 C5    LDA $C520
+0F4E  69 18       ADC #$18
+0F50  8D A6 C7    STA $C7A6
+0F53  AD 21 C5    LDA $C521
+0F56  69 00       ADC #$00
+0F58  8D A7 C7    STA $C7A7
+0F5B  18          CLC
+0F5C  AD 0A C5    LDA $C50A
+0F5F  69 00       ADC #$00
+0F61  8D A8 C7    STA $C7A8
+0F64  A9 00       LDA #$00
+0F66  69 00       ADC #$00
+0F68  8D A9 C7    STA $C7A9
+0F6B  18          CLC
+0F6C  AD 0A C5    LDA $C50A
+0F6F  69 08       ADC #$08
+0F71  8D AA C7    STA $C7AA
+0F74  A9 00       LDA #$00
+0F76  69 00       ADC #$00
+0F78  8D AB C7    STA $C7AB
+0F7B  18          CLC
+0F7C  AD 22 C5    LDA $C522
+0F7F  69 00       ADC #$00
+0F81  8D AC C7    STA $C7AC
+0F84  A9 00       LDA #$00
+0F86  69 00       ADC #$00
+0F88  8D AD C7    STA $C7AD
+0F8B  18          CLC
+0F8C  AD 22 C5    LDA $C522
+0F8F  69 07       ADC #$07
+0F91  8D AE C7    STA $C7AE
+0F94  A9 00       LDA #$00
+0F96  69 00       ADC #$00
+0F98  8D AF C7    STA $C7AF
+0F9B  20 69 13    JSR runtime_sprite_aabb_compare
+0F9E  D0 03       BNE sprite_aabb_pass_51
+0FA0  4C D7 0F    JMP control_if_else_47
+0FA3        sprite_aabb_pass_51:
+0FA3  A9 00       LDA #$00
+0FA5  8D 25 C5    STA $C525
+0FA8  20 AC 12    JSR runtime_sprite_sync_4
+0FAB  A9 00       LDA #$00
+0FAD  38          SEC
+0FAE  ED 0C C5    SBC $C50C
+0FB1  8D 0C C5    STA $C50C
+0FB4  CE 00 C1    DEC $C100
+0FB7  AD 00 C1    LDA $C100
+0FBA  8D 01 C1    STA $C101
+0FBD  AD 01 C1    LDA $C101
+0FC0  18          CLC
+0FC1  69 30       ADC #$30
+0FC3  8D 01 C1    STA $C101
+0FC6  AD 01 C1    LDA $C101
+0FC9  8D 30 04    STA $0430
+0FCC  A9 0F       LDA #$0F
+0FCE  8D 18 D4    STA $D418
+0FD1  20 8C 11    JSR runtime_sid_click
+0FD4  4C D7 0F    JMP control_if_end_47
+0FD7        control_if_else_47:
+0FD7        control_if_end_47:
+0FD7  AD 0D C5    LDA $C50D
+0FDA  D0 03       BNE aabb_a_active_54
+0FDC  4C A7 10    JMP control_if_else_52
+0FDF        aabb_a_active_54:
+0FDF  AD 2D C5    LDA $C52D
+0FE2  D0 03       BNE aabb_b_active_55
+0FE4  4C A7 10    JMP control_if_else_52
+0FE7        aabb_b_active_55:
+0FE7  18          CLC
+0FE8  AD 08 C5    LDA $C508
+0FEB  69 00       ADC #$00
+0FED  8D A0 C7    STA $C7A0
+0FF0  AD 09 C5    LDA $C509
+0FF3  69 00       ADC #$00
+0FF5  8D A1 C7    STA $C7A1
+0FF8  18          CLC
+0FF9  AD 08 C5    LDA $C508
+0FFC  69 08       ADC #$08
+0FFE  8D A2 C7    STA $C7A2
+1001  AD 09 C5    LDA $C509
+1004  69 00       ADC #$00
+1006  8D A3 C7    STA $C7A3
+1009  18          CLC
+100A  AD 28 C5    LDA $C528
+100D  69 00       ADC #$00
+100F  8D A4 C7    STA $C7A4
+1012  AD 29 C5    LDA $C529
+1015  69 00       ADC #$00
+1017  8D A5 C7    STA $C7A5
+101A  18          CLC
+101B  AD 28 C5    LDA $C528
+101E  69 18       ADC #$18
+1020  8D A6 C7    STA $C7A6
+1023  AD 29 C5    LDA $C529
+1026  69 00       ADC #$00
+1028  8D A7 C7    STA $C7A7
+102B  18          CLC
+102C  AD 0A C5    LDA $C50A
+102F  69 00       ADC #$00
+1031  8D A8 C7    STA $C7A8
+1034  A9 00       LDA #$00
+1036  69 00       ADC #$00
+1038  8D A9 C7    STA $C7A9
+103B  18          CLC
+103C  AD 0A C5    LDA $C50A
+103F  69 08       ADC #$08
+1041  8D AA C7    STA $C7AA
+1044  A9 00       LDA #$00
+1046  69 00       ADC #$00
+1048  8D AB C7    STA $C7AB
+104B  18          CLC
+104C  AD 2A C5    LDA $C52A
+104F  69 00       ADC #$00
+1051  8D AC C7    STA $C7AC
+1054  A9 00       LDA #$00
+1056  69 00       ADC #$00
+1058  8D AD C7    STA $C7AD
+105B  18          CLC
+105C  AD 2A C5    LDA $C52A
+105F  69 07       ADC #$07
+1061  8D AE C7    STA $C7AE
+1064  A9 00       LDA #$00
+1066  69 00       ADC #$00
+1068  8D AF C7    STA $C7AF
+106B  20 69 13    JSR runtime_sprite_aabb_compare
+106E  D0 03       BNE sprite_aabb_pass_56
+1070  4C A7 10    JMP control_if_else_52
+1073        sprite_aabb_pass_56:
+1073  A9 00       LDA #$00
+1075  8D 2D C5    STA $C52D
+1078  20 EB 12    JSR runtime_sprite_sync_5
+107B  A9 00       LDA #$00
+107D  38          SEC
+107E  ED 0C C5    SBC $C50C
+1081  8D 0C C5    STA $C50C
+1084  CE 00 C1    DEC $C100
+1087  AD 00 C1    LDA $C100
+108A  8D 01 C1    STA $C101
+108D  AD 01 C1    LDA $C101
+1090  18          CLC
+1091  69 30       ADC #$30
+1093  8D 01 C1    STA $C101
+1096  AD 01 C1    LDA $C101
+1099  8D 30 04    STA $0430
+109C  A9 0F       LDA #$0F
+109E  8D 18 D4    STA $D418
+10A1  20 8C 11    JSR runtime_sid_click
+10A4  4C A7 10    JMP control_if_end_52
+10A7        control_if_else_52:
+10A7        control_if_end_52:
+10A7  AD 0D C5    LDA $C50D
+10AA  D0 03       BNE aabb_a_active_59
+10AC  4C 77 11    JMP control_if_else_57
+10AF        aabb_a_active_59:
+10AF  AD 35 C5    LDA $C535
+10B2  D0 03       BNE aabb_b_active_60
+10B4  4C 77 11    JMP control_if_else_57
+10B7        aabb_b_active_60:
+10B7  18          CLC
+10B8  AD 08 C5    LDA $C508
+10BB  69 00       ADC #$00
+10BD  8D A0 C7    STA $C7A0
+10C0  AD 09 C5    LDA $C509
+10C3  69 00       ADC #$00
+10C5  8D A1 C7    STA $C7A1
+10C8  18          CLC
+10C9  AD 08 C5    LDA $C508
+10CC  69 08       ADC #$08
+10CE  8D A2 C7    STA $C7A2
+10D1  AD 09 C5    LDA $C509
+10D4  69 00       ADC #$00
+10D6  8D A3 C7    STA $C7A3
+10D9  18          CLC
+10DA  AD 30 C5    LDA $C530
+10DD  69 00       ADC #$00
+10DF  8D A4 C7    STA $C7A4
+10E2  AD 31 C5    LDA $C531
+10E5  69 00       ADC #$00
+10E7  8D A5 C7    STA $C7A5
+10EA  18          CLC
+10EB  AD 30 C5    LDA $C530
+10EE  69 18       ADC #$18
+10F0  8D A6 C7    STA $C7A6
+10F3  AD 31 C5    LDA $C531
+10F6  69 00       ADC #$00
+10F8  8D A7 C7    STA $C7A7
+10FB  18          CLC
+10FC  AD 0A C5    LDA $C50A
+10FF  69 00       ADC #$00
+1101  8D A8 C7    STA $C7A8
+1104  A9 00       LDA #$00
+1106  69 00       ADC #$00
+1108  8D A9 C7    STA $C7A9
+110B  18          CLC
+110C  AD 0A C5    LDA $C50A
+110F  69 08       ADC #$08
+1111  8D AA C7    STA $C7AA
+1114  A9 00       LDA #$00
+1116  69 00       ADC #$00
+1118  8D AB C7    STA $C7AB
+111B  18          CLC
+111C  AD 32 C5    LDA $C532
+111F  69 00       ADC #$00
+1121  8D AC C7    STA $C7AC
+1124  A9 00       LDA #$00
+1126  69 00       ADC #$00
+1128  8D AD C7    STA $C7AD
+112B  18          CLC
+112C  AD 32 C5    LDA $C532
+112F  69 07       ADC #$07
+1131  8D AE C7    STA $C7AE
+1134  A9 00       LDA #$00
+1136  69 00       ADC #$00
+1138  8D AF C7    STA $C7AF
+113B  20 69 13    JSR runtime_sprite_aabb_compare
+113E  D0 03       BNE sprite_aabb_pass_61
+1140  4C 77 11    JMP control_if_else_57
+1143        sprite_aabb_pass_61:
+1143  A9 00       LDA #$00
+1145  8D 35 C5    STA $C535
+1148  20 2A 13    JSR runtime_sprite_sync_6
+114B  A9 00       LDA #$00
+114D  38          SEC
+114E  ED 0C C5    SBC $C50C
+1151  8D 0C C5    STA $C50C
+1154  CE 00 C1    DEC $C100
+1157  AD 00 C1    LDA $C100
+115A  8D 01 C1    STA $C101
+115D  AD 01 C1    LDA $C101
+1160  18          CLC
+1161  69 30       ADC #$30
+1163  8D 01 C1    STA $C101
+1166  AD 01 C1    LDA $C101
+1169  8D 30 04    STA $0430
+116C  A9 0F       LDA #$0F
+116E  8D 18 D4    STA $D418
+1171  20 8C 11    JSR runtime_sid_click
+1174  4C 77 11    JMP control_if_end_57
+1177        control_if_else_57:
+1177        control_if_end_57:
+1177  AD 00 C1    LDA $C100
+117A  C9 00       CMP #$00
+117C  F0 03       BEQ condition_pass_63
+117E  4C 89 11    JMP control_if_else_62
+1181        condition_pass_63:
+1181  A9 05       LDA #$05
+1183  8D 20 D0    STA $D020
+1186  4C 89 11    JMP control_if_end_62
+1189        control_if_else_62:
+1189        control_if_end_62:
+1189  4C 6B 0A    JMP game_frame_loop
+            ; Shared non-blocking SID click
+118C        runtime_sid_click:
+118C  A9 00       LDA #$00
+118E  8D 04 D4    STA $D404
+1191  A9 10       LDA #$10
+1193  8D 04 D4    STA $D404
+1196  A9 00       LDA #$00
+1198  8D 05 D4    STA $D405
+119B  A9 00       LDA #$00
+119D  8D 06 D4    STA $D406
+11A0  A9 39       LDA #$39
+11A2  8D 00 D4    STA $D400
+11A5  A9 8B       LDA #$8B
+11A7  8D 01 D4    STA $D401
+11AA  A9 11       LDA #$11
+11AC  8D 04 D4    STA $D404
+11AF  60          RTS
+            ; Shared VIC-II synchronization for sprite 0
+11B0        runtime_sprite_sync_0:
+11B0  AD 05 C5    LDA $C505
+11B3  D0 0B       BNE sprite_runtime_active_0_64
+11B5  AD 15 D0    LDA $D015
+11B8  29 FE       AND #$FE
+11BA  8D 15 D0    STA $D015
+11BD  4C EE 11    JMP sprite_runtime_sync_done_0_67
+11C0        sprite_runtime_active_0_64:
+11C0  AD 15 D0    LDA $D015
+11C3  09 01       ORA #$01
+11C5  8D 15 D0    STA $D015
+11C8  AD 00 C5    LDA $C500
+11CB  8D 00 D0    STA $D000
+11CE  AD 01 C5    LDA $C501
+11D1  29 01       AND #$01
+11D3  D0 0B       BNE sprite_runtime_xhigh_0_65
+11D5  AD 10 D0    LDA $D010
+11D8  29 FE       AND #$FE
+11DA  8D 10 D0    STA $D010
+11DD  4C E8 11    JMP sprite_runtime_xdone_0_66
+11E0        sprite_runtime_xhigh_0_65:
+11E0  AD 10 D0    LDA $D010
+11E3  09 01       ORA #$01
+11E5  8D 10 D0    STA $D010
+11E8        sprite_runtime_xdone_0_66:
+11E8  AD 02 C5    LDA $C502
+11EB  8D 01 D0    STA $D001
+11EE        sprite_runtime_sync_done_0_67:
+11EE  60          RTS
+            ; Shared VIC-II synchronization for sprite 1
+11EF        runtime_sprite_sync_1:
+11EF  AD 0D C5    LDA $C50D
+11F2  D0 0B       BNE sprite_runtime_active_1_68
+11F4  AD 15 D0    LDA $D015
+11F7  29 FD       AND #$FD
+11F9  8D 15 D0    STA $D015
+11FC  4C 2D 12    JMP sprite_runtime_sync_done_1_71
+11FF        sprite_runtime_active_1_68:
+11FF  AD 15 D0    LDA $D015
+1202  09 02       ORA #$02
+1204  8D 15 D0    STA $D015
+1207  AD 08 C5    LDA $C508
+120A  8D 02 D0    STA $D002
+120D  AD 09 C5    LDA $C509
+1210  29 01       AND #$01
+1212  D0 0B       BNE sprite_runtime_xhigh_1_69
+1214  AD 10 D0    LDA $D010
+1217  29 FD       AND #$FD
+1219  8D 10 D0    STA $D010
+121C  4C 27 12    JMP sprite_runtime_xdone_1_70
+121F        sprite_runtime_xhigh_1_69:
+121F  AD 10 D0    LDA $D010
+1222  09 02       ORA #$02
+1224  8D 10 D0    STA $D010
+1227        sprite_runtime_xdone_1_70:
+1227  AD 0A C5    LDA $C50A
+122A  8D 03 D0    STA $D003
+122D        sprite_runtime_sync_done_1_71:
+122D  60          RTS
+            ; Shared VIC-II synchronization for sprite 2
+122E        runtime_sprite_sync_2:
+122E  AD 15 C5    LDA $C515
+1231  D0 0B       BNE sprite_runtime_active_2_72
+1233  AD 15 D0    LDA $D015
+1236  29 FB       AND #$FB
+1238  8D 15 D0    STA $D015
+123B  4C 6C 12    JMP sprite_runtime_sync_done_2_75
+123E        sprite_runtime_active_2_72:
+123E  AD 15 D0    LDA $D015
+1241  09 04       ORA #$04
+1243  8D 15 D0    STA $D015
+1246  AD 10 C5    LDA $C510
+1249  8D 04 D0    STA $D004
+124C  AD 11 C5    LDA $C511
+124F  29 01       AND #$01
+1251  D0 0B       BNE sprite_runtime_xhigh_2_73
+1253  AD 10 D0    LDA $D010
+1256  29 FB       AND #$FB
+1258  8D 10 D0    STA $D010
+125B  4C 66 12    JMP sprite_runtime_xdone_2_74
+125E        sprite_runtime_xhigh_2_73:
+125E  AD 10 D0    LDA $D010
+1261  09 04       ORA #$04
+1263  8D 10 D0    STA $D010
+1266        sprite_runtime_xdone_2_74:
+1266  AD 12 C5    LDA $C512
+1269  8D 05 D0    STA $D005
+126C        sprite_runtime_sync_done_2_75:
+126C  60          RTS
+            ; Shared VIC-II synchronization for sprite 3
+126D        runtime_sprite_sync_3:
+126D  AD 1D C5    LDA $C51D
+1270  D0 0B       BNE sprite_runtime_active_3_76
+1272  AD 15 D0    LDA $D015
+1275  29 F7       AND #$F7
+1277  8D 15 D0    STA $D015
+127A  4C AB 12    JMP sprite_runtime_sync_done_3_79
+127D        sprite_runtime_active_3_76:
+127D  AD 15 D0    LDA $D015
+1280  09 08       ORA #$08
+1282  8D 15 D0    STA $D015
+1285  AD 18 C5    LDA $C518
+1288  8D 06 D0    STA $D006
+128B  AD 19 C5    LDA $C519
+128E  29 01       AND #$01
+1290  D0 0B       BNE sprite_runtime_xhigh_3_77
+1292  AD 10 D0    LDA $D010
+1295  29 F7       AND #$F7
+1297  8D 10 D0    STA $D010
+129A  4C A5 12    JMP sprite_runtime_xdone_3_78
+129D        sprite_runtime_xhigh_3_77:
+129D  AD 10 D0    LDA $D010
+12A0  09 08       ORA #$08
+12A2  8D 10 D0    STA $D010
+12A5        sprite_runtime_xdone_3_78:
+12A5  AD 1A C5    LDA $C51A
+12A8  8D 07 D0    STA $D007
+12AB        sprite_runtime_sync_done_3_79:
+12AB  60          RTS
+            ; Shared VIC-II synchronization for sprite 4
+12AC        runtime_sprite_sync_4:
+12AC  AD 25 C5    LDA $C525
+12AF  D0 0B       BNE sprite_runtime_active_4_80
+12B1  AD 15 D0    LDA $D015
+12B4  29 EF       AND #$EF
+12B6  8D 15 D0    STA $D015
+12B9  4C EA 12    JMP sprite_runtime_sync_done_4_83
+12BC        sprite_runtime_active_4_80:
+12BC  AD 15 D0    LDA $D015
+12BF  09 10       ORA #$10
+12C1  8D 15 D0    STA $D015
+12C4  AD 20 C5    LDA $C520
+12C7  8D 08 D0    STA $D008
+12CA  AD 21 C5    LDA $C521
+12CD  29 01       AND #$01
+12CF  D0 0B       BNE sprite_runtime_xhigh_4_81
+12D1  AD 10 D0    LDA $D010
+12D4  29 EF       AND #$EF
+12D6  8D 10 D0    STA $D010
+12D9  4C E4 12    JMP sprite_runtime_xdone_4_82
+12DC        sprite_runtime_xhigh_4_81:
+12DC  AD 10 D0    LDA $D010
+12DF  09 10       ORA #$10
+12E1  8D 10 D0    STA $D010
+12E4        sprite_runtime_xdone_4_82:
+12E4  AD 22 C5    LDA $C522
+12E7  8D 09 D0    STA $D009
+12EA        sprite_runtime_sync_done_4_83:
+12EA  60          RTS
+            ; Shared VIC-II synchronization for sprite 5
+12EB        runtime_sprite_sync_5:
+12EB  AD 2D C5    LDA $C52D
+12EE  D0 0B       BNE sprite_runtime_active_5_84
+12F0  AD 15 D0    LDA $D015
+12F3  29 DF       AND #$DF
+12F5  8D 15 D0    STA $D015
+12F8  4C 29 13    JMP sprite_runtime_sync_done_5_87
+12FB        sprite_runtime_active_5_84:
+12FB  AD 15 D0    LDA $D015
+12FE  09 20       ORA #$20
+1300  8D 15 D0    STA $D015
+1303  AD 28 C5    LDA $C528
+1306  8D 0A D0    STA $D00A
+1309  AD 29 C5    LDA $C529
+130C  29 01       AND #$01
+130E  D0 0B       BNE sprite_runtime_xhigh_5_85
+1310  AD 10 D0    LDA $D010
+1313  29 DF       AND #$DF
+1315  8D 10 D0    STA $D010
+1318  4C 23 13    JMP sprite_runtime_xdone_5_86
+131B        sprite_runtime_xhigh_5_85:
+131B  AD 10 D0    LDA $D010
+131E  09 20       ORA #$20
+1320  8D 10 D0    STA $D010
+1323        sprite_runtime_xdone_5_86:
+1323  AD 2A C5    LDA $C52A
+1326  8D 0B D0    STA $D00B
+1329        sprite_runtime_sync_done_5_87:
+1329  60          RTS
+            ; Shared VIC-II synchronization for sprite 6
+132A        runtime_sprite_sync_6:
+132A  AD 35 C5    LDA $C535
+132D  D0 0B       BNE sprite_runtime_active_6_88
+132F  AD 15 D0    LDA $D015
+1332  29 BF       AND #$BF
+1334  8D 15 D0    STA $D015
+1337  4C 68 13    JMP sprite_runtime_sync_done_6_91
+133A        sprite_runtime_active_6_88:
+133A  AD 15 D0    LDA $D015
+133D  09 40       ORA #$40
+133F  8D 15 D0    STA $D015
+1342  AD 30 C5    LDA $C530
+1345  8D 0C D0    STA $D00C
+1348  AD 31 C5    LDA $C531
+134B  29 01       AND #$01
+134D  D0 0B       BNE sprite_runtime_xhigh_6_89
+134F  AD 10 D0    LDA $D010
+1352  29 BF       AND #$BF
+1354  8D 10 D0    STA $D010
+1357  4C 62 13    JMP sprite_runtime_xdone_6_90
+135A        sprite_runtime_xhigh_6_89:
+135A  AD 10 D0    LDA $D010
+135D  09 40       ORA #$40
+135F  8D 10 D0    STA $D010
+1362        sprite_runtime_xdone_6_90:
+1362  AD 32 C5    LDA $C532
+1365  8D 0D D0    STA $D00D
+1368        sprite_runtime_sync_done_6_91:
+1368  60          RTS
+            ; Shared strict AABB bounds comparison
+1369        runtime_sprite_aabb_compare:
+1369  AD A3 C7    LDA $C7A3
+136C  CD A5 C7    CMP $C7A5
+136F  F0 05       BEQ aabb_high_equal_runtime_0
+1371  B0 13       BCS aabb_greater_runtime_0
+1373  4C E0 13    JMP runtime_sprite_aabb_false
+1376        aabb_high_equal_runtime_0:
+1376  AD A2 C7    LDA $C7A2
+1379  CD A4 C7    CMP $C7A4
+137C  D0 03       BNE aabb_low_not_equal_runtime_0
+137E  4C E0 13    JMP runtime_sprite_aabb_false
+1381        aabb_low_not_equal_runtime_0:
+1381  B0 03       BCS aabb_greater_runtime_0
+1383  4C E0 13    JMP runtime_sprite_aabb_false
+1386        aabb_greater_runtime_0:
+1386  AD A7 C7    LDA $C7A7
+1389  CD A1 C7    CMP $C7A1
+138C  F0 05       BEQ aabb_high_equal_runtime_1
+138E  B0 13       BCS aabb_greater_runtime_1
+1390  4C E0 13    JMP runtime_sprite_aabb_false
+1393        aabb_high_equal_runtime_1:
+1393  AD A6 C7    LDA $C7A6
+1396  CD A0 C7    CMP $C7A0
+1399  D0 03       BNE aabb_low_not_equal_runtime_1
+139B  4C E0 13    JMP runtime_sprite_aabb_false
+139E        aabb_low_not_equal_runtime_1:
+139E  B0 03       BCS aabb_greater_runtime_1
+13A0  4C E0 13    JMP runtime_sprite_aabb_false
+13A3        aabb_greater_runtime_1:
+13A3  AD AB C7    LDA $C7AB
+13A6  CD AD C7    CMP $C7AD
+13A9  F0 05       BEQ aabb_high_equal_runtime_2
+13AB  B0 13       BCS aabb_greater_runtime_2
+13AD  4C E0 13    JMP runtime_sprite_aabb_false
+13B0        aabb_high_equal_runtime_2:
+13B0  AD AA C7    LDA $C7AA
+13B3  CD AC C7    CMP $C7AC
+13B6  D0 03       BNE aabb_low_not_equal_runtime_2
+13B8  4C E0 13    JMP runtime_sprite_aabb_false
+13BB        aabb_low_not_equal_runtime_2:
+13BB  B0 03       BCS aabb_greater_runtime_2
+13BD  4C E0 13    JMP runtime_sprite_aabb_false
+13C0        aabb_greater_runtime_2:
+13C0  AD AF C7    LDA $C7AF
+13C3  CD A9 C7    CMP $C7A9
+13C6  F0 05       BEQ aabb_high_equal_runtime_3
+13C8  B0 13       BCS aabb_greater_runtime_3
+13CA  4C E0 13    JMP runtime_sprite_aabb_false
+13CD        aabb_high_equal_runtime_3:
+13CD  AD AE C7    LDA $C7AE
+13D0  CD A8 C7    CMP $C7A8
+13D3  D0 03       BNE aabb_low_not_equal_runtime_3
+13D5  4C E0 13    JMP runtime_sprite_aabb_false
+13D8        aabb_low_not_equal_runtime_3:
+13D8  B0 03       BCS aabb_greater_runtime_3
+13DA  4C E0 13    JMP runtime_sprite_aabb_false
+13DD        aabb_greater_runtime_3:
+13DD  A9 01       LDA #$01
+13DF  60          RTS
+13E0        runtime_sprite_aabb_false:
+13E0  A9 00       LDA #$00
+13E2  60          RTS
+            ; String pool
+13E3        str_screen_0:
+13E3  02 12 05 01 0B 0F 15 14 20 0D 09 0E 09 20 2D 20 0A 0F 19 13 14 09 03 0B 20 32 00 .byte $02, $12, $05, $01, $0B, $0F, $15, $14, $20, $0D, $09, $0E, $09, $20, $2D, $20, $0A, $0F, $19, $13, $14, $09, $03, $0B, $20, $32, $00
+13FE        str_screen_1:
+13FE  02 0C 0F 03 0B 13 3A 20 35 00 .byte $02, $0C, $0F, $03, $0B, $13, $3A, $20, $35, $00
+            ; User data
+1408        sprite_frames_breakout_ball_0:
+1408  3C 00 00 7E 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00 7E 00 00 3C 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 .byte $3C, $00, $00, $7E, $00, $00, $FF, $00, $00, $FF, $00, $00, $FF, $00, $00, $FF, $00, $00, $7E, $00, $00, $3C, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+1447        sprite_frames_breakout_ball_1:
+1447  1E 00 00 3F 00 00 FF 00 00 FF 00 00 FF 00 00 FF 00 00 3F 00 00 1E 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 .byte $1E, $00, $00, $3F, $00, $00, $FF, $00, $00, $FF, $00, $00, $FF, $00, $00, $FF, $00, $00, $3F, $00, $00, $1E, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+1486        sprite_data_0_0:
+1486  FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 .byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+14C5        sprite_sequence_1_spin:
+14C5  C0 C1       .byte $C0, $C1
+14C7        sprite_data_2_1:
+14C7  FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 .byte $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
