@@ -330,6 +330,71 @@ Its limits are:
 
 See [examples/sprite-multiplex-16.js](./examples/sprite-multiplex-16.js).
 
+### v0.9 static charset and map assets
+
+The NPM package owns the stable asset format, validation and generated C64
+runtime. The dependency-free visual editor lives in `studio graphique/` and
+exports the same JSON schema without making the compiler depend on a browser UI framework.
+
+```js
+const room = c64.assets.loadMap("assets/room.json");
+
+c64.game.init(() => {
+  c64.charset.use(room.charset, { address: 0x3000 });
+  c64.map.draw(room, { x: 0, y: 0 });
+});
+
+const tileX = c64.var.byte("tileX", { initial: 1 });
+const tileY = c64.var.byte("tileY", { initial: 1 });
+
+c64.game.frame(() => {
+  const tile = room.map(tileX, tileY);
+  c64.control.if(tile.isSolid(), () => tileX.set(0));
+  tile.set(1); // updates runtime map RAM and redraws only this tile
+});
+```
+
+Current v0.9 foundation includes:
+
+- JSON loading relative to the compiled JavaScript file;
+- inline assets through `c64.assets.defineMap()`;
+- lossless hires 8x8 and multicolor 4x8 charset data, padded to the VIC-II 2 KB format;
+- configurable metatiles from 1x1 to 8x8 characters;
+- per-cell colors and a separate logical collision value per tile;
+- compile-time validation of dimensions, byte values and tile references;
+- charset bank/alignment validation and automatic `$DD00`/`$D018` setup;
+- maps stored as mutable two-dimensional runtime state in `$8000..$9FFF`;
+- callable cells with `level.map(x, y)` and the `set()`, `load()`, `eq()`,
+  `ne()`, `isSolid()` and `hasCollision()` operations;
+- automatic redraw of only the changed character or metatile after `set()`;
+- explicit full redraw through `level.map.redraw()`;
+- 16-bit runtime indexing for maps up to 8,192 cells;
+- pixel/tile and character/tile runtime coordinate conversions;
+- an optional object/spawn layer with typed JSON properties;
+- a detailed `assetReport` with address ranges and overlap detection.
+
+Fine scrolling and line removal helpers remain later milestones. See
+[examples/tilemap-static.js](./examples/tilemap-static.js) and its
+[JSON source](./examples/assets/v09-room.json). The package also ships the
+formal [v1 JSON Schema](./schemas/map-asset-v1.schema.json) for editor and IDE
+integration.
+
+The playable [examples/tetris-mini.js](./examples/tetris-mini.js) demonstrates
+dynamic reads and writes: T, O, I and L tetrominoes are selected with a compact
+pseudo-random generator, move with joystick port 2, rotate with FIRE, test the
+map and become solid when they land.
+The demo intentionally focuses on dynamic-map movement, rotation, spawning and
+collision; complete-line removal and scoring remain future gameplay additions.
+
+The playable [Snake](./examples/snake.js) and [multicolor maze](./examples/maze-game.js)
+examples both use 20x15 (300-cell) maps, logical collisions and JSON object/spawn
+metadata. Coordinate conversion is explicit and allocation-free:
+
+```js
+c64.map.pixelToTile(level, { x: playerPixelX, y: playerPixelY }, { x: tileX, y: tileY });
+c64.map.tileToCharacter(level, { x: tileX, y: tileY }, { x: charX, y: charY });
+```
+
 ### SID audio API
 
 Current `v0.6.0` layer includes:
@@ -537,6 +602,8 @@ c64js init my-c64-demo
 - [examples/sprite-api.js](./examples/sprite-api.js)
 - [examples/sprite-animate.js](./examples/sprite-animate.js)
 - [examples/sprite-multiplex-16.js](./examples/sprite-multiplex-16.js)
+- [examples/tilemap-static.js](./examples/tilemap-static.js)
+- [examples/tetris-mini.js](./examples/tetris-mini.js)
 - [examples/sid-beep.js](./examples/sid-beep.js)
 - [examples/combo-irq.js](./examples/combo-irq.js)
 - [examples/sprite-basic.js](./examples/sprite-basic.js)

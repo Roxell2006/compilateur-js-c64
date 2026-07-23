@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "charset": {
+    "mode": "hires",
+    "characters": [
+      [0, 0, 0, 0, 0, 0, 0, 0],
+      [255, 129, 189, 165, 189, 129, 255, 0],
+      [0, 0, 24, 60, 60, 24, 0, 0]
+    ]
+  },
+  "tileWidth": 2,
+  "tileHeight": 2,
+  "tiles": [
+    { "chars": [0, 0, 0, 0], "colors": [6, 6, 6, 6], "collision": 0 },
+    { "chars": [1, 1, 1, 1], "colors": [14, 14, 14, 14], "collision": 1, "properties": { "solid": true } },
+    { "chars": [0, 2, 2, 0], "colors": [6, 7, 7, 6], "collision": 2, "properties": { "collectible": true } }
+  ],
+  "map": {
+    "width": 10,
+    "height": 6,
+    "data": [
+      1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+      1, 0, 0, 2, 0, 0, 2, 0, 0, 1,
+      1, 0, 1, 1, 0, 0, 1, 1, 0, 1,
+      1, 2, 0, 0, 0, 0, 0, 0, 2, 1,
+      1, 0, 0, 1, 1, 1, 1, 0, 0, 1,
+      1, 1, 1, 1, 1, 1, 1, 1, 1, 1
+    ]
+  }
+}

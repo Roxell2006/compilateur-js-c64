@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171922">
+  <title>JS-C64 Asset Studio</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#charset" aria-label="JS-C64 Asset Studio">
+      <span class="brand-mark">64</span>
+      <span><strong>JS-C64</strong><small>Asset Studio · v0.9</small></span>
+    </a>
+    <nav class="workspace-tabs" aria-label="Éditeurs">
+      <button class="tab active" data-view="charset">Caractères</button>
+      <button class="tab" data-view="tiles">Métatuiles</button>
+      <button class="tab" data-view="map">Map</button>
+    </nav>
+    <div class="top-actions">
+      <button id="newProject" class="button ghost" title="Nouveau projet">Nouveau</button>
+      <button id="importProject" class="button ghost">Importer JSON</button>
+      <input id="fileInput" type="file" accept="application/json,.json" hidden>
+      <button id="exportJson" class="button primary">Exporter JSON</button>
+      <details class="export-menu">
+        <summary class="button ghost">Autres exports</summary>
+        <div class="menu-card">
+          <button data-export="bin">Charset .bin</button>
+          <button data-export="map-bin">Map .bin</button>
+          <button data-export="map-rle">Map RLE .bin</button>
+          <button data-export="js">Module .js</button>
+          <button data-export="asm">Données .asm</button>
+        </div>
+      </details>
+    </div>
+  </header>
+
+  <main>
+    <aside class="sidebar">
+      <section class="project-card">
+        <label for="projectName">Nom du projet</label>
+        <input id="projectName" value="ma-map-c64" maxlength="64">
+        <div class="history-actions">
+          <button id="undo" class="icon-button" title="Annuler (Ctrl+Z)" aria-label="Annuler">↶</button>
+          <button id="redo" class="icon-button" title="Rétablir (Ctrl+Y)" aria-label="Rétablir">↷</button>
+          <span id="saveState" class="save-state">Sauvegardé localement</span>
+        </div>
+      </section>
+
+      <section id="contextHelp" class="help-card">
+        <span class="eyebrow">Caractère sélectionné</span>
+        <h2 id="selectionTitle">Caractère 0</h2>
+        <p id="selectionHelp">Dessinez les pixels du caractère 8 × 8. Clic gauche : dessiner. Clic droit : effacer.</p>
+      </section>
+
+      <section class="validation-card">
+        <div class="section-heading">
+          <h2>Compatibilité</h2>
+          <span id="validationBadge" class="badge success">Valide</span>
+        </div>
+        <ul id="validationList" class="validation-list"></ul>
+      </section>
+    </aside>
+
+    <section class="workspace">
+      <section id="charsetView" class="view active" aria-labelledby="charsetHeading">
+        <div class="view-heading">
+          <div>
+            <span class="eyebrow">Charset C64 · hires 1 bit</span>
+            <h1 id="charsetHeading">Éditeur de caractères</h1>
+          </div>
+          <label>Mode
+            <select id="charsetMode"><option value="hires">Hires 1 bit</option><option value="multicolor">Multicolore 2 bits</option></select>
+          </label>
+          <div class="button-row">
+            <button id="addChar" class="button">+ Vide</button>
+            <button id="duplicateChar" class="button">Dupliquer</button>
+            <button id="deleteChar" class="button danger">Supprimer</button>
+          </div>
+        </div>
+
+        <div class="editor-layout char-layout">
+          <article class="panel pixel-panel">
+            <div class="panel-heading">
+              <h2>Pixels 8 × 8</h2>
+              <code id="charBytes">$00 $00 $00 $00 $00 $00 $00 $00</code>
+            </div>
+            <div class="pixel-stage">
+              <div id="pixelGrid" class="pixel-grid" role="grid" aria-label="Pixels du caractère"></div>
+            </div>
+            <div class="transform-grid" aria-label="Transformations du caractère">
+              <button data-transform="mirrorX">Miroir ↔</button>
+              <button data-transform="mirrorY">Miroir ↕</button>
+              <button data-transform="rotate">Rotation 90°</button>
+              <button data-transform="left">Décaler ←</button>
+              <button data-transform="right">Décaler →</button>
+              <button data-transform="up">Décaler ↑</button>
+              <button data-transform="down">Décaler ↓</button>
+              <button id="clearChar">Effacer</button>
+            </div>
+            <div class="button-row compact">
+              <button id="copyChar" class="button ghost">Copier</button>
+              <button id="pasteChar" class="button ghost">Coller</button>
+              <button id="moveCharBack" class="button ghost">Déplacer avant</button>
+              <button id="moveCharNext" class="button ghost">Déplacer après</button>
+            </div>
+          </article>
+
+          <article class="panel preview-panel">
+            <div class="panel-heading"><h2>Aperçu</h2><span>Couleurs de travail</span></div>
+            <canvas id="charPreview" width="256" height="256" aria-label="Aperçu du caractère"></canvas>
+            <div>
+              <label>Premier plan</label>
+              <div id="charForegroundPalette" class="palette" aria-label="Couleur de premier plan"></div>
+            </div>
+            <div>
+              <label>Arrière-plan</label>
+              <div id="charBackgroundPalette" class="palette" aria-label="Couleur d'arrière-plan"></div>
+            </div>
+            <div id="multicolorControls" hidden>
+              <label>Couleur multicolore 1</label>
+              <div id="multicolor1Palette" class="palette"></div>
+              <label>Couleur multicolore 2</label>
+              <div id="multicolor2Palette" class="palette"></div>
+              <label>Valeur à dessiner</label>
+              <div id="pixelValueButtons" class="button-row compact"></div>
+            </div>
+          </article>
+
+          <article class="panel library-panel">
+            <div class="panel-heading">
+              <h2>Bibliothèque</h2>
+              <span id="charCount">1 / 256</span>
+            </div>
+            <div id="charLibrary" class="asset-library" aria-label="Liste des caractères"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="tilesView" class="view" aria-labelledby="tilesHeading">
+        <div class="view-heading">
+          <div>
+            <span class="eyebrow">Assemblage de caractères</span>
+            <h1 id="tilesHeading">Éditeur de métatuiles</h1>
+          </div>
+          <div class="button-row">
+            <button id="addTile" class="button">+ Métatuile</button>
+            <button id="duplicateTile" class="button">Dupliquer</button>
+            <button id="deleteTile" class="button danger">Supprimer</button>
+          </div>
+        </div>
+
+        <div class="dimension-bar panel">
+          <strong>Taille commune</strong>
+          <label>Largeur <input id="tileWidth" type="number" min="1" max="8" value="1"></label>
+          <label>Hauteur <input id="tileHeight" type="number" min="1" max="8" value="1"></label>
+          <button id="resizeTiles" class="button">Appliquer à toutes</button>
+          <span>Une métatuile peut mesurer de 1 × 1 à 8 × 8 caractères.</span>
+        </div>
+
+        <div class="editor-layout tile-layout">
+          <article class="panel tile-canvas-panel">
+            <div class="panel-heading"><h2>Composition</h2><span id="tileDimensions">1 × 1 caractère</span></div>
+            <div id="tileGrid" class="tile-grid" aria-label="Composition de la métatuile"></div>
+            <p class="hint">Choisissez un caractère et une couleur, puis cliquez dans la grille.</p>
+          </article>
+          <article class="panel tile-options">
+            <div>
+              <label>Caractère à peindre</label>
+              <div id="tileCharPicker" class="asset-library mini"></div>
+            </div>
+            <div>
+              <label>Couleur à peindre</label>
+              <div id="tileColorPalette" class="palette"></div>
+            </div>
+            <label for="tileCollision">Collision (0 = traversable)</label>
+            <input id="tileCollision" type="number" min="0" max="255" value="0">
+            <label for="tileProperties">Propriétés JSON facultatives</label>
+            <textarea id="tileProperties" rows="6" spellcheck="false">{}</textarea>
+            <p id="propertyError" class="field-error" role="alert"></p>
+          </article>
+          <article class="panel library-panel">
+            <div class="panel-heading"><h2>Métatuiles</h2><span id="tileCount">1 / 256</span></div>
+            <div id="tileLibrary" class="asset-library tiles"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="mapView" class="view" aria-labelledby="mapHeading">
+        <div class="view-heading">
+          <div>
+            <span class="eyebrow">Carte de niveau</span>
+            <h1 id="mapHeading">Éditeur de map</h1>
+          </div>
+          <div class="map-stats"><strong id="mapSizeLabel">16 × 12</strong><span id="mapPixelSize">128 × 96 px</span><span id="rleSizeLabel">RLE : 0 octet</span></div>
+        </div>
+
+        <div class="map-toolbar panel">
+          <div class="tool-group" aria-label="Outils de dessin">
+            <button class="tool active" data-tool="pencil" title="Crayon">✎ <span>Crayon</span></button>
+            <button class="tool" data-tool="rect" title="Rectangle">▭ <span>Rectangle</span></button>
+            <button class="tool" data-tool="fill" title="Remplissage">◈ <span>Remplir</span></button>
+            <button class="tool" data-tool="picker" title="Pipette">⌾ <span>Pipette</span></button>
+            <button class="tool" data-tool="select" title="Sélection">□ <span>Sélection</span></button>
+            <button class="tool" data-tool="object" title="Objet ou spawn">★ <span>Objet</span></button>
+            <button class="tool" data-tool="eraser" title="Gomme">⌫ <span>Gomme</span></button>
+          </div>
+          <div class="toolbar-options">
+            <label><input id="showGrid" type="checkbox" checked> Grille</label>
+            <label><input id="showCollision" type="checkbox"> Collisions</label>
+            <label>Zoom <input id="mapZoom" type="range" min="1" max="5" value="3"></label>
+          </div>
+        </div>
+
+        <div class="map-layout">
+          <aside class="panel map-side-panel">
+            <div class="panel-heading"><h2>Palette</h2><span id="selectedTileLabel">Tuile 0</span></div>
+            <div id="mapTilePicker" class="asset-library tiles map-picker"></div>
+            <hr>
+            <h3>Redimensionner</h3>
+            <div class="inline-fields">
+              <label>L <input id="mapWidth" type="number" min="1" max="255" value="16"></label>
+              <label>H <input id="mapHeight" type="number" min="1" max="255" value="12"></label>
+            </div>
+            <button id="resizeMap" class="button full">Appliquer</button>
+            <hr>
+            <h3>Sélection</h3>
+            <p id="selectionInfo" class="hint">Aucune sélection</p>
+            <div class="button-row compact">
+              <button id="copySelection" class="button ghost" disabled>Copier</button>
+              <button id="pasteSelection" class="button ghost" disabled>Coller</button>
+            </div>
+            <hr>
+            <h3>Objets / spawns</h3>
+            <label>Type <input id="objectType" value="spawn"></label>
+            <label>Propriétés JSON <textarea id="objectProperties" rows="3">{}</textarea></label>
+            <div class="button-row compact">
+              <button id="addObject" class="button ghost">Ajouter au centre</button>
+              <button id="deleteObject" class="button danger" disabled>Supprimer</button>
+            </div>
+            <div id="objectList" class="object-list"></div>
+          </aside>
+          <article class="panel map-canvas-panel">
+            <div class="map-scroll">
+              <canvas id="mapCanvas" width="384" height="288" aria-label="Carte à dessiner"></canvas>
+            </div>
+            <footer><span id="cursorPosition">x: — · y: —</span><span>Les changements sont enregistrés automatiquement.</span></footer>
+          </article>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="main.js"></script>
+</body>
+</html>

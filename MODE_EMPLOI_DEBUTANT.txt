@@ -1491,6 +1491,152 @@ Exemple complet :
 examples/sprite-multiplex-16.js
 
 
+7.5 CHARGER UN CHARSET ET UNE MAP JSON (DEBUT V0.9)
+----------------------------------------------------
+
+Le compilateur peut maintenant lire un fichier d'assets JSON. Ce fichier reste
+dans votre projet et contient les pixels du charset, les tiles, leurs couleurs,
+leurs collisions et la map. Seules les donnees C64 utiles sont integrees au
+PRG final.
+
+Le chemin est relatif au fichier JavaScript compile. Par exemple, depuis
+examples/tilemap-static.js :
+
+const room = c64.assets.loadMap("assets/v09-room.json");
+
+c64.game.init(() => {
+  c64.charset.use(room.charset, { address: 0x3000 });
+  c64.map.draw(room, { x: 10, y: 6 });
+});
+
+c64.charset.use() verifie automatiquement que :
+
+- l'adresse est alignee sur $0800, soit 2048 octets ;
+- le charset et la memoire ecran sont dans la meme banque VIC-II ;
+- chaque caractere contient exactement 8 octets ;
+- le charset ne contient pas plus de 256 caracteres.
+
+Une tile peut contenir plusieurs caracteres. Avec tileWidth: 2 et tileHeight: 2,
+chaque case de map dessine un bloc de 2 x 2 caracteres. Les couleurs sont
+enregistrees separement pour chaque cellule.
+
+COLLISIONS LOGIQUES
+
+Ne testez pas la couleur affichee pour savoir si un mur est solide. Le JSON
+possede une valeur collision independante : 0 pour vide, 1 pour solide, ou une
+autre valeur choisie par le jeu.
+
+const tileX = c64.var.byte("tileX", { initial: 1 });
+const tileY = c64.var.byte("tileY", { initial: 1 });
+
+c64.game.frame(() => {
+  const tile = c64.map.tileAt(room, tileX, tileY);
+
+  c64.control.if(tile.isSolid(), () => {
+    tileX.set(0);
+  });
+});
+
+tile.hasCollision(2) permet de tester une autre valeur, par exemple un objet a
+ramasser.
+
+MAP DYNAMIQUE EN DEUX DIMENSIONS
+
+La map chargee devient une grille modifiable en RAM C64. La forme la plus simple
+pour acceder a une case est :
+
+const cellule = room.map(tileX, tileY);
+
+Vous pouvez ensuite la lire, la comparer ou la modifier :
+
+cellule.load(tileValue);       // place son numero de tile dans tileValue
+cellule.eq(0);                 // condition : la case est vide
+cellule.ne(0);                 // condition : la case n'est pas vide
+cellule.set(1);                // remplace la case par la tile 1
+
+set() modifie la map logique puis redessine automatiquement uniquement le
+caractere ou metatile concerne, avec ses couleurs. Il ne faut donc pas redessiner
+tout l'ecran apres l'explosion d'un mur ou le deplacement d'un bloc.
+
+Pour forcer exceptionnellement un dessin complet :
+
+room.map.redraw();
+
+Un redraw complet est beaucoup plus couteux et ne doit normalement pas etre
+appele a chaque frame. Les acces hors de la map sont ignores par set() et ne
+sont jamais consideres comme une case vide par eq(0). Cela simplifie les tests
+de collision contre les bords.
+
+Les maps dynamiques utilisent maintenant un index 16 bits. Elles peuvent contenir
+jusqu'a 8 192 cases au total dans la zone RAM sure $8000-$9FFF. Le rapport assetReport
+indique les plages utilisees et le compilateur refuse un chevauchement avec le
+programme, un charset ou des sprites. Une map plus grande que l'ecran peut etre
+interrogee et modifiee, mais son affichage avec scrolling appartient a la v0.10.
+
+CONVERTIR DES COORDONNEES
+
+const pixelX = c64.var.word("pixelX", { initial: 160 });
+const pixelY = c64.var.byte("pixelY", { initial: 80 });
+const tileX = c64.var.byte("tileX", { initial: 0 });
+const tileY = c64.var.byte("tileY", { initial: 0 });
+
+c64.map.pixelToTile(room,
+  { x: pixelX, y: pixelY },
+  { x: tileX, y: tileY }
+);
+
+Les fonctions inverses sont tileToPixel(), characterToTile() et
+tileToCharacter(). Les resultats sont ecrits dans les variables donnees, sans
+allocation dynamique sur le C64.
+
+CHARSET MULTICOLORE ET OBJETS
+
+Un JSON peut utiliser "mode": "multicolor". Activez ses trois couleurs globales :
+
+c64.charset.use(room.charset, {
+  address: 0x3000,
+  background: 0,
+  multicolor1: 5,
+  multicolor2: 10
+});
+
+Dans ce mode, la couleur propre de chaque cellule doit rester entre 0 et 7. Le
+tableau map.objects peut contenir des spawns, sorties ou ennemis avec un type,
+des coordonnees x/y et un objet properties. Ces metadonnees sont conservees par
+le compilateur et par le studio graphique externe.
+
+Le format complet utilise par la demonstration est visible ici :
+
+examples/assets/v09-room.json
+
+Exemple compilable :
+
+examples/tilemap-static.js
+
+Exemple de jeu avec modifications dynamiques :
+
+examples/tetris-mini.js
+
+Autres exemples jouables :
+
+examples/snake.js
+examples/maze-game.js
+
+Dans cet exemple, un petit generateur pseudo-aleatoire choisit une piece T, O,
+I ou L, sa rotation et sa colonne de depart. Le joystick du port 2 la deplace a
+gauche et a droite. Le bouton FIRE la fait pivoter. La piece descend
+automatiquement, teste les cases de la map puis devient solide lorsqu'elle ne
+peut plus descendre.
+
+Cette mini-demo se concentre sur la map dynamique, les collisions et les
+rotations. Elle ne supprime pas encore les lignes completes et ne calcule pas
+encore de score.
+
+L'editeur graphique n'est pas inclus dans le coeur de la librairie pour le
+moment. Il pourra etre developpe comme outil separe et produire exactement le
+meme JSON.
+
+
 8. GESTION DES IRQ RASTER
 -------------------------
 

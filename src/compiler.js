@@ -3,6 +3,8 @@ import { pathToFileURL } from "node:url";
 import { Assembler6502, abs, absx, absy, acc, imm, immHi, immLo, indy, rel, zp, exportBasicData } from "./assembler6502.js";
 import { c64, getProgramState, resetRuntime } from "./c64.js";
 import { createBasicDataProgram, createPrg } from "./prgWriter.js";
+import { expandMapAsset } from "./assets.js";
+import { setAssetBaseDirectory } from "./runtime.js";
 
 // The compiler is the bridge between the user DSL and the final C64 outputs.
 // It receives a list of recorded instructions and turns them into:
@@ -96,9 +98,27 @@ const SPRITE_MUX_BIT_MASK = 0xc599;
 const SPRITE_MUX_INVERSE_MASK = 0xc59a;
 const SPRITE_MUX_SLOT_END_BASE = 0xc5a0;
 const SPRITE_MUX_FRAME_RASTER = 200;
+// Large mutable maps live in the free RAM window below BASIC ROM. Indexing is
+// 16-bit, so a level is no longer limited to a single 256-byte page.
+const MAP_RUNTIME_BASE = 0x8000;
+const MAP_RUNTIME_END = 0x9fff;
 const COLLISION_TEMP_BASE = 0xc7a0;
 const VIC_SPRITE_COLLISION_SNAPSHOT = 0xc7b0;
 const VIC_BACKGROUND_COLLISION_SNAPSHOT = 0xc7b1;
+const MAP_TEMP_X = 0xc7b2;
+const MAP_TEMP_Y = 0xc7b3;
+const MAP_TEMP_TILE = 0xc7b4;
+const MAP_TEMP_TILE_OFFSET = 0xc7b5;
+const MAP_TEMP_INDEX = 0xc7b6;
+const MAP_TEMP_ROWS = 0xc7b7;
+const MAP_TEMP_VALUE = 0xc7b8;
+const MAP_TEMP_PIXEL_OFFSET = 0xc7b9;
+const MAP_TEMP_INDEX_HI = 0xc7ba;
+const MAP_CONVERT_LO = 0xc7bb;
+const MAP_CONVERT_HI = 0xc7bc;
+const MAP_CONVERT_RESULT_LO = 0xc7bd;
+const MAP_CONVERT_RESULT_HI = 0xc7be;
+const MAP_CONVERT_COUNT = 0xc7bf;
 const AUTO_VARIABLE_START = 0xc100;
 const AUTO_VARIABLE_END = 0xc2ff;
 const RESERVED_RUNTIME_RANGES = Object.freeze([
@@ -109,7 +129,8 @@ const RESERVED_RUNTIME_RANGES = Object.freeze([
   { start: SPRITE_RUNTIME_BASE, end: SPRITE_RUNTIME_BASE + SPRITE_RUNTIME_STRIDE * SPRITE_LOGICAL_COUNT - 1, name: "sprite gameplay runtime" },
   { start: SPRITE_LOGICAL_STATE_BASE, end: SPRITE_LOGICAL_STATE_BASE + SPRITE_LOGICAL_STATE_STRIDE * SPRITE_LOGICAL_COUNT - 1, name: "sprite logical state" },
   { start: SPRITE_MUX_SORTED_BASE, end: SPRITE_MUX_SLOT_END_BASE + 7, name: "Y-sorted sprite multiplexer" },
-  { start: COLLISION_TEMP_BASE, end: VIC_BACKGROUND_COLLISION_SNAPSHOT, name: "collision runtime" }
+  { start: COLLISION_TEMP_BASE, end: VIC_BACKGROUND_COLLISION_SNAPSHOT, name: "collision runtime" },
+  { start: MAP_TEMP_X, end: MAP_CONVERT_COUNT, name: "dynamic map temporary state" }
 ]);
 
 // The compiler uses a fixed internal RAM layout for long-running systems such
@@ -2333,6 +2354,403 @@ function emitSpriteDataAsset(asm, compileState, index, dataSource, explicitAddre
   return { targetAddress, length, blockIndex: Math.floor(targetAddress / 64) };
 }
 
+function emitEmbeddedBytesToRam(asm, compileState, destination, bytes, prefix) {
+  ensureWord(destination, `${prefix} destination`);
+  ensureWord(destination + bytes.length - 1, `${prefix} end destination`);
+  let offset = 0;
+  while (offset < bytes.length) {
+    const chunk = bytes.slice(offset, offset + 256);
+    const poolKey = `${chunk.length}:${chunk.join(",")}`;
+    let label = compileState.assets.bytePool.get(poolKey);
+    if (!label) {
+      label = `asset_bytes_${compileState.assets.counter++}`;
+      registerData(compileState, label, chunk);
+      compileState.assets.bytePool.set(poolKey, label);
+    }
+    const loopLabel = `${prefix}_copy_${compileState.assets.counter++}`;
+    asm.ldx(imm(0));
+    asm.label(loopLabel);
+    asm.lda(absx(label));
+    asm.sta(absx(destination + offset));
+    asm.inx();
+    if (chunk.length === 256) {
+      asm.bne(rel(loopLabel));
+    } else {
+      asm.cpx(imm(chunk.length));
+      asm.bne(rel(loopLabel));
+    }
+    offset += chunk.length;
+  }
+}
+
+function buildCharsetLayout(screenBase, charsetAddress) {
+  ensureWord(screenBase, "screen address");
+  ensureWord(charsetAddress, "charset address");
+  if (charsetAddress % 0x0800 !== 0) throw new Error("charset address must be aligned to $0800");
+  if (charsetAddress + 0x0800 > 0x10000) throw new Error("charset must fit in C64 memory");
+  const screenBank = Math.floor(screenBase / 0x4000);
+  const charsetBank = Math.floor(charsetAddress / 0x4000);
+  if (screenBank !== charsetBank) throw new Error("charset and screen RAM must be in the same VIC-II 16 KB bank");
+  const charsetOffset = charsetAddress - charsetBank * 0x4000;
+  return {
+    ciaBankBits: 3 - charsetBank,
+    d018CharsetBits: (charsetOffset / 0x0800) << 1
+  };
+}
+
+function emitCharsetUse(asm, compileState, charset, options) {
+  if (!charset || charset.type !== "charsetAsset" || charset.bytes?.length !== 2048) {
+    throw new Error("charsetUse needs a validated 2048-byte charset asset");
+  }
+  const address = options?.address ?? 0x3000;
+  const layout = buildCharsetLayout(compileState.screenBase, address);
+  emitEmbeddedBytesToRam(asm, compileState, address, charset.bytes, "asset_charset");
+  asm.lda(abs(c64.CIA2_PRA)); asm.and(imm(0xfc)); asm.ora(imm(layout.ciaBankBits)); asm.sta(abs(c64.CIA2_PRA));
+  asm.lda(abs(c64.VIC_MEMORY_POINTERS)); asm.and(imm(0xf1)); asm.ora(imm(layout.d018CharsetBits)); asm.sta(abs(c64.VIC_MEMORY_POINTERS));
+  asm.lda(abs(c64.VIC_CONTROL_2));
+  if (charset.mode === "multicolor") {
+    const background = options?.background ?? 0;
+    const multicolor1 = options?.multicolor1 ?? 5;
+    const multicolor2 = options?.multicolor2 ?? 10;
+    ensureByte(background, "multicolor background"); ensureByte(multicolor1, "multicolor 1"); ensureByte(multicolor2, "multicolor 2");
+    if (background > 15 || multicolor1 > 15 || multicolor2 > 15) throw new Error("charset colors must be between 0 and 15");
+    asm.ora(imm(0x10)); asm.sta(abs(c64.VIC_CONTROL_2));
+    emitStoreImmediate(asm, c64.VIC_BACKGROUND_COLOR, background);
+    emitStoreImmediate(asm, c64.VIC_BACKGROUND_COLOR_1, multicolor1);
+    emitStoreImmediate(asm, c64.VIC_BACKGROUND_COLOR_2, multicolor2);
+  } else {
+    asm.and(imm(0xef)); asm.sta(abs(c64.VIC_CONTROL_2));
+  }
+  compileState.assets.report.push({ type: "charset", mode: charset.mode, address, endAddress: address + charset.bytes.length - 1, bytes: charset.bytes.length, characters: charset.characterCount });
+}
+
+function mapAssetKey(asset) {
+  return JSON.stringify({
+    sourcePath: asset.sourcePath,
+    width: asset.map.width,
+    height: asset.map.height,
+    data: asset.map.data,
+    charsetMode: asset.charset.mode,
+    tileWidth: asset.tileWidth,
+    tileHeight: asset.tileHeight,
+    tiles: asset.tiles.map((tile) => ({ chars: tile.chars, colors: tile.colors, collision: tile.collision }))
+  });
+}
+
+function emitMapRegister(asm, compileState, asset) {
+  const tileCells = asset.tileWidth * asset.tileHeight;
+  if (asset.tiles.length * tileCells > 256) throw new Error("dynamic tile graphics currently support at most 256 character cells across all tiles");
+  const key = mapAssetKey(asset);
+  const existing = compileState.assets.mapTables.get(key);
+  if (existing) return existing;
+  const id = compileState.assets.counter++;
+  const runtimeAddress = compileState.assets.nextMapAddress;
+  const runtimeEnd = runtimeAddress + asset.map.data.length - 1;
+  if (runtimeEnd > MAP_RUNTIME_END) throw new Error("dynamic map RAM is full ($8000-$9FFF); total loaded map cells must stay at or below 8192");
+  compileState.assets.nextMapAddress = runtimeEnd + 1;
+  const info = {
+    id,
+    key,
+    asset,
+    runtimeAddress,
+    collisionLabel: `asset_map_collisions_${id}`,
+    charsLabel: `asset_map_chars_${id}`,
+    colorsLabel: `asset_map_colors_${id}`,
+    rendererNeeded: false,
+    draw: null
+  };
+  registerData(compileState, info.collisionLabel, asset.tiles.map((tile) => tile.collision));
+  registerData(compileState, info.charsLabel, asset.tiles.flatMap((tile) => tile.chars));
+  registerData(compileState, info.colorsLabel, asset.tiles.flatMap((tile) => tile.colors));
+  emitEmbeddedBytesToRam(asm, compileState, runtimeAddress, asset.map.data, "asset_map_initial");
+  compileState.assets.mapTables.set(key, info);
+  compileState.assets.report.push({ type: "map-runtime", sourcePath: asset.sourcePath, address: runtimeAddress, endAddress: runtimeEnd, bytes: asset.map.data.length, indexBits: 16, objects: asset.map.objects?.length ?? 0 });
+  return info;
+}
+
+function requireDynamicMap(compileState, asset) {
+  const info = compileState.assets.mapTables.get(mapAssetKey(asset));
+  if (!info) throw new Error("map asset is not registered; create it with c64.assets.loadMap() or c64.assets.defineMap() before use");
+  return info;
+}
+
+function emitMapCoordinatesOrJumpInvalid(asm, compileState, asset, x, y, invalidLabel, id) {
+  if (typeof x === "number") integerMapCoordinate(x, asset.map.width, "tile x");
+  if (typeof y === "number") integerMapCoordinate(y, asset.map.height, "tile y");
+  emitRuntimeValueToA(asm, compileState, x, "tile x"); asm.cmp(imm(asset.map.width)); asm.bcc(rel(`map_x_ok_${id}`)); asm.jmp(abs(invalidLabel)); asm.label(`map_x_ok_${id}`); asm.sta(abs(MAP_TEMP_X));
+  emitRuntimeValueToA(asm, compileState, y, "tile y"); asm.cmp(imm(asset.map.height)); asm.bcc(rel(`map_y_ok_${id}`)); asm.jmp(abs(invalidLabel)); asm.label(`map_y_ok_${id}`); asm.sta(abs(MAP_TEMP_Y));
+}
+
+function emitMapIndexToPointer(asm, info, id) {
+  const asset = info.asset;
+  const loopLabel = `map_index_rows_${id}`;
+  const doneLabel = `map_index_done_${id}`;
+  emitStoreImmediate(asm, MAP_TEMP_INDEX, 0);
+  emitStoreImmediate(asm, MAP_TEMP_INDEX_HI, 0);
+  asm.lda(abs(MAP_TEMP_Y)); asm.sta(abs(MAP_TEMP_ROWS));
+  asm.label(loopLabel); asm.lda(abs(MAP_TEMP_ROWS)); asm.beq(rel(doneLabel));
+  asm.clc(); asm.lda(abs(MAP_TEMP_INDEX)); asm.adc(imm(asset.map.width & 0xff)); asm.sta(abs(MAP_TEMP_INDEX));
+  asm.lda(abs(MAP_TEMP_INDEX_HI)); asm.adc(imm(0)); asm.sta(abs(MAP_TEMP_INDEX_HI));
+  asm.dec(abs(MAP_TEMP_ROWS)); asm.jmp(abs(loopLabel));
+  asm.label(doneLabel);
+  asm.clc(); asm.lda(abs(MAP_TEMP_INDEX)); asm.adc(abs(MAP_TEMP_X)); asm.sta(abs(MAP_TEMP_INDEX));
+  asm.lda(abs(MAP_TEMP_INDEX_HI)); asm.adc(imm(0)); asm.sta(abs(MAP_TEMP_INDEX_HI));
+  asm.clc(); asm.lda(abs(MAP_TEMP_INDEX)); asm.adc(imm(info.runtimeAddress & 0xff)); asm.sta(zp(HIRES_ZP_PTR_LO));
+  asm.lda(abs(MAP_TEMP_INDEX_HI)); asm.adc(imm((info.runtimeAddress >> 8) & 0xff)); asm.sta(zp(HIRES_ZP_PTR_HI));
+  asm.ldy(imm(0));
+}
+
+function configureMapDraw(compileState, info, options) {
+  const expanded = expandMapAsset(info.asset);
+  const x = options?.x ?? 0;
+  const y = options?.y ?? 0;
+  ensureByte(x, "map draw x"); ensureByte(y, "map draw y");
+  if (x + expanded.width > 40 || y + expanded.height > 25) {
+    throw new Error(`expanded map (${expanded.width}x${expanded.height}) does not fit at (${x},${y}) on the 40x25 screen`);
+  }
+  const draw = { x, y, screenBase: compileState.screenBase, colorBase: compileState.colorBase, width: expanded.width, height: expanded.height };
+  if (info.draw && JSON.stringify(info.draw) !== JSON.stringify(draw)) throw new Error("a dynamic map currently supports one screen position per build");
+  info.draw = draw;
+  info.rendererNeeded = true;
+  return draw;
+}
+
+function emitMapDraw(asm, compileState, asset, options) {
+  const info = requireDynamicMap(compileState, asset);
+  const draw = configureMapDraw(compileState, info, options);
+  asm.jsr(abs(`runtime_map_redraw_${info.id}`));
+  if (!info.reportedDraw) {
+    compileState.assets.report.push({ type: "map", sourcePath: asset.sourcePath, mapWidth: asset.map.width, mapHeight: asset.map.height, screenWidth: draw.width, screenHeight: draw.height, tileCount: asset.tiles.length, bytes: asset.map.data.length, objects: asset.map.objects?.length ?? 0, charsetMode: asset.charset.mode });
+    info.reportedDraw = true;
+  }
+}
+
+function emitMapRedraw(asm, compileState, asset) {
+  const info = requireDynamicMap(compileState, asset);
+  info.rendererNeeded = true;
+  asm.jsr(abs(`runtime_map_redraw_${info.id}`));
+}
+
+function emitMapRuntimeSet(asm, compileState, asset, x, y, value) {
+  const info = requireDynamicMap(compileState, asset);
+  const id = compileState.loopCounter++;
+  const doneLabel = `map_set_done_${id}`;
+  emitMapCoordinatesOrJumpInvalid(asm, compileState, asset, x, y, doneLabel, id);
+  emitRuntimeValueToA(asm, compileState, value, "tile value"); asm.cmp(imm(asset.tiles.length)); asm.bcc(rel(`map_value_ok_${id}`)); asm.jmp(abs(doneLabel)); asm.label(`map_value_ok_${id}`); asm.sta(abs(MAP_TEMP_VALUE));
+  emitMapIndexToPointer(asm, info, id);
+  asm.lda(abs(MAP_TEMP_VALUE)); asm.sta(indy(HIRES_ZP_PTR_LO));
+  if (info.draw) {
+    info.rendererNeeded = true;
+    asm.jsr(abs(`runtime_map_draw_tile_${info.id}`));
+  }
+  asm.label(doneLabel);
+}
+
+function emitMapRuntimeGet(asm, compileState, asset, x, y, target) {
+  const info = requireDynamicMap(compileState, asset);
+  const targetAddress = resolveRuntimeByteAddress(compileState, target, "map load target");
+  const id = compileState.loopCounter++;
+  const doneLabel = `map_get_done_${id}`;
+  emitMapCoordinatesOrJumpInvalid(asm, compileState, asset, x, y, doneLabel, id);
+  emitMapIndexToPointer(asm, info, id); asm.lda(indy(HIRES_ZP_PTR_LO)); asm.sta(addressMode(targetAddress));
+  asm.label(doneLabel);
+}
+
+function emitMapCollisionOrJumpFalse(asm, compileState, query, falseLabel, passLabel, id) {
+  const asset = query.asset;
+  const collision = query.collision;
+  if (!asset || asset.type !== "mapAsset") throw new Error("map collision needs a map asset");
+  ensureByte(collision, "tile collision value");
+  const info = requireDynamicMap(compileState, asset);
+  emitMapCoordinatesOrJumpInvalid(asm, compileState, asset, query.x, query.y, falseLabel, id);
+  emitMapIndexToPointer(asm, info, id);
+  asm.lda(indy(HIRES_ZP_PTR_LO)); asm.tax(); asm.lda(absx(info.collisionLabel)); asm.cmp(imm(collision));
+  asm.beq(rel(passLabel)); asm.jmp(abs(falseLabel)); asm.label(passLabel);
+}
+
+function emitMapEqualsOrJumpFalse(asm, compileState, query, falseLabel, passLabel, id, negate) {
+  const info = requireDynamicMap(compileState, query.asset);
+  emitMapCoordinatesOrJumpInvalid(asm, compileState, query.asset, query.x, query.y, falseLabel, id);
+  emitMapIndexToPointer(asm, info, id); asm.lda(indy(HIRES_ZP_PTR_LO)); asm.cmp(runtimeValueOperand(compileState, query.value, "tile value"));
+  if (negate) asm.bne(rel(passLabel)); else asm.beq(rel(passLabel));
+  asm.jmp(abs(falseLabel)); asm.label(passLabel);
+}
+
+function emitCoordinateSourceWord(asm, compileState, value, label) {
+  if (isVarRef(value)) {
+    const variable = resolveRuntimeVariable(compileState, value, label);
+    asm.lda(addressMode(variable.address)); asm.sta(abs(MAP_CONVERT_LO));
+    if (variable.size === 2) asm.lda(addressMode(variable.address + 1)); else asm.lda(imm(0));
+    asm.sta(abs(MAP_CONVERT_HI));
+    return;
+  }
+  ensureWord(value, label);
+  emitStoreImmediate(asm, MAP_CONVERT_LO, value & 0xff);
+  emitStoreImmediate(asm, MAP_CONVERT_HI, (value >> 8) & 0xff);
+}
+
+function emitCoordinateResultStore(asm, compileState, target, label) {
+  const variable = resolveRuntimeVariable(compileState, target, label);
+  asm.lda(abs(MAP_CONVERT_RESULT_LO)); asm.sta(addressMode(variable.address));
+  if (variable.size === 2) {
+    asm.lda(abs(MAP_CONVERT_RESULT_HI)); asm.sta(addressMode(variable.address + 1));
+  }
+}
+
+function emitCoordinateScale(asm, compileState, source, target, numerator, denominator, axisLabel) {
+  emitCoordinateSourceWord(asm, compileState, source, `${axisLabel} source`);
+  emitStoreImmediate(asm, MAP_CONVERT_RESULT_LO, 0);
+  emitStoreImmediate(asm, MAP_CONVERT_RESULT_HI, 0);
+  const id = compileState.loopCounter++;
+  if (numerator > 1) {
+    const loop = `map_convert_multiply_${id}`;
+    const done = `map_convert_multiply_done_${id}`;
+    asm.label(loop);
+    asm.lda(abs(MAP_CONVERT_LO)); asm.ora(abs(MAP_CONVERT_HI)); asm.beq(rel(done));
+    asm.clc(); asm.lda(abs(MAP_CONVERT_RESULT_LO)); asm.adc(imm(numerator & 0xff)); asm.sta(abs(MAP_CONVERT_RESULT_LO));
+    asm.lda(abs(MAP_CONVERT_RESULT_HI)); asm.adc(imm((numerator >> 8) & 0xff)); asm.sta(abs(MAP_CONVERT_RESULT_HI));
+    asm.lda(abs(MAP_CONVERT_LO)); asm.bne(rel(`map_convert_dec_low_${id}`)); asm.dec(abs(MAP_CONVERT_HI));
+    asm.label(`map_convert_dec_low_${id}`); asm.dec(abs(MAP_CONVERT_LO)); asm.jmp(abs(loop));
+    asm.label(done);
+  } else {
+    asm.lda(abs(MAP_CONVERT_LO)); asm.sta(abs(MAP_CONVERT_RESULT_LO));
+    asm.lda(abs(MAP_CONVERT_HI)); asm.sta(abs(MAP_CONVERT_RESULT_HI));
+  }
+  if (denominator > 1) {
+    // Divide the current 16-bit result by a small map-unit scale using repeated
+    // subtraction. C64 screen coordinates keep this bounded and predictable.
+    asm.lda(abs(MAP_CONVERT_RESULT_LO)); asm.sta(abs(MAP_CONVERT_LO));
+    asm.lda(abs(MAP_CONVERT_RESULT_HI)); asm.sta(abs(MAP_CONVERT_HI));
+    emitStoreImmediate(asm, MAP_CONVERT_RESULT_LO, 0);
+    emitStoreImmediate(asm, MAP_CONVERT_RESULT_HI, 0);
+    const loop = `map_convert_divide_${id}`;
+    const subtract = `map_convert_divide_subtract_${id}`;
+    const done = `map_convert_divide_done_${id}`;
+    asm.label(loop);
+    asm.lda(abs(MAP_CONVERT_HI)); asm.bne(rel(subtract));
+    asm.lda(abs(MAP_CONVERT_LO)); asm.cmp(imm(denominator)); asm.bcc(rel(done));
+    asm.label(subtract);
+    asm.sec(); asm.lda(abs(MAP_CONVERT_LO)); asm.sbc(imm(denominator)); asm.sta(abs(MAP_CONVERT_LO));
+    asm.lda(abs(MAP_CONVERT_HI)); asm.sbc(imm(0)); asm.sta(abs(MAP_CONVERT_HI));
+    asm.inc(abs(MAP_CONVERT_RESULT_LO)); asm.bne(rel(loop)); asm.inc(abs(MAP_CONVERT_RESULT_HI)); asm.jmp(abs(loop));
+    asm.label(done);
+  }
+  emitCoordinateResultStore(asm, compileState, target, `${axisLabel} target`);
+}
+
+function emitMapCoordinateConvert(asm, compileState, asset, from, to, sourceX, sourceY, targetX, targetY) {
+  const scales = {
+    pixel: { x: 1, y: 1 },
+    character: { x: 8, y: 8 },
+    tile: { x: asset.tileWidth * 8, y: asset.tileHeight * 8 }
+  };
+  if (!scales[from] || !scales[to]) throw new Error("map coordinate units must be pixel, character or tile");
+  const convertAxis = (source, target, axis) => {
+    const fromScale = scales[from][axis];
+    const toScale = scales[to][axis];
+    emitCoordinateScale(asm, compileState, source, target, fromScale, toScale, `${from} to ${to} ${axis}`);
+  };
+  convertAxis(sourceX, targetX, "x");
+  convertAxis(sourceY, targetY, "y");
+}
+
+function integerMapCoordinate(value, size, label) {
+  if (!Number.isInteger(value) || value < 0 || value >= size) throw new Error(`${label} must be between 0 and ${size - 1}`);
+}
+
+function emitAddWordImmediateToZeroPagePointer(asm, pointer, value) {
+  asm.clc(); asm.lda(zp(pointer)); asm.adc(imm(value & 0xff)); asm.sta(zp(pointer));
+  asm.lda(zp(pointer + 1)); asm.adc(imm((value >> 8) & 0xff)); asm.sta(zp(pointer + 1));
+}
+
+function emitMapRendererRoutine(asm, info) {
+  const asset = info.asset;
+  const tileCells = asset.tileWidth * asset.tileHeight;
+  const rendererId = `renderer_${info.id}`;
+  asm.comment(`Dynamic map ${info.id}: draw one changed metatile`);
+  asm.label(`runtime_map_draw_tile_${info.id}`);
+  emitMapIndexToPointer(asm, info, rendererId);
+  asm.lda(indy(HIRES_ZP_PTR_LO)); asm.sta(abs(MAP_TEMP_TILE));
+
+  asm.lda(abs(MAP_TEMP_TILE));
+  if ((tileCells & (tileCells - 1)) === 0) {
+    for (let shift = tileCells; shift > 1; shift >>= 1) asm.asl(acc());
+    asm.sta(abs(MAP_TEMP_TILE_OFFSET));
+  } else {
+    emitStoreImmediate(asm, MAP_TEMP_TILE_OFFSET, 0);
+    asm.sta(abs(MAP_TEMP_ROWS));
+    asm.label(`runtime_map_tile_offset_loop_${info.id}`);
+    asm.lda(abs(MAP_TEMP_ROWS)); asm.beq(rel(`runtime_map_tile_offset_done_${info.id}`));
+    asm.clc(); asm.lda(abs(MAP_TEMP_TILE_OFFSET)); asm.adc(imm(tileCells)); asm.sta(abs(MAP_TEMP_TILE_OFFSET));
+    asm.dec(abs(MAP_TEMP_ROWS)); asm.jmp(abs(`runtime_map_tile_offset_loop_${info.id}`));
+    asm.label(`runtime_map_tile_offset_done_${info.id}`);
+  }
+
+  const screenStart = info.draw.screenBase + info.draw.y * 40 + info.draw.x;
+  emitStoreImmediate(asm, HIRES_ZP_PTR_LO, screenStart & 0xff);
+  emitStoreImmediate(asm, HIRES_ZP_PTR_HI, (screenStart >> 8) & 0xff);
+  asm.lda(abs(MAP_TEMP_Y)); asm.sta(abs(MAP_TEMP_ROWS));
+  asm.label(`runtime_map_screen_y_loop_${info.id}`);
+  asm.lda(abs(MAP_TEMP_ROWS)); asm.beq(rel(`runtime_map_screen_y_done_${info.id}`));
+  emitAddWordImmediateToZeroPagePointer(asm, HIRES_ZP_PTR_LO, asset.tileHeight * 40);
+  asm.dec(abs(MAP_TEMP_ROWS)); asm.jmp(abs(`runtime_map_screen_y_loop_${info.id}`));
+  asm.label(`runtime_map_screen_y_done_${info.id}`);
+
+  if (asset.tileWidth === 1) {
+    asm.lda(abs(MAP_TEMP_X)); asm.sta(abs(MAP_TEMP_PIXEL_OFFSET));
+  } else {
+    emitStoreImmediate(asm, MAP_TEMP_PIXEL_OFFSET, 0);
+    asm.lda(abs(MAP_TEMP_X)); asm.sta(abs(MAP_TEMP_ROWS));
+    asm.label(`runtime_map_screen_x_loop_${info.id}`);
+    asm.lda(abs(MAP_TEMP_ROWS)); asm.beq(rel(`runtime_map_screen_x_done_${info.id}`));
+    asm.clc(); asm.lda(abs(MAP_TEMP_PIXEL_OFFSET)); asm.adc(imm(asset.tileWidth)); asm.sta(abs(MAP_TEMP_PIXEL_OFFSET));
+    asm.dec(abs(MAP_TEMP_ROWS)); asm.jmp(abs(`runtime_map_screen_x_loop_${info.id}`));
+    asm.label(`runtime_map_screen_x_done_${info.id}`);
+  }
+  asm.clc(); asm.lda(zp(HIRES_ZP_PTR_LO)); asm.adc(abs(MAP_TEMP_PIXEL_OFFSET)); asm.sta(zp(HIRES_ZP_PTR_LO));
+  asm.lda(zp(HIRES_ZP_PTR_HI)); asm.adc(imm(0)); asm.sta(zp(HIRES_ZP_PTR_HI));
+
+  const colorDelta = (info.draw.colorBase - info.draw.screenBase) & 0xffff;
+  asm.clc(); asm.lda(zp(HIRES_ZP_PTR_LO)); asm.adc(imm(colorDelta & 0xff)); asm.sta(zp(HIRES_ZP_WORK_LO));
+  asm.lda(zp(HIRES_ZP_PTR_HI)); asm.adc(imm((colorDelta >> 8) & 0xff)); asm.sta(zp(HIRES_ZP_WORK_HI));
+
+  for (let cellY = 0; cellY < asset.tileHeight; cellY += 1) {
+    for (let cellX = 0; cellX < asset.tileWidth; cellX += 1) {
+      const cellOffset = cellY * asset.tileWidth + cellX;
+      asm.clc(); asm.lda(abs(MAP_TEMP_TILE_OFFSET)); asm.adc(imm(cellOffset)); asm.tay();
+      asm.lda(absy(info.charsLabel)); asm.ldy(imm(cellX)); asm.sta(indy(HIRES_ZP_PTR_LO));
+      asm.clc(); asm.lda(abs(MAP_TEMP_TILE_OFFSET)); asm.adc(imm(cellOffset)); asm.tay();
+      asm.lda(absy(info.colorsLabel));
+      if (asset.charset.mode === "multicolor") asm.ora(imm(0x08));
+      asm.ldy(imm(cellX)); asm.sta(indy(HIRES_ZP_WORK_LO));
+    }
+    if (cellY + 1 < asset.tileHeight) {
+      emitAddWordImmediateToZeroPagePointer(asm, HIRES_ZP_PTR_LO, 40);
+      emitAddWordImmediateToZeroPagePointer(asm, HIRES_ZP_WORK_LO, 40);
+    }
+  }
+  asm.rts();
+
+  asm.comment(`Dynamic map ${info.id}: redraw every cell from runtime RAM`);
+  asm.label(`runtime_map_redraw_${info.id}`);
+  emitStoreImmediate(asm, MAP_TEMP_Y, 0);
+  asm.label(`runtime_map_redraw_row_${info.id}`);
+  emitStoreImmediate(asm, MAP_TEMP_X, 0);
+  asm.label(`runtime_map_redraw_column_${info.id}`);
+  asm.jsr(abs(`runtime_map_draw_tile_${info.id}`));
+  asm.inc(abs(MAP_TEMP_X)); asm.lda(abs(MAP_TEMP_X)); asm.cmp(imm(asset.map.width)); asm.bne(rel(`runtime_map_redraw_column_${info.id}`));
+  asm.inc(abs(MAP_TEMP_Y)); asm.lda(abs(MAP_TEMP_Y)); asm.cmp(imm(asset.map.height)); asm.bne(rel(`runtime_map_redraw_row_${info.id}`));
+  asm.rts();
+}
+
+function emitMapRoutines(asm, state) {
+  for (const info of state.assets.mapTables.values()) {
+    if (!info.rendererNeeded) continue;
+    if (!info.draw) throw new Error("dynamic map renderer is missing c64.map.draw() screen configuration");
+    emitMapRendererRoutine(asm, info);
+  }
+}
+
 function emitSpriteData(asm, compileState, index, dataSource, explicitAddress) {
   const asset = emitSpriteDataAsset(asm, compileState, index, dataSource, explicitAddress, false);
   emitSpritePointer(asm, index, asset.blockIndex);
@@ -3163,6 +3581,7 @@ function createInstructionCompileState(baseState) {
     spriteFrameAssets: baseState.spriteFrameAssets,
     spriteDataAssets: baseState.spriteDataAssets,
     sharedRoutines: baseState.sharedRoutines,
+    assets: baseState.assets,
     optimization: baseState.optimization,
     multiplexer: baseState.multiplexer,
     nextSpriteFrameAddress: baseState.nextSpriteFrameAddress,
@@ -3554,6 +3973,16 @@ function emitConditionOrJump(asm, compileState, runtimeCondition, falseLabel) {
     return;
   }
 
+  if (runtimeCondition.operator === "mapCollision") {
+    emitMapCollisionOrJumpFalse(asm, compileState, runtimeCondition.left, falseLabel, passLabel, id);
+    return;
+  }
+
+  if (runtimeCondition.operator === "mapTileEquals" || runtimeCondition.operator === "mapTileNotEquals") {
+    emitMapEqualsOrJumpFalse(asm, compileState, runtimeCondition.left, falseLabel, passLabel, id, runtimeCondition.operator === "mapTileNotEquals");
+    return;
+  }
+
   if (runtimeCondition.operator === "spriteVic") {
     if (compileState.multiplexer.enabled) {
       throw new Error("vicCollides() is unavailable when sprites 8..15 enable multiplexing; use software collides() instead");
@@ -3685,12 +4114,15 @@ function emitControlRepeat(asm, compileState, count, instructions) {
   const counterAddress = allocateVariableAddress(compileState, 1);
   const id = compileState.loopCounter++;
   const loopLabel = `control_repeat_${id}`;
+  const bodyLabel = `control_repeat_body_${id}`;
   const doneLabel = `control_repeat_done_${id}`;
   emitRuntimeValueToA(asm, compileState, count, "repeat count");
   asm.sta(abs(counterAddress));
   asm.label(loopLabel);
   asm.lda(abs(counterAddress));
-  asm.beq(rel(doneLabel));
+  asm.bne(rel(bodyLabel));
+  asm.jmp(abs(doneLabel));
+  asm.label(bodyLabel);
   for (const instruction of instructions) compileHighLevelInstruction(asm, instruction, compileState);
   asm.dec(abs(counterAddress));
   asm.jmp(abs(loopLabel));
@@ -3702,11 +4134,14 @@ function emitControlWhile(asm, compileState, runtimeCondition, instructions, max
   const counterAddress = allocateVariableAddress(compileState, 1);
   const id = compileState.loopCounter++;
   const loopLabel = `control_while_${id}`;
+  const bodyLabel = `control_while_body_${id}`;
   const doneLabel = `control_while_done_${id}`;
   emitStoreImmediate(asm, counterAddress, maxIterations);
   asm.label(loopLabel);
   asm.lda(abs(counterAddress));
-  asm.beq(rel(doneLabel));
+  asm.bne(rel(bodyLabel));
+  asm.jmp(abs(doneLabel));
+  asm.label(bodyLabel);
   emitConditionOrJump(asm, compileState, runtimeCondition, doneLabel);
   for (const instruction of instructions) compileHighLevelInstruction(asm, instruction, compileState);
   asm.dec(abs(counterAddress));
@@ -3723,7 +4158,7 @@ function safeRoutineLabel(name) {
 
 const GAME_FRAME_COMPILE_TIME_ONLY_OPS = new Set([
   "dataByte", "dataWord", "dataString", "dataScreenString",
-  "varByte", "varWord", "screen", "colorRam",
+  "varByte", "varWord", "screen", "colorRam", "charsetUse", "mapRegister", "mapDraw",
   "sidPlaySong", "sidInstallPlayer", "spriteInstallAnimator",
   "spriteMoveX", "spriteMoveY", "spriteMoveToX", "spriteMoveToY",
   "spriteAnimateTo", "spriteStop", "spriteStopX", "spriteStopY",
@@ -3845,6 +4280,27 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
       break;
     case "colorRam":
       compileState.colorBase = instruction.args[0];
+      break;
+    case "charsetUse":
+      emitCharsetUse(asm, compileState, instruction.args[0], instruction.args[1]);
+      break;
+    case "mapRegister":
+      emitMapRegister(asm, compileState, instruction.args[0]);
+      break;
+    case "mapDraw":
+      emitMapDraw(asm, compileState, instruction.args[0], instruction.args[1]);
+      break;
+    case "mapRedraw":
+      emitMapRedraw(asm, compileState, instruction.args[0]);
+      break;
+    case "mapRuntimeSet":
+      emitMapRuntimeSet(asm, compileState, instruction.args[0], instruction.args[1], instruction.args[2], instruction.args[3]);
+      break;
+    case "mapRuntimeGet":
+      emitMapRuntimeGet(asm, compileState, instruction.args[0], instruction.args[1], instruction.args[2], instruction.args[3]);
+      break;
+    case "mapCoordinateConvert":
+      emitMapCoordinateConvert(asm, compileState, ...instruction.args);
       break;
     case "hiresScreen":
       compileState.hires.screenBase = instruction.args[0];
@@ -4663,6 +5119,58 @@ function buildCompileResult(finalBytes, asm, codeStart, sysAddress) {
   };
 }
 
+function buildDetailedMemoryReport(state, codeStart, finalBytes) {
+  const ranges = [];
+  const add = (name, start, end, kind, details = {}) => {
+    if (!Number.isInteger(start) || !Number.isInteger(end) || end < start) return;
+    ranges.push({ name, kind, start, end, bytes: end - start + 1, ...details });
+  };
+  add("program", codeStart, codeStart + finalBytes.length - 1, "program");
+  add("screen RAM", state.screenBase, state.screenBase + 999, "video");
+  add("color RAM", state.colorBase, state.colorBase + 999, "video");
+  for (const range of RESERVED_RUNTIME_RANGES) add(range.name, range.start, range.end, "runtime");
+  for (const [name, variable] of state.variables) {
+    if (isCompilerSpriteVariable(name, variable.address, variable.size)) continue;
+    add(`variable ${name}`, variable.address, variable.address + variable.size - 1, "variable");
+  }
+  for (const info of state.assets.mapTables.values()) add(`map ${info.id}`, info.runtimeAddress, info.runtimeAddress + info.asset.map.data.length - 1, "map", { sourcePath: info.asset.sourcePath });
+  for (const entry of state.assets.report.filter(item => item.type === "charset")) add("charset", entry.address, entry.endAddress, "charset", { mode: entry.mode });
+  const seenSpriteRanges = new Set();
+  for (const asset of state.spriteDataAssets.values()) {
+    const key = `${asset.targetAddress}:${asset.length}`;
+    if (!seenSpriteRanges.has(key)) {
+      seenSpriteRanges.add(key);
+      add("sprite data", asset.targetAddress, asset.targetAddress + asset.length - 1, "sprite");
+    }
+  }
+  for (const asset of state.spriteFrameAssets.values()) {
+    const length = asset.count * 64;
+    const key = `${asset.address}:${length}`;
+    if (!seenSpriteRanges.has(key)) {
+      seenSpriteRanges.add(key);
+      add("sprite frames", asset.address, asset.address + length - 1, "sprite");
+    }
+  }
+  const conflicts = [];
+  for (let left = 0; left < ranges.length; left++) {
+    for (let right = left + 1; right < ranges.length; right++) {
+      const a = ranges[left];
+      const b = ranges[right];
+      if (a.end < b.start || b.end < a.start) continue;
+      // Color RAM is I/O memory and intentionally shares the CPU address space;
+      // duplicate sprite range registrations were removed above.
+      conflicts.push({ first: a.name, second: b.name, start: Math.max(a.start, b.start), end: Math.min(a.end, b.end) });
+    }
+  }
+  return {
+    type: "memory-layout",
+    ranges: ranges.sort((a, b) => a.start - b.start),
+    conflicts,
+    programBytes: finalBytes.length,
+    assetBytes: ranges.filter(range => ["charset", "map", "sprite"].includes(range.kind)).reduce((sum, range) => sum + range.bytes, 0)
+  };
+}
+
 function sanitizeInlineSource(source) {
   // compileJsToC64Outputs() accepts a code string. We allow a simple
   // `import { c64 } ...` line, then strip it because the runtime already
@@ -4729,6 +5237,13 @@ export function compileInstructions(instructions, options = {}) {
       sidClick: false,
       spriteSyncIndexes: new Set(),
       spriteAabbCompare: false
+    },
+    assets: {
+      counter: 0,
+      report: [],
+      mapTables: new Map(),
+      bytePool: new Map(),
+      nextMapAddress: MAP_RUNTIME_BASE
     },
     optimization,
     multiplexer: {
@@ -4862,13 +5377,20 @@ export function compileInstructions(instructions, options = {}) {
     asm.rts();
   }
   emitBalancedSharedRoutines(asm, state);
+  emitMapRoutines(asm, state);
   emitHiresRoutines(asm, state);
   // Strings and user data are emitted after code, then referenced by labels.
   emitStringPool(asm, state);
   emitDataPool(asm, state);
 
   const finalBytes = Uint8Array.from(Array.from(asm.toBytes()));
-  return buildCompileResult(finalBytes, asm, codeStart, sysAddress);
+  const memoryLayout = buildDetailedMemoryReport(state, codeStart, finalBytes);
+  state.assets.report.push(memoryLayout);
+  if (memoryLayout.conflicts.length) {
+    const conflict = memoryLayout.conflicts[0];
+    throw new Error(`memory overlap between ${conflict.first} and ${conflict.second} at $${conflict.start.toString(16).toUpperCase()}-$${conflict.end.toString(16).toUpperCase()}`);
+  }
+  return { ...buildCompileResult(finalBytes, asm, codeStart, sysAddress), assetReport: state.assets.report };
 }
 
 export async function compileFile(inputFile, options = {}) {
@@ -4877,6 +5399,7 @@ export async function compileFile(inputFile, options = {}) {
   const absolute = path.resolve(inputFile);
   const compileOptions = normalizeCompileOptions(options, false);
   resetRuntime();
+  setAssetBaseDirectory(path.dirname(absolute));
   const moduleUrl = pathToFileURL(absolute);
   moduleUrl.searchParams.set("ts", String(Date.now()));
   await import(moduleUrl.href);
@@ -4892,6 +5415,7 @@ export async function compileJsToC64Outputs(source, options = {}) {
   // for example an AI assistant or an editor integration.
   const compileOptions = normalizeCompileOptions(options, true);
   resetRuntime();
+  setAssetBaseDirectory(process.cwd());
   await executeInlineSource(source);
   const state = getProgramState();
   return {

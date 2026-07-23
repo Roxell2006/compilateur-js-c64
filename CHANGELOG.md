@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- Completed the v0.9 asset pipeline with 16-bit mutable-map indexes and up to 8,192 runtime cells
+- Added runtime pixel/tile and character/tile coordinate conversion helpers
+- Added hires and multicolor character modes with VIC-II color-register setup and validation
+- Added typed object/spawn metadata to the v1 JSON schema and asset model
+- Added detailed memory ranges, asset totals and hard overlap detection to `assetReport`
+- Added the standalone offline character, metatile and map studio with JSON/BIN/JS/ASM/RLE exports
+- Added playable 300-cell `snake.js` and multicolor `maze-game.js` examples with JSON sources
+- Started v0.9 with a validated JSON format for charsets, metatiles, colors, collision values and static maps
+- Added `c64.assets.loadMap()`/`defineMap()`, `c64.charset.use()` and `c64.map.draw()`
+- Added runtime logical collision queries through `c64.map.tileAt().isSolid()` and `hasCollision()`
+- Added automatic VIC-II charset bank setup, compiler asset reports and `examples/tilemap-static.js`
+- Added mutable two-dimensional maps through `level.map(x, y)` with runtime `set`, `load`, `eq` and `ne`
+- Added automatic single-metatile redraw, explicit full redraw and safe out-of-bounds map access
+- Added the playable joystick-controlled `examples/tetris-mini.js` dynamic-map demo
 - Added automatic 16-logical-sprite support through `c64.sprite.create(0..15)`
 - Replaced the fixed two-zone renderer with a dynamic Y-sorted 16-to-8 VIC-II sprite multiplexer
 - Added height-aware channel recycling for normal and vertically expanded sprites, with no unavailable middle zone
