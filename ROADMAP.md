@@ -392,16 +392,25 @@ Le générateur de caractères est non seulement possible, mais recommandé : il
 réduit fortement la difficulté de création d'un jeu C64 et évite de nombreuses
 erreurs de format.
 
-### 1. Charset Studio intégré aux outils js-c64
+### Décision d'architecture : format intégré, studio séparé
 
-Ajouter une application locale, par exemple lancée avec :
+Le coeur NPM `js-c64` contient le schéma d'assets, leur validation, le
+compilateur et le runtime C64. Le studio graphique sera un outil séparé qui
+importe et exporte exactement le même JSON versionné.
+
+Cette séparation évite d'ajouter un serveur web, un framework d'interface et
+de nombreuses dépendances au compilateur installé par tous les utilisateurs.
+Elle permet aussi de publier et mettre à jour le studio indépendamment, sans
+casser l'API de génération des PRG.
+
+Le studio pourra être lancé depuis son propre package, éventuellement avec :
 
 ```text
 c64js assets
 ```
 
-L'outil peut être une petite application web locale indépendante du compilateur
-principal. Elle doit fonctionner hors ligne et proposer :
+L'outil sera une petite application web locale indépendante du compilateur
+principal. Elle devra fonctionner hors ligne et proposer :
 
 - éditeur pixel 8 × 8 avec zoom ;
 - modes caractère hires 1 bit et multicolore 2 bits ;
@@ -450,22 +459,56 @@ const level = c64.assets.loadMap("assets/level1.json");
 c64.charset.use(level.charset, { address: 0x3000 });
 c64.map.draw(level, { x: 0, y: 0 });
 
-const tile = c64.map.tileAt(level, playerTileX, playerTileY);
+const tile = level.map(playerTileX, playerTileY);
 c64.control.if(tile.isSolid(), () => {
   playerX.set(previousX);
 });
+
+// Détruit le bloc et rafraîchit uniquement le metatile concerné.
+tile.set(0);
 ```
 
 Fonctionnalités nécessaires :
 
-- chargement d'assets à la compilation ;
-- charset à une adresse alignée et compatible avec la banque VIC ;
-- copie ou inclusion directe des données ;
-- dessin d'une map ou d'une zone rectangulaire ;
-- `getTile`/`setTile` avec coordonnées runtime ;
-- requêtes de propriétés de collision ;
-- conversion coordonnées pixel, caractère et tile ;
-- rapport mémoire du charset, de la map et des tables de propriétés.
+- [x] format JSON versionné commun au compilateur et au futur studio ;
+- [x] JSON Schema v1 publié avec le package NPM ;
+- [x] chargement d'assets relatif au fichier JavaScript compilé ;
+- [x] définition inline avec `c64.assets.defineMap()` pour les tests et outils ;
+- [x] validation des caractères 8 x 8 hires, metatiles, couleurs et indices ;
+- [x] charset à une adresse alignée et compatible avec la banque VIC ;
+- [x] configuration automatique de `$DD00` et `$D018` ;
+- [x] copie des données de charset vers la RAM C64 ;
+- [x] dessin d'une map ou d'une zone positionnée ;
+- [x] map mutable stockée en RAM et accessible avec `level.map(x, y)` ;
+- [x] `tileAt()` et `level.map(x,y)` avec coordonnées runtime et index 16 bits ;
+- [x] requêtes `isSolid()` et `hasCollision()` sur la couche logique ;
+- [x] lecture avec `load()`, comparaisons `eq()`/`ne()` et écriture `set()` ;
+- [x] rafraîchissement automatique du metatile modifié ;
+- [x] rafraîchissement complet explicite avec `level.map.redraw()` ;
+- [x] premier rapport mémoire `assetReport` dans le résultat du compilateur ;
+- [x] `setTile()` avec coordonnées runtime ;
+- [x] maps runtime de plus de 256 cases avec index 16 bits, jusqu'à 8 192 cases ;
+- [x] conversion coordonnées pixel, caractère et tile ;
+- [x] rapport mémoire détaillé avec plages et détection de chevauchement ;
+- [x] mode charset multicolore 2 bits.
+
+### État du studio graphique
+
+- [x] projet externe autonome dans `studio graphique/`, sans dépendance au package ;
+- [x] éditeur de caractères hires et multicolore, palette, transformations et réorganisation ;
+- [x] éditeur de metatiles 1 x 1 à 8 x 8, couleurs et propriétés ;
+- [x] éditeur de maps redimensionnables avec dessin, sélection et collisions ;
+- [x] couche séparée d'objets/spawns avec type, coordonnées et propriétés ;
+- [x] import/export sans perte des données du schéma JSON v1 ;
+- [x] export `.bin`, `.js` et `.asm` ;
+- [x] export map binaire brut et compression RLE avec taille avant/après ;
+- [x] historique annuler/rétablir et sauvegarde locale automatique.
+
+Le compilateur fournit déjà un fichier JSON écrit à la main et une démo de
+référence : `examples/assets/v09-room.json` et
+`examples/tilemap-static.js`. La map dynamique est testée dans
+`examples/tetris-mini.js` avec `examples/assets/tetris-room.json`. Ces fichiers
+servent désormais de contrat initial au futur studio.
 
 ### Périmètre volontaire
 
@@ -475,12 +518,15 @@ même temps rendrait la version trop risquée et beaucoup plus difficile à test
 
 ### Critères de sortie
 
-- un charset peut être dessiné, sauvegardé, rouvert et exporté sans perte ;
-- une map peut être dessinée dans le studio puis compilée dans un PRG ;
-- les collisions utilisent la couche logique, pas la couleur affichée ;
-- exemples `examples/snake.js`, `examples/tetris-mini.js` et
-  `examples/maze-game.js` ;
-- un projet exemple contient les sources JSON des assets, pas seulement le BIN.
+- [x] un charset peut être dessiné, sauvegardé, rouvert et exporté sans perte ;
+- [x] une map JSON peut être validée et compilée dans un PRG ;
+- [x] les collisions utilisent la couche logique, pas la couleur affichée ;
+- [x] metatiles et couleurs par cellule pris en charge ;
+- [x] exemple source `examples/tilemap-static.js` avec son JSON ;
+- [x] exemple `examples/snake.js` ;
+- [x] exemple jouable `examples/tetris-mini.js` ;
+- [x] exemple `examples/maze-game.js` ;
+- [x] un projet exemple contient les sources JSON des assets, pas seulement le BIN.
 
 ---
 

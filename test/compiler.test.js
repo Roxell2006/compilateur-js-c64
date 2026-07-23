@@ -587,6 +587,183 @@ describe("v0.8.2 virtual sprite multiplexer", () => {
   });
 });
 
+describe("v0.9 static charset and map assets", () => {
+  it("loads JSON relative to the source file and emits charset plus map data", async () => {
+    const result = await compileFile("examples/tilemap-static.js");
+    expect(result.asm).toMatch(/asset_charset_copy_\d+:/);
+    expect(result.asm).toMatch(/STA \$3000,X/);
+    expect(result.asm).toMatch(/STA \(\$FD\),Y/);
+    expect(result.asm).toMatch(/AND #\$F1/);
+    expect(result.assetReport).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "charset", address: 0x3000, bytes: 2048, characters: 3 }),
+      expect.objectContaining({ type: "map", mapWidth: 10, mapHeight: 6, screenWidth: 20, screenHeight: 12, tileCount: 3 })
+    ]));
+    expect(result.asm.match(/asset_bytes_\d+:/g)?.length).toBeLessThan(20);
+  });
+
+  it("validates charset alignment, tile indexes and screen bounds", async () => {
+    await expect(compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({
+        charset: { characters: [[0,0,0,0,0,0,0,0]] },
+        tiles: [{ chars: [0] }],
+        map: { width: 1, height: 1, data: [0] }
+      });
+      c64.charset.use(level.charset, { address: 0x3100 });
+    `)).rejects.toThrow(/aligned to \$0800/i);
+
+    await expect(compileJsToC64Outputs(`
+      c64.assets.defineMap({
+        charset: { characters: [[0,0,0,0,0,0,0,0]] },
+        tiles: [{ chars: [0] }],
+        map: { width: 1, height: 1, data: [1] }
+      });
+    `)).rejects.toThrow(/missing tile 1/i);
+
+    await expect(compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({
+        charset: { characters: [[0,0,0,0,0,0,0,0]] },
+        tiles: [{ chars: [0] }],
+        map: { width: 2, height: 1, data: [0,0] }
+      });
+      c64.map.draw(level, { x: 39, y: 0 });
+    `)).rejects.toThrow(/does not fit/i);
+  });
+
+  it("queries the logical collision layer with runtime tile coordinates", async () => {
+    const result = await compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({
+        charset: { characters: [[0,0,0,0,0,0,0,0]] },
+        tiles: [
+          { chars: [0], collision: 0 },
+          { chars: [0], collision: 1, properties: { solid: true } }
+        ],
+        map: { width: 3, height: 2, data: [1,0,0,0,1,0] }
+      });
+      const tileX = c64.var.byte("tileX", { initial: 1 });
+      const tileY = c64.var.byte("tileY", { initial: 1 });
+      c64.game.frame(() => {
+        const tile = c64.map.tileAt(level, tileX, tileY);
+        c64.control.if(tile.isSolid(), () => tileX.set(0));
+      });
+    `);
+    expect(result.asm).toMatch(/STA \$8000,X/);
+    expect(result.asm).toMatch(/asset_map_collisions_\d+:/);
+    expect(result.asm).toMatch(/map_index_rows_/);
+    expect(result.asm).toMatch(/ADC #\$03/);
+  });
+
+  it("reads, writes and redraws callable two-dimensional map cells", async () => {
+    const result = await compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({
+        charset: { characters: [[0,0,0,0,0,0,0,0], [255,255,255,255,255,255,255,255]] },
+        tiles: [{ chars: [0], colors: [0] }, { chars: [1], colors: [7], collision: 1 }],
+        map: { width: 4, height: 3, data: [0,0,0,0,0,0,0,0,0,0,0,0] }
+      });
+      const x = c64.var.byte("mapX", { initial: 1 });
+      const y = c64.var.byte("mapY", { initial: 1 });
+      const value = c64.var.byte("mapValue", { initial: 0 });
+      c64.game.init(() => c64.map.draw(level));
+      c64.game.frame(() => {
+        level.map(x, y).set(1);
+        level.map(x, y).load(value);
+        c64.control.if(level.map(x, y).eq(1), () => value.set(2));
+        level.map.redraw();
+      });
+    `);
+    expect(result.asm).toMatch(/STA \$8000,X/);
+    expect(result.asm).toMatch(/STA \(\$FB\),Y/);
+    expect(result.asm).toMatch(/LDA \(\$FB\),Y/);
+    expect(result.asm.match(/runtime_map_draw_tile_\d+:/g)).toHaveLength(1);
+    expect(result.asm.match(/runtime_map_redraw_\d+:/g)).toHaveLength(1);
+    expect(result.asm).toMatch(/STA \(\$FB\),Y/);
+    expect(result.asm).toMatch(/STA \(\$FD\),Y/);
+  });
+
+  it("compiles the playable dynamic-map Tetris example", async () => {
+    const result = await compileFile("examples/tetris-mini.js");
+    expect(result.prgBytes.length).toBeLessThan(7000);
+    expect(result.asm).toMatch(/user_routine_drop_piece:/);
+    expect(result.asm).toMatch(/user_routine_rotate_piece:/);
+    expect(result.asm).toMatch(/runtime_map_draw_tile_0:/);
+    expect(result.asm).toMatch(/asset_map_initial_copy_/);
+  });
+
+  it("uses a 16-bit pointer for mutable maps larger than 256 cells", async () => {
+    const result = await compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({
+        charset: { characters: [[0,0,0,0,0,0,0,0]] },
+        tiles: [{ chars: [0] }],
+        map: { width: 20, height: 15, data: Array(300).fill(0) }
+      });
+      const x = c64.var.byte("largeMapX", { initial: 19 });
+      const y = c64.var.byte("largeMapY", { initial: 14 });
+      const value = c64.var.byte("largeMapValue", { initial: 0 });
+      c64.game.frame(() => { level.map(x, y).set(0); level.map(x, y).load(value); });
+    `);
+    expect(result.asm).toMatch(/STA \$C7BA/);
+    expect(result.asm).toMatch(/LDA \(\$FB\),Y/);
+    expect(result.assetReport).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "map-runtime", bytes: 300, indexBits: 16, address: 0x8000 })
+    ]));
+  });
+
+  it("converts pixel, character and tile coordinates at runtime", async () => {
+    const result = await compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({
+        charset: { characters: [[0,0,0,0,0,0,0,0]] }, tileWidth: 2, tileHeight: 2,
+        tiles: [{ chars: [0,0,0,0] }], map: { width: 2, height: 2, data: [0,0,0,0] }
+      });
+      const px = c64.var.word("coordinatePixelX", { initial: 319 });
+      const py = c64.var.byte("coordinatePixelY", { initial: 80 });
+      const tx = c64.var.byte("coordinateTileX", { initial: 0 });
+      const ty = c64.var.byte("coordinateTileY", { initial: 0 });
+      const cx = c64.var.byte("coordinateCharX", { initial: 0 });
+      const cy = c64.var.byte("coordinateCharY", { initial: 0 });
+      c64.game.frame(() => {
+        c64.map.pixelToTile(level, { x: px, y: py }, { x: tx, y: ty });
+        c64.map.tileToCharacter(level, { x: tx, y: ty }, { x: cx, y: cy });
+      });
+    `);
+    expect(result.asm).toMatch(/map_convert_divide_/);
+    expect(result.asm).toMatch(/map_convert_multiply_/);
+  });
+
+  it("enables multicolor charset mode and preserves object metadata", async () => {
+    const result = await compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({ version: 1,
+        charset: { mode: "multicolor", characters: [[0,85,170,255,0,85,170,255]] },
+        tiles: [{ chars: [0], colors: [6] }],
+        map: { width: 1, height: 1, data: [0], objects: [{ type: "spawn", x: 0, y: 0, properties: { enemy: true } }] }
+      });
+      c64.charset.use(level.charset, { address: 0x3000, background: 0, multicolor1: 5, multicolor2: 10 });
+      c64.map.draw(level);
+    `);
+    expect(result.asm).toMatch(/ORA #\$10/);
+    expect(result.asm).toMatch(/STA \$D022/);
+    expect(result.asm).toMatch(/STA \$D023/);
+    expect(result.asm).toMatch(/ORA #\$08/);
+    expect(result.assetReport).toEqual(expect.arrayContaining([expect.objectContaining({ type: "map-runtime", objects: 1 })]));
+  });
+
+  it("reports memory ranges and rejects actual overlaps", async () => {
+    const result = await compileJsToC64Outputs(`c64.var.byte("safeMemory", { initial: 1 });`);
+    expect(result.assetReport.at(-1)).toEqual(expect.objectContaining({ type: "memory-layout", conflicts: [] }));
+    await expect(compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({ charset: { characters: [[0,0,0,0,0,0,0,0]] }, tiles: [{ chars: [0] }], map: { width: 1, height: 1, data: [0] } });
+      c64.charset.use(level.charset, { address: 0x0800 });
+    `)).rejects.toThrow(/memory overlap/i);
+  });
+
+  it("compiles the Snake and multicolor maze exit examples", async () => {
+    const snake = await compileFile("examples/snake.js");
+    const maze = await compileFile("examples/maze-game.js");
+    expect(snake.assetReport).toEqual(expect.arrayContaining([expect.objectContaining({ type: "map-runtime", bytes: 300 })]));
+    expect(maze.asm).toMatch(/ORA #\$10/);
+    expect(snake.prgBytes.length).toBeLessThan(6000);
+    expect(maze.prgBytes.length).toBeLessThan(6000);
+  });
+});
+
 describe("v0.6 sid helpers", () => {
   it("emits sid.click() without a blocking delay loop", () => {
     const result = compileInstructions([{ op: "sidClick", args: [] }]);

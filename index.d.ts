@@ -18,6 +18,67 @@ export interface CompileResult {
   dataText: string;
   basicProgram: string;
   basicText: string;
+  assetReport: Array<Record<string, unknown>>;
+}
+
+export interface CharsetAsset {
+  readonly type: "charsetAsset";
+  readonly mode: "hires" | "multicolor";
+  readonly characterCount: number;
+  readonly bytes: ReadonlyArray<number>;
+}
+
+export interface TileAsset {
+  readonly chars: ReadonlyArray<number>;
+  readonly colors: ReadonlyArray<number>;
+  readonly collision: number;
+  readonly properties: Readonly<Record<string, unknown>>;
+}
+
+export interface RawMapAsset {
+  readonly type: "mapAsset";
+  readonly version: 1;
+  readonly sourcePath: string;
+  readonly charset: CharsetAsset;
+  readonly tileWidth: number;
+  readonly tileHeight: number;
+  readonly tiles: ReadonlyArray<TileAsset>;
+  readonly map: { readonly width: number; readonly height: number; readonly data: ReadonlyArray<number>; readonly objects: ReadonlyArray<MapObjectAsset> };
+}
+
+export interface MapObjectAsset {
+  readonly type: string;
+  readonly x: number;
+  readonly y: number;
+  readonly properties: Readonly<Record<string, unknown>>;
+}
+
+export interface MapAsset {
+  readonly type: "mapAsset";
+  readonly version: 1;
+  readonly sourcePath: string;
+  readonly charset: CharsetAsset;
+  readonly tileWidth: number;
+  readonly tileHeight: number;
+  readonly tiles: ReadonlyArray<TileAsset>;
+  readonly map: {
+    (x: number | RuntimeByteRef, y: number | RuntimeByteRef): MapTileRef;
+    readonly width: number;
+    readonly height: number;
+    readonly data: ReadonlyArray<number>;
+    readonly objects: ReadonlyArray<MapObjectAsset>;
+    redraw(): void;
+  };
+}
+
+export interface MapTileRef {
+  readonly type: "mapTileRef";
+  set(value: number | RuntimeByteRef): void;
+  load(target: RuntimeByteRef): void;
+  eq(value: number | RuntimeByteRef): RuntimeCondition;
+  ne(value: number | RuntimeByteRef): RuntimeCondition;
+  isSolid(): RuntimeCondition;
+  hasCollision(value: number): RuntimeCondition;
 }
 
 export interface RuntimeCondition {
@@ -194,6 +255,22 @@ export interface C64Api {
       store(index: number | RuntimeByteRef, value: number | RuntimeByteRef): void;
     };
   };
+  assets: {
+    loadMap(filePath: string): MapAsset;
+    defineMap(definition: unknown): MapAsset;
+  };
+  charset: {
+    use(charset: CharsetAsset | MapAsset, options?: { address?: number; background?: number; multicolor1?: number; multicolor2?: number }): void;
+  };
+  map: {
+    draw(asset: MapAsset, options?: { x?: number; y?: number }): void;
+    tileAt(asset: MapAsset, x: number | RuntimeByteRef, y: number | RuntimeByteRef): MapTileRef;
+    setTile(asset: MapAsset, x: number | RuntimeByteRef, y: number | RuntimeByteRef, value: number | RuntimeByteRef): void;
+    pixelToTile(asset: MapAsset, source: { x: number | RuntimeByteRef | RuntimeWordRef; y: number | RuntimeByteRef | RuntimeWordRef }, target: { x: RuntimeByteRef | RuntimeWordRef; y: RuntimeByteRef | RuntimeWordRef }): void;
+    tileToPixel(asset: MapAsset, source: { x: number | RuntimeByteRef | RuntimeWordRef; y: number | RuntimeByteRef | RuntimeWordRef }, target: { x: RuntimeByteRef | RuntimeWordRef; y: RuntimeByteRef | RuntimeWordRef }): void;
+    characterToTile(asset: MapAsset, source: { x: number | RuntimeByteRef | RuntimeWordRef; y: number | RuntimeByteRef | RuntimeWordRef }, target: { x: RuntimeByteRef | RuntimeWordRef; y: RuntimeByteRef | RuntimeWordRef }): void;
+    tileToCharacter(asset: MapAsset, source: { x: number | RuntimeByteRef | RuntimeWordRef; y: number | RuntimeByteRef | RuntimeWordRef }, target: { x: RuntimeByteRef | RuntimeWordRef; y: RuntimeByteRef | RuntimeWordRef }): void;
+  };
 }
 
 export declare class Assembler6502 {
@@ -211,6 +288,9 @@ export declare function compileFile(inputFile: string, options?: { codeStart?: n
 export declare function compileInstructions(instructions: Array<{ op: string; args?: any[] }>, options?: { codeStart?: number; sysAddress?: number }): CompileResult;
 export declare function compileJsToC64Outputs(source: string, options?: { codeStart?: number; sysAddress?: number }): Promise<CompileResult & { source: string }>;
 export declare function compileJsToBasicData(source: string, options?: { codeStart?: number; sysAddress?: number }): Promise<string>;
+export declare function loadMapAsset(filePath: string, baseDirectory?: string): RawMapAsset;
+export declare function normalizeMapAsset(definition: unknown, sourcePath?: string): RawMapAsset;
+export declare function expandMapAsset(asset: RawMapAsset | MapAsset): { width: number; height: number; chars: number[]; colors: number[] };
 export declare function createPrg(machineCode: Uint8Array, sysAddress?: number): Uint8Array;
 export declare function createBasicSysStub(sysAddress?: number): Uint8Array;
 export declare function exportBasicData(bytes: ArrayLike<number>, startLine?: number, step?: number, chunkSize?: number): string;

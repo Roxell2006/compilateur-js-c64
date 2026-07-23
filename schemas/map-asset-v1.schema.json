@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://js-c64.dev/schemas/map-asset-v1.schema.json",
+  "title": "js-c64 static map asset v1",
+  "type": "object",
+  "required": ["version", "charset", "tiles", "map"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": 1 },
+    "charset": {
+      "type": "object",
+      "additionalProperties": false,
+      "oneOf": [
+        { "required": ["characters"] },
+        { "required": ["bytes"] }
+      ],
+      "properties": {
+        "mode": { "enum": ["hires", "multicolor"] },
+        "characters": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 256,
+          "items": {
+            "type": "array",
+            "minItems": 8,
+            "maxItems": 8,
+            "items": { "type": "integer", "minimum": 0, "maximum": 255 }
+          }
+        },
+        "bytes": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 2048,
+          "items": { "type": "integer", "minimum": 0, "maximum": 255 }
+        }
+      }
+    },
+    "tileWidth": { "type": "integer", "minimum": 1, "maximum": 8, "default": 1 },
+    "tileHeight": { "type": "integer", "minimum": 1, "maximum": 8, "default": 1 },
+    "tiles": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "required": ["chars"],
+        "additionalProperties": false,
+        "properties": {
+          "chars": { "type": "array", "items": { "type": "integer", "minimum": 0, "maximum": 255 } },
+          "colors": { "type": "array", "items": { "type": "integer", "minimum": 0, "maximum": 15 } },
+          "collision": { "type": "integer", "minimum": 0, "maximum": 255, "default": 0 },
+          "properties": { "type": "object" }
+        }
+      }
+    },
+    "map": {
+      "type": "object",
+      "required": ["width", "height", "data"],
+      "additionalProperties": false,
+      "properties": {
+        "width": { "type": "integer", "minimum": 1, "maximum": 255 },
+        "height": { "type": "integer", "minimum": 1, "maximum": 255 },
+        "data": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0, "maximum": 255 }
+        },
+        "objects": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "object",
+            "required": ["type", "x", "y"],
+            "additionalProperties": false,
+            "properties": {
+              "type": { "type": "string", "minLength": 1, "maxLength": 64 },
+              "x": { "type": "integer", "minimum": 0, "maximum": 254 },
+              "y": { "type": "integer", "minimum": 0, "maximum": 254 },
+              "properties": { "type": "object", "default": {} }
+            }
+          }
+        }
+      }
+    }
+  }
+}

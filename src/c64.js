@@ -1,4 +1,5 @@
-import { captureBlock, createRuntimeFacade, defineRuntimeData, getProgramState, getRuntimeDataLength, pushInstruction, resetRuntime, setColorBase, setScreenBase, setTextColor, useJoystickPort, useKeyboardKey } from "./runtime.js";
+import { captureBlock, createRuntimeFacade, defineRuntimeData, getAssetBaseDirectory, getProgramState, getRuntimeDataLength, pushInstruction, resetRuntime, setColorBase, setScreenBase, setTextColor, useJoystickPort, useKeyboardKey } from "./runtime.js";
+import { loadMapAsset, normalizeMapAsset } from "./assets.js";
 
 // This file exposes the public DSL used by end users.
 // Important idea: calling c64.printAt(), c64.sprite.show(), etc. does not
@@ -309,6 +310,100 @@ c64.table = {
         pushInstruction("runtimeTableStore", name, index, value);
       }
     };
+  }
+};
+
+// Asset sources stay as JSON on the development machine. Only their validated,
+// compact byte representation is embedded in the generated C64 program.
+function createMapCellRef(asset, x, y) {
+  const ref = {
+    type: "mapTileRef",
+    asset,
+    x,
+    y,
+    set(value) {
+      pushInstruction("mapRuntimeSet", asset, x, y, value);
+    },
+    load(target) {
+      pushInstruction("mapRuntimeGet", asset, x, y, target);
+    },
+    eq(value) {
+      return condition("mapTileEquals", { asset, x, y, value });
+    },
+    ne(value) {
+      return condition("mapTileNotEquals", { asset, x, y, value });
+    },
+    isSolid() {
+      return condition("mapCollision", { asset, x, y, collision: 1 });
+    },
+    hasCollision(value) {
+      return condition("mapCollision", { asset, x, y, collision: value });
+    }
+  };
+  return ref;
+}
+
+function createDynamicMapAsset(asset) {
+  const sourceMap = asset.map;
+  const mapAccessor = (x, y) => createMapCellRef(dynamicAsset, x, y);
+  Object.assign(mapAccessor, sourceMap, {
+    redraw() {
+      pushInstruction("mapRedraw", dynamicAsset);
+    }
+  });
+  const dynamicAsset = Object.freeze({ ...asset, map: Object.freeze(mapAccessor) });
+  pushInstruction("mapRegister", dynamicAsset);
+  return dynamicAsset;
+}
+
+c64.assets = {
+  loadMap(filePath) {
+    return createDynamicMapAsset(loadMapAsset(filePath, getAssetBaseDirectory()));
+  },
+  defineMap(definition) {
+    return createDynamicMapAsset(normalizeMapAsset(definition));
+  }
+};
+
+c64.charset = {
+  use(charset, options = {}) {
+    const normalized = charset?.type === "mapAsset" ? charset.charset : charset;
+    if (!normalized || normalized.type !== "charsetAsset") throw new Error("c64.charset.use() needs a charset asset");
+    pushInstruction("charsetUse", normalized, { address: options.address ?? 0x3000 });
+  }
+};
+
+function convertMapCoordinates(asset, from, to, source, target) {
+  if (!asset || asset.type !== "mapAsset") throw new Error("map coordinate conversion needs a map asset");
+  if (!source || !target || source.x === undefined || source.y === undefined || !target.x || !target.y) {
+    throw new Error("map coordinate conversion needs { x, y } source and target objects");
+  }
+  pushInstruction("mapCoordinateConvert", asset, from, to, source.x, source.y, target.x, target.y);
+}
+
+c64.map = {
+  draw(asset, options = {}) {
+    if (!asset || asset.type !== "mapAsset") throw new Error("c64.map.draw() needs a map asset");
+    pushInstruction("mapDraw", asset, { x: options.x ?? 0, y: options.y ?? 0 });
+  },
+  tileAt(asset, x, y) {
+    if (!asset || asset.type !== "mapAsset") throw new Error("c64.map.tileAt() needs a map asset");
+    return createMapCellRef(asset, x, y);
+  },
+  setTile(asset, x, y, value) {
+    createMapCellRef(asset, x, y).set(value);
+  },
+  pixelToTile(asset, source, target) {
+    convertMapCoordinates(asset, "pixel", "tile", source, target);
+  },
+  tileToPixel(asset, source, target) {
+    convertMapCoordinates(asset, "tile", "pixel", source, target);
+  },
+  characterToTile(asset, source, target) {
+    convertMapCoordinates(asset, "character", "tile", source, target);
+  },
+  tileToCharacter(asset, source, target) {
+    convertMapCoordinates(asset, "tile", "character", source, target);
   }
 };
 

@@ -1,0 +1,965 @@
+0810  A2 00       LDX #$00
+0812        asset_map_initial_copy_2:
+0812  BD 25 10    LDA asset_bytes_1,X
+0815  9D 00 C6    STA $C600,X
+0818  E8          INX
+0819  E0 C8       CPX #$C8
+081B  D0 F5       BNE asset_map_initial_copy_2
+081D  A9 03       LDA #$03
+081F  8D 00 C1    STA $C100
+0822  A9 00       LDA #$00
+0824  8D 01 C1    STA $C101
+0827  A9 00       LDA #$00
+0829  8D 02 C1    STA $C102
+082C  A9 00       LDA #$00
+082E  8D 03 C1    STA $C103
+0831  A9 00       LDA #$00
+0833  8D 04 C1    STA $C104
+0836  A9 00       LDA #$00
+0838  8D 05 C1    STA $C105
+083B  A9 00       LDA #$00
+083D  8D 06 C1    STA $C106
+0840  A9 00       LDA #$00
+0842  8D 07 C1    STA $C107
+0845  A9 00       LDA #$00
+0847  8D 08 C1    STA $C108
+084A  A9 00       LDA #$00
+084C  8D 09 C1    STA $C109
+084F  A9 00       LDA #$00
+0851  8D 0A C1    STA $C10A
+0854  A9 00       LDA #$00
+0856  8D 0B C1    STA $C10B
+0859  A9 00       LDA #$00
+085B  8D 0C C1    STA $C10C
+085E  A9 00       LDA #$00
+0860  8D 0D C1    STA $C10D
+0863  A9 00       LDA #$00
+0865  8D 0E C1    STA $C10E
+0868  A9 00       LDA #$00
+086A  8D 0F C1    STA $C10F
+086D  A9 00       LDA #$00
+086F  8D 10 C1    STA $C110
+0872  A9 25       LDA #$25
+0874  8D 11 C1    STA $C111
+0877  A9 93       LDA #$93
+0879  20 D2 FF    JSR $FFD2
+087C  A9 00       LDA #$00
+087E  8D 20 D0    STA $D020
+0881  A9 00       LDA #$00
+0883  8D 21 D0    STA $D021
+0886  A2 00       LDX #$00
+0888        asset_charset_copy_4:
+0888  BD 6D 11    LDA asset_bytes_3,X
+088B  9D 00 30    STA $3000,X
+088E  E8          INX
+088F  D0 F7       BNE asset_charset_copy_4
+0891  A2 00       LDX #$00
+0893        asset_charset_copy_6:
+0893  BD 6D 12    LDA asset_bytes_5,X
+0896  9D 00 31    STA $3100,X
+0899  E8          INX
+089A  D0 F7       BNE asset_charset_copy_6
+089C  A2 00       LDX #$00
+089E        asset_charset_copy_7:
+089E  BD 6D 12    LDA asset_bytes_5,X
+08A1  9D 00 32    STA $3200,X
+08A4  E8          INX
+08A5  D0 F7       BNE asset_charset_copy_7
+08A7  A2 00       LDX #$00
+08A9        asset_charset_copy_8:
+08A9  BD 6D 12    LDA asset_bytes_5,X
+08AC  9D 00 33    STA $3300,X
+08AF  E8          INX
+08B0  D0 F7       BNE asset_charset_copy_8
+08B2  A2 00       LDX #$00
+08B4        asset_charset_copy_9:
+08B4  BD 6D 12    LDA asset_bytes_5,X
+08B7  9D 00 34    STA $3400,X
+08BA  E8          INX
+08BB  D0 F7       BNE asset_charset_copy_9
+08BD  A2 00       LDX #$00
+08BF        asset_charset_copy_10:
+08BF  BD 6D 12    LDA asset_bytes_5,X
+08C2  9D 00 35    STA $3500,X
+08C5  E8          INX
+08C6  D0 F7       BNE asset_charset_copy_10
+08C8  A2 00       LDX #$00
+08CA        asset_charset_copy_11:
+08CA  BD 6D 12    LDA asset_bytes_5,X
+08CD  9D 00 36    STA $3600,X
+08D0  E8          INX
+08D1  D0 F7       BNE asset_charset_copy_11
+08D3  A2 00       LDX #$00
+08D5        asset_charset_copy_12:
+08D5  BD 6D 12    LDA asset_bytes_5,X
+08D8  9D 00 37    STA $3700,X
+08DB  E8          INX
+08DC  D0 F7       BNE asset_charset_copy_12
+08DE  AD 00 DD    LDA $DD00
+08E1  29 FC       AND #$FC
+08E3  09 03       ORA #$03
+08E5  8D 00 DD    STA $DD00
+08E8  AD 18 D0    LDA $D018
+08EB  29 F1       AND #$F1
+08ED  09 0C       ORA #$0C
+08EF  8D 18 D0    STA $D018
+08F2  A9 03       LDA #$03
+08F4  A2 00       LDX #$00
+08F6        memset_45e_3_12:
+08F6  9D 5E 04    STA $045E,X
+08F9  E8          INX
+08FA  E0 0C       CPX #$0C
+08FC  D0 F8       BNE memset_45e_3_12
+08FE  A9 01       LDA #$01
+0900  A2 00       LDX #$00
+0902        memset_d85e_1_12:
+0902  9D 5E D8    STA $D85E,X
+0905  E8          INX
+0906  E0 0C       CPX #$0C
+0908  D0 F8       BNE memset_d85e_1_12
+090A  A9 03       LDA #$03
+090C  A2 00       LDX #$00
+090E        memset_7a6_3_12:
+090E  9D A6 07    STA $07A6,X
+0911  E8          INX
+0912  E0 0C       CPX #$0C
+0914  D0 F8       BNE memset_7a6_3_12
+0916  A9 01       LDA #$01
+0918  A2 00       LDX #$00
+091A        memset_dba6_1_12:
+091A  9D A6 DB    STA $DBA6,X
+091D  E8          INX
+091E  E0 0C       CPX #$0C
+0920  D0 F8       BNE memset_dba6_1_12
+0922  A9 03       LDA #$03
+0924  8D 86 04    STA $0486
+0927  A9 01       LDA #$01
+0929  8D 86 D8    STA $D886
+092C  A9 03       LDA #$03
+092E  8D 91 04    STA $0491
+0931  A9 01       LDA #$01
+0933  8D 91 D8    STA $D891
+0936  A9 03       LDA #$03
+0938  8D AE 04    STA $04AE
+093B  A9 01       LDA #$01
+093D  8D AE D8    STA $D8AE
+0940  A9 03       LDA #$03
+0942  8D B9 04    STA $04B9
+0945  A9 01       LDA #$01
+0947  8D B9 D8    STA $D8B9
+094A  A9 03       LDA #$03
+094C  8D D6 04    STA $04D6
+094F  A9 01       LDA #$01
+0951  8D D6 D8    STA $D8D6
+0954  A9 03       LDA #$03
+0956  8D E1 04    STA $04E1
+0959  A9 01       LDA #$01
+095B  8D E1 D8    STA $D8E1
+095E  A9 03       LDA #$03
+0960  8D FE 04    STA $04FE
+0963  A9 01       LDA #$01
+0965  8D FE D8    STA $D8FE
+0968  A9 03       LDA #$03
+096A  8D 09 05    STA $0509
+096D  A9 01       LDA #$01
+096F  8D 09 D9    STA $D909
+0972  A9 03       LDA #$03
+0974  8D 26 05    STA $0526
+0977  A9 01       LDA #$01
+0979  8D 26 D9    STA $D926
+097C  A9 03       LDA #$03
+097E  8D 31 05    STA $0531
+0981  A9 01       LDA #$01
+0983  8D 31 D9    STA $D931
+0986  A9 03       LDA #$03
+0988  8D 4E 05    STA $054E
+098B  A9 01       LDA #$01
+098D  8D 4E D9    STA $D94E
+0990  A9 03       LDA #$03
+0992  8D 59 05    STA $0559
+0995  A9 01       LDA #$01
+0997  8D 59 D9    STA $D959
+099A  A9 03       LDA #$03
+099C  8D 76 05    STA $0576
+099F  A9 01       LDA #$01
+09A1  8D 76 D9    STA $D976
+09A4  A9 03       LDA #$03
+09A6  8D 81 05    STA $0581
+09A9  A9 01       LDA #$01
+09AB  8D 81 D9    STA $D981
+09AE  A9 03       LDA #$03
+09B0  8D 9E 05    STA $059E
+09B3  A9 01       LDA #$01
+09B5  8D 9E D9    STA $D99E
+09B8  A9 03       LDA #$03
+09BA  8D A9 05    STA $05A9
+09BD  A9 01       LDA #$01
+09BF  8D A9 D9    STA $D9A9
+09C2  A9 03       LDA #$03
+09C4  8D C6 05    STA $05C6
+09C7  A9 01       LDA #$01
+09C9  8D C6 D9    STA $D9C6
+09CC  A9 03       LDA #$03
+09CE  8D D1 05    STA $05D1
+09D1  A9 01       LDA #$01
+09D3  8D D1 D9    STA $D9D1
+09D6  A9 03       LDA #$03
+09D8  8D EE 05    STA $05EE
+09DB  A9 01       LDA #$01
+09DD  8D EE D9    STA $D9EE
+09E0  A9 03       LDA #$03
+09E2  8D F9 05    STA $05F9
+09E5  A9 01       LDA #$01
+09E7  8D F9 D9    STA $D9F9
+09EA  A9 03       LDA #$03
+09EC  8D 16 06    STA $0616
+09EF  A9 01       LDA #$01
+09F1  8D 16 DA    STA $DA16
+09F4  A9 03       LDA #$03
+09F6  8D 21 06    STA $0621
+09F9  A9 01       LDA #$01
+09FB  8D 21 DA    STA $DA21
+09FE  A9 03       LDA #$03
+0A00  8D 3E 06    STA $063E
+0A03  A9 01       LDA #$01
+0A05  8D 3E DA    STA $DA3E
+0A08  A9 03       LDA #$03
+0A0A  8D 49 06    STA $0649
+0A0D  A9 01       LDA #$01
+0A0F  8D 49 DA    STA $DA49
+0A12  A9 03       LDA #$03
+0A14  8D 66 06    STA $0666
+0A17  A9 01       LDA #$01
+0A19  8D 66 DA    STA $DA66
+0A1C  A9 03       LDA #$03
+0A1E  8D 71 06    STA $0671
+0A21  A9 01       LDA #$01
+0A23  8D 71 DA    STA $DA71
+0A26  A9 03       LDA #$03
+0A28  8D 8E 06    STA $068E
+0A2B  A9 01       LDA #$01
+0A2D  8D 8E DA    STA $DA8E
+0A30  A9 03       LDA #$03
+0A32  8D 99 06    STA $0699
+0A35  A9 01       LDA #$01
+0A37  8D 99 DA    STA $DA99
+0A3A  A9 03       LDA #$03
+0A3C  8D B6 06    STA $06B6
+0A3F  A9 01       LDA #$01
+0A41  8D B6 DA    STA $DAB6
+0A44  A9 03       LDA #$03
+0A46  8D C1 06    STA $06C1
+0A49  A9 01       LDA #$01
+0A4B  8D C1 DA    STA $DAC1
+0A4E  A9 03       LDA #$03
+0A50  8D DE 06    STA $06DE
+0A53  A9 01       LDA #$01
+0A55  8D DE DA    STA $DADE
+0A58  A9 03       LDA #$03
+0A5A  8D E9 06    STA $06E9
+0A5D  A9 01       LDA #$01
+0A5F  8D E9 DA    STA $DAE9
+0A62  A9 03       LDA #$03
+0A64  8D 06 07    STA $0706
+0A67  A9 01       LDA #$01
+0A69  8D 06 DB    STA $DB06
+0A6C  A9 03       LDA #$03
+0A6E  8D 11 07    STA $0711
+0A71  A9 01       LDA #$01
+0A73  8D 11 DB    STA $DB11
+0A76  A9 03       LDA #$03
+0A78  8D 2E 07    STA $072E
+0A7B  A9 01       LDA #$01
+0A7D  8D 2E DB    STA $DB2E
+0A80  A9 03       LDA #$03
+0A82  8D 39 07    STA $0739
+0A85  A9 01       LDA #$01
+0A87  8D 39 DB    STA $DB39
+0A8A  A9 03       LDA #$03
+0A8C  8D 56 07    STA $0756
+0A8F  A9 01       LDA #$01
+0A91  8D 56 DB    STA $DB56
+0A94  A9 03       LDA #$03
+0A96  8D 61 07    STA $0761
+0A99  A9 01       LDA #$01
+0A9B  8D 61 DB    STA $DB61
+0A9E  A9 03       LDA #$03
+0AA0  8D 7E 07    STA $077E
+0AA3  A9 01       LDA #$01
+0AA5  8D 7E DB    STA $DB7E
+0AA8  A9 03       LDA #$03
+0AAA  8D 89 07    STA $0789
+0AAD  A9 01       LDA #$01
+0AAF  8D 89 DB    STA $DB89
+0AB2  20 FA 0F    JSR runtime_map_redraw_0
+0AB5  20 1E 0D    JSR user_routine_spawn_piece
+0AB8  4C FE 0A    JMP user_routine_prepare_cell_after
+0ABB        user_routine_prepare_cell:
+0ABB  AD 08 C1    LDA $C108
+0ABE  8D 0A C1    STA $C10A
+0AC1  AD 0A C1    LDA $C10A
+0AC4  18          CLC
+0AC5  6D 09 C1    ADC $C109
+0AC8  8D 0A C1    STA $C10A
+0ACB  AE 0A C1    LDX $C10A
+0ACE  BD ED 10    LDA tetris_shape_x,X
+0AD1  8D 0B C1    STA $C10B
+0AD4  AE 0A C1    LDX $C10A
+0AD7  BD 2D 11    LDA tetris_shape_y,X
+0ADA  8D 0C C1    STA $C10C
+0ADD  AD 06 C1    LDA $C106
+0AE0  8D 0D C1    STA $C10D
+0AE3  AD 0D C1    LDA $C10D
+0AE6  18          CLC
+0AE7  6D 0B C1    ADC $C10B
+0AEA  8D 0D C1    STA $C10D
+0AED  AD 07 C1    LDA $C107
+0AF0  8D 0E C1    STA $C10E
+0AF3  AD 0E C1    LDA $C10E
+0AF6  18          CLC
+0AF7  6D 0C C1    ADC $C10C
+0AFA  8D 0E C1    STA $C10E
+0AFD  60          RTS
+0AFE        user_routine_prepare_cell_after:
+0AFE  4C 14 0B    JMP user_routine_use_current_piece_after
+0B01        user_routine_use_current_piece:
+0B01  AD 00 C1    LDA $C100
+0B04  8D 06 C1    STA $C106
+0B07  AD 01 C1    LDA $C101
+0B0A  8D 07 C1    STA $C107
+0B0D  AD 02 C1    LDA $C102
+0B10  8D 08 C1    STA $C108
+0B13  60          RTS
+0B14        user_routine_use_current_piece_after:
+0B14  4C 8C 0B    JMP user_routine_clear_piece_after
+0B17        user_routine_clear_piece:
+0B17  20 01 0B    JSR user_routine_use_current_piece
+0B1A  A9 00       LDA #$00
+0B1C  8D 09 C1    STA $C109
+0B1F  A9 04       LDA #$04
+0B21  8D 12 C1    STA $C112
+0B24        control_repeat_0:
+0B24  AD 12 C1    LDA $C112
+0B27  F0 62       BEQ control_repeat_done_0
+0B29  20 BB 0A    JSR user_routine_prepare_cell
+0B2C  AD 0D C1    LDA $C10D
+0B2F  C9 0A       CMP #$0A
+0B31  90 03       BCC map_x_ok_1
+0B33  4C 82 0B    JMP map_set_done_1
+0B36        map_x_ok_1:
+0B36  8D B2 C7    STA $C7B2
+0B39  AD 0E C1    LDA $C10E
+0B3C  C9 14       CMP #$14
+0B3E  90 03       BCC map_y_ok_1
+0B40  4C 82 0B    JMP map_set_done_1
+0B43        map_y_ok_1:
+0B43  8D B3 C7    STA $C7B3
+0B46  A9 00       LDA #$00
+0B48  C9 03       CMP #$03
+0B4A  90 03       BCC map_value_ok_1
+0B4C  4C 82 0B    JMP map_set_done_1
+0B4F        map_value_ok_1:
+0B4F  8D B8 C7    STA $C7B8
+0B52  A9 00       LDA #$00
+0B54  8D B6 C7    STA $C7B6
+0B57  AD B3 C7    LDA $C7B3
+0B5A  8D B7 C7    STA $C7B7
+0B5D        map_index_rows_1:
+0B5D  AD B7 C7    LDA $C7B7
+0B60  F0 0F       BEQ map_index_done_1
+0B62  18          CLC
+0B63  AD B6 C7    LDA $C7B6
+0B66  69 0A       ADC #$0A
+0B68  8D B6 C7    STA $C7B6
+0B6B  CE B7 C7    DEC $C7B7
+0B6E  4C 5D 0B    JMP map_index_rows_1
+0B71        map_index_done_1:
+0B71  18          CLC
+0B72  AD B6 C7    LDA $C7B6
+0B75  6D B2 C7    ADC $C7B2
+0B78  AA          TAX
+0B79  AD B8 C7    LDA $C7B8
+0B7C  9D 00 C6    STA $C600,X
+0B7F  20 63 0F    JSR runtime_map_draw_tile_0
+0B82        map_set_done_1:
+0B82  EE 09 C1    INC $C109
+0B85  CE 12 C1    DEC $C112
+0B88  4C 24 0B    JMP control_repeat_0
+0B8B        control_repeat_done_0:
+0B8B  60          RTS
+0B8C        user_routine_clear_piece_after:
+0B8C  4C 04 0C    JMP user_routine_draw_piece_after
+0B8F        user_routine_draw_piece:
+0B8F  20 01 0B    JSR user_routine_use_current_piece
+0B92  A9 00       LDA #$00
+0B94  8D 09 C1    STA $C109
+0B97  A9 04       LDA #$04
+0B99  8D 13 C1    STA $C113
+0B9C        control_repeat_2:
+0B9C  AD 13 C1    LDA $C113
+0B9F  F0 62       BEQ control_repeat_done_2
+0BA1  20 BB 0A    JSR user_routine_prepare_cell
+0BA4  AD 0D C1    LDA $C10D
+0BA7  C9 0A       CMP #$0A
+0BA9  90 03       BCC map_x_ok_3
+0BAB  4C FA 0B    JMP map_set_done_3
+0BAE        map_x_ok_3:
+0BAE  8D B2 C7    STA $C7B2
+0BB1  AD 0E C1    LDA $C10E
+0BB4  C9 14       CMP #$14
+0BB6  90 03       BCC map_y_ok_3
+0BB8  4C FA 0B    JMP map_set_done_3
+0BBB        map_y_ok_3:
+0BBB  8D B3 C7    STA $C7B3
+0BBE  A9 02       LDA #$02
+0BC0  C9 03       CMP #$03
+0BC2  90 03       BCC map_value_ok_3
+0BC4  4C FA 0B    JMP map_set_done_3
+0BC7        map_value_ok_3:
+0BC7  8D B8 C7    STA $C7B8
+0BCA  A9 00       LDA #$00
+0BCC  8D B6 C7    STA $C7B6
+0BCF  AD B3 C7    LDA $C7B3
+0BD2  8D B7 C7    STA $C7B7
+0BD5        map_index_rows_3:
+0BD5  AD B7 C7    LDA $C7B7
+0BD8  F0 0F       BEQ map_index_done_3
+0BDA  18          CLC
+0BDB  AD B6 C7    LDA $C7B6
+0BDE  69 0A       ADC #$0A
+0BE0  8D B6 C7    STA $C7B6
+0BE3  CE B7 C7    DEC $C7B7
+0BE6  4C D5 0B    JMP map_index_rows_3
+0BE9        map_index_done_3:
+0BE9  18          CLC
+0BEA  AD B6 C7    LDA $C7B6
+0BED  6D B2 C7    ADC $C7B2
+0BF0  AA          TAX
+0BF1  AD B8 C7    LDA $C7B8
+0BF4  9D 00 C6    STA $C600,X
+0BF7  20 63 0F    JSR runtime_map_draw_tile_0
+0BFA        map_set_done_3:
+0BFA  EE 09 C1    INC $C109
+0BFD  CE 13 C1    DEC $C113
+0C00  4C 9C 0B    JMP control_repeat_2
+0C03        control_repeat_done_2:
+0C03  60          RTS
+0C04        user_routine_draw_piece_after:
+0C04  4C A4 0C    JMP user_routine_lock_piece_after
+0C07        user_routine_lock_piece:
+0C07  20 01 0B    JSR user_routine_use_current_piece
+0C0A  A9 00       LDA #$00
+0C0C  8D 09 C1    STA $C109
+0C0F  A9 04       LDA #$04
+0C11  8D 14 C1    STA $C114
+0C14        control_repeat_4:
+0C14  AD 14 C1    LDA $C114
+0C17  F0 62       BEQ control_repeat_done_4
+0C19  20 BB 0A    JSR user_routine_prepare_cell
+0C1C  AD 0D C1    LDA $C10D
+0C1F  C9 0A       CMP #$0A
+0C21  90 03       BCC map_x_ok_5
+0C23  4C 72 0C    JMP map_set_done_5
+0C26        map_x_ok_5:
+0C26  8D B2 C7    STA $C7B2
+0C29  AD 0E C1    LDA $C10E
+0C2C  C9 14       CMP #$14
+0C2E  90 03       BCC map_y_ok_5
+0C30  4C 72 0C    JMP map_set_done_5
+0C33        map_y_ok_5:
+0C33  8D B3 C7    STA $C7B3
+0C36  A9 01       LDA #$01
+0C38  C9 03       CMP #$03
+0C3A  90 03       BCC map_value_ok_5
+0C3C  4C 72 0C    JMP map_set_done_5
+0C3F        map_value_ok_5:
+0C3F  8D B8 C7    STA $C7B8
+0C42  A9 00       LDA #$00
+0C44  8D B6 C7    STA $C7B6
+0C47  AD B3 C7    LDA $C7B3
+0C4A  8D B7 C7    STA $C7B7
+0C4D        map_index_rows_5:
+0C4D  AD B7 C7    LDA $C7B7
+0C50  F0 0F       BEQ map_index_done_5
+0C52  18          CLC
+0C53  AD B6 C7    LDA $C7B6
+0C56  69 0A       ADC #$0A
+0C58  8D B6 C7    STA $C7B6
+0C5B  CE B7 C7    DEC $C7B7
+0C5E  4C 4D 0C    JMP map_index_rows_5
+0C61        map_index_done_5:
+0C61  18          CLC
+0C62  AD B6 C7    LDA $C7B6
+0C65  6D B2 C7    ADC $C7B2
+0C68  AA          TAX
+0C69  AD B8 C7    LDA $C7B8
+0C6C  9D 00 C6    STA $C600,X
+0C6F  20 63 0F    JSR runtime_map_draw_tile_0
+0C72        map_set_done_5:
+0C72  EE 09 C1    INC $C109
+0C75  CE 14 C1    DEC $C114
+0C78  4C 14 0C    JMP control_repeat_4
+0C7B        control_repeat_done_4:
+0C7B  A9 0F       LDA #$0F
+0C7D  8D 18 D4    STA $D418
+0C80  A9 00       LDA #$00
+0C82  8D 04 D4    STA $D404
+0C85  A9 10       LDA #$10
+0C87  8D 04 D4    STA $D404
+0C8A  A9 00       LDA #$00
+0C8C  8D 05 D4    STA $D405
+0C8F  A9 00       LDA #$00
+0C91  8D 06 D4    STA $D406
+0C94  A9 39       LDA #$39
+0C96  8D 00 D4    STA $D400
+0C99  A9 8B       LDA #$8B
+0C9B  8D 01 D4    STA $D401
+0C9E  A9 11       LDA #$11
+0CA0  8D 04 D4    STA $D404
+0CA3  60          RTS
+0CA4        user_routine_lock_piece_after:
+0CA4  4C 1B 0D    JMP user_routine_test_work_piece_after
+0CA7        user_routine_test_work_piece:
+0CA7  A9 00       LDA #$00
+0CA9  8D 0F C1    STA $C10F
+0CAC  A9 00       LDA #$00
+0CAE  8D 09 C1    STA $C109
+0CB1  A9 04       LDA #$04
+0CB3  8D 15 C1    STA $C115
+0CB6        control_repeat_6:
+0CB6  AD 15 C1    LDA $C115
+0CB9  F0 5F       BEQ control_repeat_done_6
+0CBB  20 BB 0A    JSR user_routine_prepare_cell
+0CBE  AD 0D C1    LDA $C10D
+0CC1  C9 0A       CMP #$0A
+0CC3  90 03       BCC map_x_ok_8
+0CC5  4C 0C 0D    JMP control_if_else_7
+0CC8        map_x_ok_8:
+0CC8  8D B2 C7    STA $C7B2
+0CCB  AD 0E C1    LDA $C10E
+0CCE  C9 14       CMP #$14
+0CD0  90 03       BCC map_y_ok_8
+0CD2  4C 0C 0D    JMP control_if_else_7
+0CD5        map_y_ok_8:
+0CD5  8D B3 C7    STA $C7B3
+0CD8  A9 00       LDA #$00
+0CDA  8D B6 C7    STA $C7B6
+0CDD  AD B3 C7    LDA $C7B3
+0CE0  8D B7 C7    STA $C7B7
+0CE3        map_index_rows_8:
+0CE3  AD B7 C7    LDA $C7B7
+0CE6  F0 0F       BEQ map_index_done_8
+0CE8  18          CLC
+0CE9  AD B6 C7    LDA $C7B6
+0CEC  69 0A       ADC #$0A
+0CEE  8D B6 C7    STA $C7B6
+0CF1  CE B7 C7    DEC $C7B7
+0CF4  4C E3 0C    JMP map_index_rows_8
+0CF7        map_index_done_8:
+0CF7  18          CLC
+0CF8  AD B6 C7    LDA $C7B6
+0CFB  6D B2 C7    ADC $C7B2
+0CFE  AA          TAX
+0CFF  BD 00 C6    LDA $C600,X
+0D02  C9 00       CMP #$00
+0D04  F0 03       BEQ condition_pass_8
+0D06  4C 0C 0D    JMP control_if_else_7
+0D09        condition_pass_8:
+0D09  4C 11 0D    JMP control_if_end_7
+0D0C        control_if_else_7:
+0D0C  A9 01       LDA #$01
+0D0E  8D 0F C1    STA $C10F
+0D11        control_if_end_7:
+0D11  EE 09 C1    INC $C109
+0D14  CE 15 C1    DEC $C115
+0D17  4C B6 0C    JMP control_repeat_6
+0D1A        control_repeat_done_6:
+0D1A  60          RTS
+0D1B        user_routine_test_work_piece_after:
+0D1B  4C 98 0D    JMP user_routine_spawn_piece_after
+0D1E        user_routine_spawn_piece:
+0D1E  AD 11 C1    LDA $C111
+0D21  18          CLC
+0D22  69 49       ADC #$49
+0D24  8D 11 C1    STA $C111
+0D27  AD 11 C1    LDA $C111
+0D2A  49 A7       EOR #$A7
+0D2C  8D 11 C1    STA $C111
+0D2F  AD 11 C1    LDA $C111
+0D32  8D 00 C1    STA $C100
+0D35  AD 00 C1    LDA $C100
+0D38  29 03       AND #$03
+0D3A  8D 00 C1    STA $C100
+0D3D  AD 00 C1    LDA $C100
+0D40  18          CLC
+0D41  69 02       ADC #$02
+0D43  8D 00 C1    STA $C100
+0D46  A9 00       LDA #$00
+0D48  8D 01 C1    STA $C101
+0D4B  AD 11 C1    LDA $C111
+0D4E  8D 03 C1    STA $C103
+0D51  AD 03 C1    LDA $C103
+0D54  29 30       AND #$30
+0D56  8D 03 C1    STA $C103
+0D59  AD 11 C1    LDA $C111
+0D5C  8D 04 C1    STA $C104
+0D5F  AD 04 C1    LDA $C104
+0D62  29 0C       AND #$0C
+0D64  8D 04 C1    STA $C104
+0D67  AD 03 C1    LDA $C103
+0D6A  8D 02 C1    STA $C102
+0D6D  AD 02 C1    LDA $C102
+0D70  18          CLC
+0D71  6D 04 C1    ADC $C104
+0D74  8D 02 C1    STA $C102
+0D77  20 01 0B    JSR user_routine_use_current_piece
+0D7A  20 A7 0C    JSR user_routine_test_work_piece
+0D7D  AD 0F C1    LDA $C10F
+0D80  C9 00       CMP #$00
+0D82  F0 03       BEQ condition_pass_10
+0D84  4C 8D 0D    JMP control_if_else_9
+0D87        condition_pass_10:
+0D87  20 8F 0B    JSR user_routine_draw_piece
+0D8A  4C 97 0D    JMP control_if_end_9
+0D8D        control_if_else_9:
+0D8D  A9 01       LDA #$01
+0D8F  8D 10 C1    STA $C110
+0D92  A9 02       LDA #$02
+0D94  8D 20 D0    STA $D020
+0D97        control_if_end_9:
+0D97  60          RTS
+0D98        user_routine_spawn_piece_after:
+0D98  4C C4 0D    JMP user_routine_move_left_after
+0D9B        user_routine_move_left:
+0D9B  20 17 0B    JSR user_routine_clear_piece
+0D9E  20 01 0B    JSR user_routine_use_current_piece
+0DA1  AD 06 C1    LDA $C106
+0DA4  38          SEC
+0DA5  E9 01       SBC #$01
+0DA7  8D 06 C1    STA $C106
+0DAA  20 A7 0C    JSR user_routine_test_work_piece
+0DAD  AD 0F C1    LDA $C10F
+0DB0  C9 00       CMP #$00
+0DB2  F0 03       BEQ condition_pass_12
+0DB4  4C C0 0D    JMP control_if_else_11
+0DB7        condition_pass_12:
+0DB7  AD 06 C1    LDA $C106
+0DBA  8D 00 C1    STA $C100
+0DBD  4C C0 0D    JMP control_if_end_11
+0DC0        control_if_else_11:
+0DC0        control_if_end_11:
+0DC0  20 8F 0B    JSR user_routine_draw_piece
+0DC3  60          RTS
+0DC4        user_routine_move_left_after:
+0DC4  4C F0 0D    JMP user_routine_move_right_after
+0DC7        user_routine_move_right:
+0DC7  20 17 0B    JSR user_routine_clear_piece
+0DCA  20 01 0B    JSR user_routine_use_current_piece
+0DCD  AD 06 C1    LDA $C106
+0DD0  18          CLC
+0DD1  69 01       ADC #$01
+0DD3  8D 06 C1    STA $C106
+0DD6  20 A7 0C    JSR user_routine_test_work_piece
+0DD9  AD 0F C1    LDA $C10F
+0DDC  C9 00       CMP #$00
+0DDE  F0 03       BEQ condition_pass_14
+0DE0  4C EC 0D    JMP control_if_else_13
+0DE3        condition_pass_14:
+0DE3  AD 06 C1    LDA $C106
+0DE6  8D 00 C1    STA $C100
+0DE9  4C EC 0D    JMP control_if_end_13
+0DEC        control_if_else_13:
+0DEC        control_if_end_13:
+0DEC  20 8F 0B    JSR user_routine_draw_piece
+0DEF  60          RTS
+0DF0        user_routine_move_right_after:
+0DF0  4C 40 0E    JMP user_routine_rotate_piece_after
+0DF3        user_routine_rotate_piece:
+0DF3  20 17 0B    JSR user_routine_clear_piece
+0DF6  20 01 0B    JSR user_routine_use_current_piece
+0DF9  AD 04 C1    LDA $C104
+0DFC  8D 05 C1    STA $C105
+0DFF  AD 05 C1    LDA $C105
+0E02  18          CLC
+0E03  69 04       ADC #$04
+0E05  8D 05 C1    STA $C105
+0E08  AD 05 C1    LDA $C105
+0E0B  29 0F       AND #$0F
+0E0D  8D 05 C1    STA $C105
+0E10  AD 03 C1    LDA $C103
+0E13  8D 08 C1    STA $C108
+0E16  AD 08 C1    LDA $C108
+0E19  18          CLC
+0E1A  6D 05 C1    ADC $C105
+0E1D  8D 08 C1    STA $C108
+0E20  20 A7 0C    JSR user_routine_test_work_piece
+0E23  AD 0F C1    LDA $C10F
+0E26  C9 00       CMP #$00
+0E28  F0 03       BEQ condition_pass_16
+0E2A  4C 3C 0E    JMP control_if_else_15
+0E2D        condition_pass_16:
+0E2D  AD 05 C1    LDA $C105
+0E30  8D 04 C1    STA $C104
+0E33  AD 08 C1    LDA $C108
+0E36  8D 02 C1    STA $C102
+0E39  4C 3C 0E    JMP control_if_end_15
+0E3C        control_if_else_15:
+0E3C        control_if_end_15:
+0E3C  20 8F 0B    JSR user_routine_draw_piece
+0E3F  60          RTS
+0E40        user_routine_rotate_piece_after:
+0E40  4C 72 0E    JMP user_routine_drop_piece_after
+0E43        user_routine_drop_piece:
+0E43  20 17 0B    JSR user_routine_clear_piece
+0E46  20 01 0B    JSR user_routine_use_current_piece
+0E49  AD 07 C1    LDA $C107
+0E4C  18          CLC
+0E4D  69 01       ADC #$01
+0E4F  8D 07 C1    STA $C107
+0E52  20 A7 0C    JSR user_routine_test_work_piece
+0E55  AD 0F C1    LDA $C10F
+0E58  C9 00       CMP #$00
+0E5A  F0 03       BEQ condition_pass_18
+0E5C  4C 6B 0E    JMP control_if_else_17
+0E5F        condition_pass_18:
+0E5F  AD 07 C1    LDA $C107
+0E62  8D 01 C1    STA $C101
+0E65  20 8F 0B    JSR user_routine_draw_piece
+0E68  4C 71 0E    JMP control_if_end_17
+0E6B        control_if_else_17:
+0E6B  20 07 0C    JSR user_routine_lock_piece
+0E6E  20 1E 0D    JSR user_routine_spawn_piece
+0E71        control_if_end_17:
+0E71  60          RTS
+0E72        user_routine_drop_piece_after:
+            ; Deterministic game frame loop
+0E72  A9 00       LDA #$00
+0E74  8D 6A C7    STA $C76A
+0E77  A9 00       LDA #$00
+0E79  8D 6B C7    STA $C76B
+0E7C  A9 00       LDA #$00
+0E7E  8D 70 C7    STA $C770
+0E81  A9 3C       LDA #$3C
+0E83  8D 6F C7    STA $C76F
+0E86  A9 00       LDA #$00
+0E88  8D 16 C1    STA $C116
+0E8B  A9 FF       LDA #$FF
+0E8D  8D 67 C7    STA $C767
+0E90  A9 FF       LDA #$FF
+0E92  8D 69 C7    STA $C769
+0E95        game_video_detect_low:
+0E95  AD 11 D0    LDA $D011
+0E98  30 FB       BMI game_video_detect_low
+0E9A        game_video_detect_high:
+0E9A  AD 11 D0    LDA $D011
+0E9D  10 FB       BPL game_video_detect_high
+0E9F        game_video_detect_scan:
+0E9F  AD 11 D0    LDA $D011
+0EA2  10 0F       BPL game_video_detect_done
+0EA4  AD 12 D0    LDA $D012
+0EA7  C9 20       CMP #$20
+0EA9  B0 03       BCS game_video_detect_pal
+0EAB  4C 9F 0E    JMP game_video_detect_scan
+0EAE        game_video_detect_pal:
+0EAE  A9 32       LDA #$32
+0EB0  8D 6F C7    STA $C76F
+0EB3        game_video_detect_done:
+0EB3        game_frame_loop:
+0EB3        game_frame_wait_leave:
+0EB3  AD 12 D0    LDA $D012
+0EB6  C9 F0       CMP #$F0
+0EB8  F0 F9       BEQ game_frame_wait_leave
+0EBA        game_frame_wait_target:
+0EBA  AD 12 D0    LDA $D012
+0EBD  C9 F0       CMP #$F0
+0EBF  D0 F9       BNE game_frame_wait_target
+0EC1  18          CLC
+0EC2  AD 70 C7    LDA $C770
+0EC5  69 32       ADC #$32
+0EC7  8D 70 C7    STA $C770
+0ECA  CD 6F C7    CMP $C76F
+0ECD  B0 03       BCS game_frame_logical_tick
+0ECF  4C B3 0E    JMP game_frame_loop
+0ED2        game_frame_logical_tick:
+0ED2  38          SEC
+0ED3  AD 70 C7    LDA $C770
+0ED6  ED 6F C7    SBC $C76F
+0ED9  8D 70 C7    STA $C770
+0EDC  AD 67 C7    LDA $C767
+0EDF  8D 69 C7    STA $C769
+0EE2  AD 00 DC    LDA $DC00
+0EE5  8D 67 C7    STA $C767
+0EE8  EE 6A C7    INC $C76A
+0EEB  D0 03       BNE game_frame_counter_done_19
+0EED  EE 6B C7    INC $C76B
+0EF0        game_frame_counter_done_19:
+0EF0  AD 10 C1    LDA $C110
+0EF3  C9 00       CMP #$00
+0EF5  F0 03       BEQ condition_pass_21
+0EF7  4C 60 0F    JMP control_if_else_20
+0EFA        condition_pass_21:
+0EFA  AD 67 C7    LDA $C767
+0EFD  29 04       AND #$04
+0EFF  F0 03       BEQ joystick_current_pressed_23
+0F01  4C 14 0F    JMP control_if_else_22
+0F04        joystick_current_pressed_23:
+0F04  AD 69 C7    LDA $C769
+0F07  29 04       AND #$04
+0F09  D0 03       BNE condition_pass_23
+0F0B  4C 14 0F    JMP control_if_else_22
+0F0E        condition_pass_23:
+0F0E  20 9B 0D    JSR user_routine_move_left
+0F11  4C 14 0F    JMP control_if_end_22
+0F14        control_if_else_22:
+0F14        control_if_end_22:
+0F14  AD 67 C7    LDA $C767
+0F17  29 08       AND #$08
+0F19  F0 03       BEQ joystick_current_pressed_25
+0F1B  4C 2E 0F    JMP control_if_else_24
+0F1E        joystick_current_pressed_25:
+0F1E  AD 69 C7    LDA $C769
+0F21  29 08       AND #$08
+0F23  D0 03       BNE condition_pass_25
+0F25  4C 2E 0F    JMP control_if_else_24
+0F28        condition_pass_25:
+0F28  20 C7 0D    JSR user_routine_move_right
+0F2B  4C 2E 0F    JMP control_if_end_24
+0F2E        control_if_else_24:
+0F2E        control_if_end_24:
+0F2E  AD 67 C7    LDA $C767
+0F31  29 10       AND #$10
+0F33  F0 03       BEQ joystick_current_pressed_27
+0F35  4C 48 0F    JMP control_if_else_26
+0F38        joystick_current_pressed_27:
+0F38  AD 69 C7    LDA $C769
+0F3B  29 10       AND #$10
+0F3D  D0 03       BNE condition_pass_27
+0F3F  4C 48 0F    JMP control_if_else_26
+0F42        condition_pass_27:
+0F42  20 F3 0D    JSR user_routine_rotate_piece
+0F45  4C 48 0F    JMP control_if_end_26
+0F48        control_if_else_26:
+0F48        control_if_end_26:
+0F48  EE 16 C1    INC $C116
+0F4B  AD 16 C1    LDA $C116
+0F4E  C9 0A       CMP #$0A
+0F50  B0 03       BCS game_every_run_28
+0F52  4C 5D 0F    JMP game_every_done_29
+0F55        game_every_run_28:
+0F55  A9 00       LDA #$00
+0F57  8D 16 C1    STA $C116
+0F5A  20 43 0E    JSR user_routine_drop_piece
+0F5D        game_every_done_29:
+0F5D  4C 60 0F    JMP control_if_end_20
+0F60        control_if_else_20:
+0F60        control_if_end_20:
+0F60  4C B3 0E    JMP game_frame_loop
+            ; Dynamic map 0: draw one changed metatile
+0F63        runtime_map_draw_tile_0:
+0F63  A9 00       LDA #$00
+0F65  8D B6 C7    STA $C7B6
+0F68  AD B3 C7    LDA $C7B3
+0F6B  8D B7 C7    STA $C7B7
+0F6E        map_index_rows_renderer_0:
+0F6E  AD B7 C7    LDA $C7B7
+0F71  F0 0F       BEQ map_index_done_renderer_0
+0F73  18          CLC
+0F74  AD B6 C7    LDA $C7B6
+0F77  69 0A       ADC #$0A
+0F79  8D B6 C7    STA $C7B6
+0F7C  CE B7 C7    DEC $C7B7
+0F7F  4C 6E 0F    JMP map_index_rows_renderer_0
+0F82        map_index_done_renderer_0:
+0F82  18          CLC
+0F83  AD B6 C7    LDA $C7B6
+0F86  6D B2 C7    ADC $C7B2
+0F89  AA          TAX
+0F8A  BD 00 C6    LDA $C600,X
+0F8D  8D B4 C7    STA $C7B4
+0F90  AD B4 C7    LDA $C7B4
+0F93  8D B5 C7    STA $C7B5
+0F96  A9 87       LDA #$87
+0F98  85 FB       STA $FB
+0F9A  A9 04       LDA #$04
+0F9C  85 FC       STA $FC
+0F9E  AD B3 C7    LDA $C7B3
+0FA1  8D B7 C7    STA $C7B7
+0FA4        runtime_map_screen_y_loop_0:
+0FA4  AD B7 C7    LDA $C7B7
+0FA7  F0 13       BEQ runtime_map_screen_y_done_0
+0FA9  18          CLC
+0FAA  A5 FB       LDA $FB
+0FAC  69 28       ADC #$28
+0FAE  85 FB       STA $FB
+0FB0  A5 FC       LDA $FC
+0FB2  69 00       ADC #$00
+0FB4  85 FC       STA $FC
+0FB6  CE B7 C7    DEC $C7B7
+0FB9  4C A4 0F    JMP runtime_map_screen_y_loop_0
+0FBC        runtime_map_screen_y_done_0:
+0FBC  AD B2 C7    LDA $C7B2
+0FBF  8D B9 C7    STA $C7B9
+0FC2  18          CLC
+0FC3  A5 FB       LDA $FB
+0FC5  6D B9 C7    ADC $C7B9
+0FC8  85 FB       STA $FB
+0FCA  A5 FC       LDA $FC
+0FCC  69 00       ADC #$00
+0FCE  85 FC       STA $FC
+0FD0  18          CLC
+0FD1  A5 FB       LDA $FB
+0FD3  69 00       ADC #$00
+0FD5  85 FD       STA $FD
+0FD7  A5 FC       LDA $FC
+0FD9  69 D4       ADC #$D4
+0FDB  85 FE       STA $FE
+0FDD  18          CLC
+0FDE  AD B5 C7    LDA $C7B5
+0FE1  69 00       ADC #$00
+0FE3  A8          TAY
+0FE4  B9 1F 10    LDA asset_map_chars_0,Y
+0FE7  A0 00       LDY #$00
+0FE9  91 FB       STA ($FB),Y
+0FEB  18          CLC
+0FEC  AD B5 C7    LDA $C7B5
+0FEF  69 00       ADC #$00
+0FF1  A8          TAY
+0FF2  B9 22 10    LDA asset_map_colors_0,Y
+0FF5  A0 00       LDY #$00
+0FF7  91 FD       STA ($FD),Y
+0FF9  60          RTS
+            ; Dynamic map 0: redraw every cell from runtime RAM
+0FFA        runtime_map_redraw_0:
+0FFA  A9 00       LDA #$00
+0FFC  8D B3 C7    STA $C7B3
+0FFF        runtime_map_redraw_row_0:
+0FFF  A9 00       LDA #$00
+1001  8D B2 C7    STA $C7B2
+1004        runtime_map_redraw_column_0:
+1004  20 63 0F    JSR runtime_map_draw_tile_0
+1007  EE B2 C7    INC $C7B2
+100A  AD B2 C7    LDA $C7B2
+100D  C9 0A       CMP #$0A
+100F  D0 F3       BNE runtime_map_redraw_column_0
+1011  EE B3 C7    INC $C7B3
+1014  AD B3 C7    LDA $C7B3
+1017  C9 14       CMP #$14
+1019  D0 E4       BNE runtime_map_redraw_row_0
+101B  60          RTS
+            ; User data
+101C        asset_map_collisions_0:
+101C  00 01 00    .byte $00, $01, $00
+101F        asset_map_chars_0:
+101F  00 01 02    .byte $00, $01, $02
+1022        asset_map_colors_0:
+1022  00 0E 07    .byte $00, $0E, $07
+1025        asset_bytes_1:
+1025  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+10ED        tetris_shape_x:
+10ED  00 01 02 01 01 00 01 01 01 00 01 02 00 00 01 00 00 01 00 01 00 01 00 01 00 01 00 01 00 01 00 01 00 01 02 03 00 00 00 00 00 01 02 03 00 00 00 00 00 00 00 01 00 00 01 02 00 01 01 01 00 01 02 02 .byte $00, $01, $02, $01, $01, $00, $01, $01, $01, $00, $01, $02, $00, $00, $01, $00, $00, $01, $00, $01, $00, $01, $00, $01, $00, $01, $00, $01, $00, $01, $00, $01, $00, $01, $02, $03, $00, $00, $00, $00, $00, $01, $02, $03, $00, $00, $00, $00, $00, $00, $00, $01, $00, $00, $01, $02, $00, $01, $01, $01, $00, $01, $02, $02
+112D        tetris_shape_y:
+112D  00 00 00 01 00 01 01 02 00 01 01 01 00 01 01 02 00 00 01 01 00 00 01 01 00 00 01 01 00 00 01 01 00 00 00 00 00 01 02 03 00 00 00 00 00 01 02 03 00 01 02 02 00 01 00 00 00 00 01 02 01 01 01 00 .byte $00, $00, $00, $01, $00, $01, $01, $02, $00, $01, $01, $01, $00, $01, $01, $02, $00, $00, $01, $01, $00, $00, $01, $01, $00, $00, $01, $01, $00, $00, $01, $01, $00, $00, $00, $00, $00, $01, $02, $03, $00, $00, $00, $00, $00, $01, $02, $03, $00, $01, $02, $02, $00, $01, $00, $00, $00, $00, $01, $02, $01, $01, $01, $00
+116D        asset_bytes_3:
+116D  00 00 00 00 00 00 00 00 FF 81 BD A5 BD 81 FF 00 3C 7E FF FF FF FF 7E 3C FF FF C3 C3 C3 C3 FF FF 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 .byte $00, $00, $00, $00, $00, $00, $00, $00, $FF, $81, $BD, $A5, $BD, $81, $FF, $00, $3C, $7E, $FF, $FF, $FF, $FF, $7E, $3C, $FF, $FF, $C3, $C3, $C3, $C3, $FF, $FF, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+126D        asset_bytes_5:
+126D  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00

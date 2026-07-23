@@ -7,14 +7,17 @@
     "c64js": "./src/cli.js"
   },
   "main": "./src/index.js",
+  "types": "./index.d.ts",
   "exports": {
     ".": "./src/index.js",
     "./assembler": "./src/assembler6502.js",
     "./compiler": "./src/compiler.js",
+    "./assets": "./src/assets.js",
     "./irq/raster": "./src/irq/raster.js"
   },
   "files": [
     "src",
+    "schemas",
     "examples",
     "README.md",
     "LICENSE",

@@ -6,6 +6,7 @@ const initialState = () => ({
   currentTextColor: 1,
   screenBase: 0x0400,
   colorBase: 0xd800,
+  assetBaseDirectory: process.cwd(),
   dataDefinitions: new Map(),
   input: {
     joystickPorts: [],
@@ -36,6 +37,7 @@ export function resetRuntime() {
   state.currentTextColor = fresh.currentTextColor;
   state.screenBase = fresh.screenBase;
   state.colorBase = fresh.colorBase;
+  state.assetBaseDirectory = fresh.assetBaseDirectory;
   state.dataDefinitions = fresh.dataDefinitions;
   state.input = fresh.input;
   state.irq = fresh.irq;
@@ -100,6 +102,14 @@ export function setScreenBase(address) {
 
 export function setColorBase(address) {
   state.colorBase = address & 0xffff;
+}
+
+export function setAssetBaseDirectory(directory) {
+  state.assetBaseDirectory = directory;
+}
+
+export function getAssetBaseDirectory() {
+  return state.assetBaseDirectory;
 }
 
 export function addRasterHandler(line, callback) {
