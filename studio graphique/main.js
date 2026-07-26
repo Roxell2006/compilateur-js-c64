@@ -12,13 +12,76 @@
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const clone = value => JSON.parse(JSON.stringify(value));
   const blankChar = () => Array(8).fill(0);
+  const SYSTEM_CHAR_COUNT = 65;
+  const C64_LETTERS = [
+    [24,60,102,126,102,102,102,0], [124,102,102,124,102,102,124,0],
+    [60,102,96,96,96,102,60,0], [120,108,102,102,102,108,120,0],
+    [126,96,96,120,96,96,126,0], [126,96,96,120,96,96,96,0],
+    [60,102,96,110,102,102,60,0], [102,102,102,126,102,102,102,0],
+    [60,24,24,24,24,24,60,0], [30,12,12,12,12,108,56,0],
+    [102,108,120,112,120,108,102,0], [96,96,96,96,96,96,126,0],
+    [99,119,127,107,99,99,99,0], [102,118,126,126,110,102,102,0],
+    [60,102,102,102,102,102,60,0], [124,102,102,124,96,96,96,0],
+    [60,102,102,102,110,60,14,0], [124,102,102,124,120,108,102,0],
+    [60,102,96,60,6,102,60,0], [126,24,24,24,24,24,24,0],
+    [102,102,102,102,102,102,60,0], [102,102,102,102,102,60,24,0],
+    [99,99,99,107,127,119,99,0], [102,102,60,24,60,102,102,0],
+    [102,102,102,60,24,24,24,0], [126,6,12,24,48,96,126,0]
+  ];
+  const C64_DIGITS = [
+    [60,102,110,118,102,102,60,0], [24,56,24,24,24,24,126,0],
+    [60,102,6,12,48,96,126,0], [60,102,6,28,6,102,60,0],
+    [6,14,30,102,127,6,6,0], [126,96,124,6,6,102,60,0],
+    [60,102,96,124,102,102,60,0], [126,102,12,24,24,24,24,0],
+    [60,102,102,60,102,102,60,0], [60,102,102,62,6,102,60,0]
+  ];
+  const C64_PUNCTUATION = {
+    33: [24,24,24,24,0,0,24,0], 34: [102,102,102,0,0,0,0,0],
+    35: [102,102,255,102,255,102,102,0], 36: [24,62,96,60,6,124,24,0],
+    37: [98,102,12,24,48,102,70,0], 38: [60,102,60,56,103,102,63,0],
+    39: [6,12,24,0,0,0,0,0], 40: [12,24,48,48,48,24,12,0],
+    41: [48,24,12,12,12,24,48,0], 42: [0,102,60,255,60,102,0,0],
+    43: [0,24,24,126,24,24,0,0], 44: [0,0,0,0,0,24,24,48],
+    45: [0,0,0,126,0,0,0,0], 46: [0,0,0,0,0,24,24,0],
+    47: [0,6,12,24,48,96,0,0], 58: [0,0,24,0,0,24,0,0],
+    59: [0,0,24,0,0,24,24,48], 60: [14,24,48,96,48,24,14,0],
+    61: [0,0,126,0,126,0,0,0], 62: [112,24,12,6,12,24,112,0],
+    63: [60,102,6,12,24,0,24,0]
+  };
+
+  function createSystemCharset() {
+    const characters = Array.from({ length: SYSTEM_CHAR_COUNT }, blankChar);
+    C64_LETTERS.forEach((character, index) => { characters[index + 1] = [...character]; });
+    C64_DIGITS.forEach((character, index) => { characters[index + 48] = [...character]; });
+    Object.entries(C64_PUNCTUATION).forEach(([index, character]) => { characters[Number(index)] = [...character]; });
+    return characters;
+  }
+
+  function hasSystemCharset(asset) {
+    const expected = createSystemCharset();
+    const characters = asset?.charset?.characters;
+    return Array.isArray(characters) && characters.length >= SYSTEM_CHAR_COUNT
+      && expected.every((character, index) => character.every((byte, row) => characters[index]?.[row] === byte));
+  }
+
+  function installSystemCharacters(asset) {
+    if (hasSystemCharset(asset)) return false;
+    if (asset.charset.characters.length + SYSTEM_CHAR_COUNT > 256) throw new Error("Il faut libérer 65 caractères avant d’installer le charset système.");
+    asset.charset.characters = [...createSystemCharset(), ...asset.charset.characters.map(character => [...character])];
+    asset.tiles.forEach(tile => { tile.chars = tile.chars.map(index => index + SYSTEM_CHAR_COUNT); });
+    return true;
+  }
+
+  function isSystemCharacter(index) {
+    return hasSystemCharset(project) && index < SYSTEM_CHAR_COUNT;
+  }
 
   const starterProject = () => ({
     version: 1,
     charset: {
       mode: "hires",
       characters: [
-        blankChar(),
+        ...createSystemCharset(),
         [255, 129, 129, 129, 129, 129, 129, 255],
         [0, 24, 60, 126, 255, 126, 60, 24],
         [170, 85, 170, 85, 170, 85, 170, 85]
@@ -27,10 +90,10 @@
     tileWidth: 1,
     tileHeight: 1,
     tiles: [
-      { chars: [0], colors: [1], collision: 0, properties: {} },
-      { chars: [1], colors: [14], collision: 1, properties: { solid: true } },
-      { chars: [2], colors: [7], collision: 0, properties: { collectible: true } },
-      { chars: [3], colors: [5], collision: 1, properties: { solid: true } }
+      { chars: [32], colors: [1], collision: 0, properties: {} },
+      { chars: [65], colors: [14], collision: 1, properties: { solid: true } },
+      { chars: [66], colors: [7], collision: 0, properties: { collectible: true } },
+      { chars: [67], colors: [5], collision: 1, properties: { solid: true } }
     ],
     map: {
       width: 16,
@@ -46,9 +109,9 @@
 
   let project = loadLocalProject();
   let currentView = "charset";
-  let selectedChar = 0;
+  let selectedChar = Math.min(SYSTEM_CHAR_COUNT, project.charset.characters.length - 1);
   let selectedTile = 0;
-  let tilePaintChar = 0;
+  let tilePaintChar = selectedChar;
   let tilePaintColor = 1;
   let foreground = 1;
   let background = 0;
@@ -74,7 +137,10 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return starterProject();
       const parsed = JSON.parse(raw);
-      return validateAsset(parsed).errors.length ? starterProject() : normalizeAsset(parsed);
+      if (validateAsset(parsed).errors.length) return starterProject();
+      const normalized = normalizeAsset(parsed);
+      try { installSystemCharacters(normalized); } catch (_) { /* Installation manuelle possible. */ }
+      return normalized;
     } catch (_) {
       return starterProject();
     }
@@ -185,13 +251,48 @@
   }
 
   function updateContextHelp() {
+    const charsetHelp = isSystemCharacter(selectedChar)
+      ? `Code écran ${selectedChar} protégé pour conserver l’affichage des textes et des scores.`
+      : "Dessinez dans la grille 8 × 8. Clic gauche : dessiner. Clic droit : effacer.";
     const content = {
-      charset: [`Caractère ${selectedChar}`, "Dessinez dans la grille 8 × 8. Clic gauche : dessiner. Clic droit : effacer."],
+      charset: [`${characterLabel(selectedChar)} · code ${selectedChar}`, charsetHelp],
       tiles: [`Métatuile ${selectedTile}`, "Assemblez caractères et couleurs, puis associez collision et propriétés de gameplay."],
       map: [`Tuile ${selectedTile}`, "Dessinez la carte. Les collisions proviennent de chaque métatuile."]
     }[currentView];
     $("#selectionTitle").textContent = content[0];
     $("#selectionHelp").textContent = content[1];
+  }
+
+  function characterLabel(index) {
+    if (!hasSystemCharset(project)) return `P${index}`;
+    if (index >= 1 && index <= 26) return String.fromCharCode(64 + index);
+    if (index === 32) return "Espace";
+    if (index >= 48 && index <= 57) return String(index - 48);
+    const punctuation = { 33: "!", 34: '"', 35: "#", 36: "$", 37: "%", 38: "&", 39: "'", 40: "(", 41: ")", 42: "*", 43: "+", 44: ",", 45: "-", 46: ".", 47: "/", 58: ":", 59: ";", 60: "<", 61: "=", 62: ">", 63: "?" };
+    if (punctuation[index]) return punctuation[index];
+    if (index >= 65 && index <= 90) return `Shift+${String.fromCharCode(index)}`;
+    if (index < SYSTEM_CHAR_COUNT) return `S${index}`;
+    return `P${index}`;
+  }
+
+  function textScreenCode(character) {
+    const code = character.charCodeAt(0);
+    if (character === " ") return 32;
+    if (code >= 65 && code <= 90) return code - 64;
+    if (code >= 97 && code <= 122) return code - 96;
+    return code & 0xff;
+  }
+
+  function renderTextPreview() {
+    const canvas = $("#textPreviewCanvas");
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = COLORS[background]; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const text = $("#textPreviewInput").value;
+    [...text].slice(0, 32).forEach((character, index) => {
+      const code = textScreenCode(character);
+      const glyph = project.charset.characters[code] || blankChar();
+      drawCharacter(ctx, glyph, index * 8, 12, 8, COLORS[foreground], COLORS[background], false, "hires");
+    });
   }
 
   function createPalette(container, selected, onSelect) {
@@ -207,13 +308,13 @@
     });
   }
 
-  function charPixelValue(character, x, y) {
-    if (project.charset.mode === "multicolor") return (character[y] >> ((3 - x) * 2)) & 3;
+  function charPixelValue(character, x, y, mode = project.charset.mode) {
+    if (mode === "multicolor") return (character[y] >> ((3 - x) * 2)) & 3;
     return (character[y] & (128 >> x)) !== 0 ? 1 : 0;
   }
 
-  function setCharPixelValue(character, x, y, value) {
-    if (project.charset.mode === "multicolor") {
+  function setCharPixelValue(character, x, y, value, mode = project.charset.mode) {
+    if (mode === "multicolor") {
       const shift = (3 - x) * 2;
       character[y] = (character[y] & ~(3 << shift)) | ((value & 3) << shift);
       return;
@@ -222,46 +323,47 @@
     character[y] = value ? character[y] | mask : character[y] & ~mask;
   }
 
-  function drawCharacter(ctx, character, x, y, size, foregroundColor, backgroundColor, transparent = false) {
+  function drawCharacter(ctx, character, x, y, size, foregroundColor, backgroundColor, transparent = false, mode = project.charset.mode) {
     if (!transparent) {
       ctx.fillStyle = backgroundColor;
       ctx.fillRect(x, y, size, size);
     }
-    const logicalWidth = project.charset.mode === "multicolor" ? 4 : 8;
+    const logicalWidth = mode === "multicolor" ? 4 : 8;
     const pixelWidth = size / logicalWidth;
     const pixelHeight = size / 8;
     const valueColors = [backgroundColor, COLORS[multicolor1], COLORS[multicolor2], foregroundColor];
     for (let py = 0; py < 8; py++) {
       for (let px = 0; px < logicalWidth; px++) {
-        const value = charPixelValue(character, px, py);
+        const value = charPixelValue(character, px, py, mode);
         if (value) {
-          ctx.fillStyle = project.charset.mode === "multicolor" ? valueColors[value] : foregroundColor;
+          ctx.fillStyle = mode === "multicolor" ? valueColors[value] : foregroundColor;
           ctx.fillRect(x + px * pixelWidth, y + py * pixelHeight, pixelWidth, pixelHeight);
         }
       }
     }
   }
 
-  function makePreviewCanvas(character, color = 1, size = 64) {
+  function makePreviewCanvas(character, color = 1, size = 64, mode = project.charset.mode) {
     const canvas = document.createElement("canvas");
     canvas.width = size;
     canvas.height = size;
     const ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = false;
-    drawCharacter(ctx, character, 0, 0, size, COLORS[color], COLORS[background]);
+    drawCharacter(ctx, character, 0, 0, size, COLORS[color], COLORS[background], false, mode);
     return canvas;
   }
 
   function renderCharset() {
     const character = project.charset.characters[selectedChar];
-    const logicalWidth = project.charset.mode === "multicolor" ? 4 : 8;
+    const editMode = isSystemCharacter(selectedChar) ? "hires" : project.charset.mode;
+    const logicalWidth = editMode === "multicolor" ? 4 : 8;
     const grid = $("#pixelGrid");
     grid.replaceChildren();
-    grid.classList.toggle("multicolor", project.charset.mode === "multicolor");
+    grid.classList.toggle("multicolor", editMode === "multicolor");
     for (let y = 0; y < 8; y++) {
       for (let x = 0; x < logicalWidth; x++) {
         const pixel = document.createElement("button");
-        const value = charPixelValue(character, x, y);
+        const value = charPixelValue(character, x, y, editMode);
         pixel.className = `pixel${value ? " on" : ""}`;
         pixel.dataset.x = x;
         pixel.dataset.y = y;
@@ -278,16 +380,22 @@
     const preview = $("#charPreview");
     const ctx = preview.getContext("2d");
     ctx.imageSmoothingEnabled = false;
-    drawCharacter(ctx, character, 0, 0, preview.width, COLORS[foreground], COLORS[background]);
+    drawCharacter(ctx, character, 0, 0, preview.width, COLORS[foreground], COLORS[background], false, editMode);
     $("#charBytes").textContent = character.map(byte => `$${byte.toString(16).padStart(2, "0").toUpperCase()}`).join(" ");
     $("#charCount").textContent = `${project.charset.characters.length} / 256`;
+    const protectedCharacter = isSystemCharacter(selectedChar);
+    $("#deleteChar").disabled = protectedCharacter;
+    $("#clearChar").disabled = protectedCharacter;
+    $("#pasteChar").disabled = protectedCharacter;
+    $("#moveCharBack").disabled = protectedCharacter || selectedChar <= (hasSystemCharset(project) ? SYSTEM_CHAR_COUNT : 0);
+    $("#moveCharNext").disabled = protectedCharacter || selectedChar >= project.charset.characters.length - 1;
 
     createPalette($("#charForegroundPalette"), foreground, value => { foreground = value; renderCharset(); });
     createPalette($("#charBackgroundPalette"), background, value => { background = value; renderAll(); });
     $("#charsetMode").value = project.charset.mode;
     $('[data-transform="rotate"]').textContent = project.charset.mode === "multicolor" ? "Rotation 180°" : "Rotation 90°";
-    $("#multicolorControls").hidden = project.charset.mode !== "multicolor";
-    if (project.charset.mode === "multicolor") {
+    $("#multicolorControls").hidden = editMode !== "multicolor";
+    if (editMode === "multicolor") {
       createPalette($("#multicolor1Palette"), multicolor1, value => { multicolor1 = value; renderAll(); });
       createPalette($("#multicolor2Palette"), multicolor2, value => { multicolor2 = value; renderAll(); });
       const valueButtons = $("#pixelValueButtons");
@@ -302,24 +410,29 @@
       });
     }
     renderCharacterLibrary($("#charLibrary"), selectedChar, index => { selectedChar = index; renderAll(); });
+    renderTextPreview();
   }
 
   function renderCharacterLibrary(container, selected, onSelect) {
     container.replaceChildren();
+    const systemReady = hasSystemCharset(project);
     project.charset.characters.forEach((character, index) => {
       const button = document.createElement("button");
       button.className = `asset-item${index === selected ? " selected" : ""}`;
-      button.append(makePreviewCanvas(character, foreground, 64));
+      button.append(makePreviewCanvas(character, foreground, 64, systemReady && index < SYSTEM_CHAR_COUNT ? "hires" : project.charset.mode));
+      button.classList.toggle("system", systemReady && index < SYSTEM_CHAR_COUNT);
+      button.classList.toggle("custom-start", systemReady && index === SYSTEM_CHAR_COUNT);
       const number = document.createElement("small");
-      number.textContent = index;
+      number.textContent = characterLabel(index);
       button.append(number);
-      button.title = `Caractère ${index}`;
+      button.title = `${characterLabel(index)} · code écran ${index}${systemReady && index < SYSTEM_CHAR_COUNT ? " · protégé" : " · personnalisé"}`;
       button.addEventListener("click", () => onSelect(index));
       container.append(button);
     });
   }
 
   function paintPixel(target, forcedValue = null) {
+    if (isSystemCharacter(selectedChar)) return;
     const x = Number(target.dataset.x);
     const y = Number(target.dataset.y);
     const character = project.charset.characters[selectedChar];
@@ -334,11 +447,13 @@
   function renderCharacterDependencies() {
     const character = project.charset.characters[selectedChar];
     const preview = $("#charPreview");
-    drawCharacter(preview.getContext("2d"), character, 0, 0, preview.width, COLORS[foreground], COLORS[background]);
+    const mode = isSystemCharacter(selectedChar) ? "hires" : project.charset.mode;
+    drawCharacter(preview.getContext("2d"), character, 0, 0, preview.width, COLORS[foreground], COLORS[background], false, mode);
     $("#charBytes").textContent = character.map(byte => `$${byte.toString(16).padStart(2, "0").toUpperCase()}`).join(" ");
   }
 
   function transformCharacter(kind) {
+    if (isSystemCharacter(selectedChar)) return showToast("Les caractères système sont protégés. Dupliquez-en un pour créer une variante.");
     mutate(() => {
       const old = project.charset.characters[selectedChar];
       const next = blankChar();
@@ -374,7 +489,8 @@
 
   function moveCharacter(delta) {
     const destination = selectedChar + delta;
-    if (destination < 0 || destination >= project.charset.characters.length) return;
+    const customStart = hasSystemCharset(project) ? SYSTEM_CHAR_COUNT : 0;
+    if (selectedChar < customStart || destination < customStart || destination >= project.charset.characters.length) return;
     mutate(() => {
       [project.charset.characters[selectedChar], project.charset.characters[destination]] = [project.charset.characters[destination], project.charset.characters[selectedChar]];
       remapCharacterIndices(selectedChar, destination);
@@ -687,6 +803,7 @@
     });
     if (asset.map && asset.map.width * asset.map.height > 8192) errors.push("La map dépasse les 8192 cases disponibles dans la RAM dynamique actuelle.");
     if (asset.map && (asset.map.width * tw > 40 || asset.map.height * th > 25)) warnings.push("La map dépasse l’écran C64 de 40 × 25 caractères et nécessitera scrolling ou découpage.");
+    if (Array.isArray(characters) && !hasSystemCharset(asset)) warnings.push("Le charset ne contient pas encore la zone système A–Z / 0–9 ; utilisez le bouton d’installation avant d’écrire du texte.");
     return { errors, warnings };
   }
 
@@ -814,11 +931,16 @@
         if (validation.errors.length) throw new Error(validation.errors.join(" "));
         const previous = snapshot();
         project = normalizeAsset(imported);
+        let systemAdded = false;
+        try { systemAdded = installSystemCharacters(project); } catch (_) { /* Le projet reste importable et affiche un avertissement. */ }
+        if (systemAdded) { selectedChar = SYSTEM_CHAR_COUNT; tilePaintChar = selectedChar; }
         pushHistory(previous);
         clampSelections();
         persist();
         renderAll();
-        showToast(`${file.name} importé sans perte.`);
+        showToast(systemAdded
+          ? `${file.name} importé ; A–Z / 0–9 ajoutés et indices de tuiles remappés.`
+          : `${file.name} importé sans perte.`);
       } catch (error) {
         showToast(`Import refusé : ${error.message}`);
       }
@@ -831,10 +953,13 @@
     $("#undo").addEventListener("click", undo);
     $("#redo").addEventListener("click", redo);
     $("#projectName").addEventListener("change", () => localStorage.setItem(`${STORAGE_KEY}-name`, $("#projectName").value));
+    $("#textPreviewInput").addEventListener("input", renderTextPreview);
     $("#newProject").addEventListener("click", () => {
       if (!confirm("Créer un nouveau projet ? Le projet actuel reste récupérable avec Annuler.")) return;
       const previous = snapshot();
       project = starterProject();
+      selectedChar = SYSTEM_CHAR_COUNT;
+      tilePaintChar = selectedChar;
       pushHistory(previous);
       clampSelections();
       persist();
@@ -875,9 +1000,12 @@
       project.charset.mode = event.target.value;
       paintPixelValue = 1;
     }));
-    $("#clearChar").addEventListener("click", () => mutate(() => { project.charset.characters[selectedChar] = blankChar(); }));
+    $("#clearChar").addEventListener("click", () => {
+      if (isSystemCharacter(selectedChar)) return;
+      mutate(() => { project.charset.characters[selectedChar] = blankChar(); });
+    });
     $("#copyChar").addEventListener("click", () => { charClipboard = [...project.charset.characters[selectedChar]]; showToast("Caractère copié."); });
-    $("#pasteChar").addEventListener("click", () => { if (charClipboard) mutate(() => { project.charset.characters[selectedChar] = [...charClipboard]; }); });
+    $("#pasteChar").addEventListener("click", () => { if (charClipboard && !isSystemCharacter(selectedChar)) mutate(() => { project.charset.characters[selectedChar] = [...charClipboard]; }); });
     $("#moveCharBack").addEventListener("click", () => moveCharacter(-1));
     $("#moveCharNext").addEventListener("click", () => moveCharacter(1));
     $("#addChar").addEventListener("click", () => {
@@ -887,6 +1015,12 @@
     $("#duplicateChar").addEventListener("click", () => {
       if (project.charset.characters.length >= 256) return showToast("Le format est limité à 256 caractères.");
       mutate(() => {
+        if (isSystemCharacter(selectedChar)) {
+          project.charset.characters.push([...project.charset.characters[selectedChar]]);
+          selectedChar = project.charset.characters.length - 1;
+          tilePaintChar = selectedChar;
+          return;
+        }
         const inserted = selectedChar + 1;
         project.charset.characters.splice(inserted, 0, [...project.charset.characters[selectedChar]]);
         project.tiles.forEach(tile => { tile.chars = tile.chars.map(value => value >= inserted ? value + 1 : value); });
@@ -895,6 +1029,7 @@
       });
     });
     $("#deleteChar").addEventListener("click", () => {
+      if (isSystemCharacter(selectedChar)) return showToast("Les caractères système A–Z et 0–9 ne peuvent pas être supprimés.");
       if (project.charset.characters.length === 1) return showToast("Le charset doit garder au moins un caractère.");
       mutate(() => {
         project.charset.characters.splice(selectedChar, 1);
@@ -902,6 +1037,23 @@
         selectedChar = Math.min(selectedChar, project.charset.characters.length - 1);
         tilePaintChar = Math.min(tilePaintChar, project.charset.characters.length - 1);
       });
+    });
+    $("#installSystemCharset").addEventListener("click", () => {
+      try {
+        mutate(() => {
+          if (hasSystemCharset(project)) {
+            const system = createSystemCharset();
+            for (let index = 0; index < SYSTEM_CHAR_COUNT; index++) project.charset.characters[index] = [...system[index]];
+          } else {
+            installSystemCharacters(project);
+            selectedChar = SYSTEM_CHAR_COUNT;
+            tilePaintChar = selectedChar;
+          }
+        });
+        showToast("Alphabet C64 A–Z, espace et chiffres 0–9 prêts aux codes écran d’origine.");
+      } catch (error) {
+        showToast(error.message);
+      }
     });
 
     $("#resizeTiles").addEventListener("click", () => {

@@ -359,6 +359,8 @@ Current v0.9 foundation includes:
 - JSON loading relative to the compiled JavaScript file;
 - inline assets through `c64.assets.defineMap()`;
 - lossless hires 8x8 and multicolor 4x8 charset data, padded to the VIC-II 2 KB format;
+- studio projects preserve the original screen-code positions for A-Z, space,
+  common punctuation and 0-9; custom glyphs start at code 65 (`Shift+A`);
 - configurable metatiles from 1x1 to 8x8 characters;
 - per-cell colors and a separate logical collision value per tile;
 - compile-time validation of dimensions, byte values and tile references;

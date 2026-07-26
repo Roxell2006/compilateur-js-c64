@@ -757,7 +757,16 @@ describe("v0.9 static charset and map assets", () => {
   it("compiles the Snake and multicolor maze exit examples", async () => {
     const snake = await compileFile("examples/snake.js");
     const maze = await compileFile("examples/maze-game.js");
-    expect(snake.assetReport).toEqual(expect.arrayContaining([expect.objectContaining({ type: "map-runtime", bytes: 300 })]));
+    const snakeSource = await fs.readFile("examples/snake.js", "utf8");
+    const snakeAsset = JSON.parse(await fs.readFile("examples/assets/snake-room.json", "utf8"));
+    const playerSpawn = snakeAsset.map.objects.find((object) => object.type === "player-spawn");
+    const foodSpawn = snakeAsset.map.objects.find((object) => object.type === "food-spawn");
+    expect(snakeAsset.map.data[playerSpawn.y * snakeAsset.map.width + playerSpawn.x]).toBe(0);
+    expect(snakeAsset.map.data[foodSpawn.y * snakeAsset.map.width + foodSpawn.x]).toBe(0);
+    expect(snakeSource).toMatch(/const speed = 6/);
+    expect(snakeSource).toMatch(/playerSpawn\.properties\.direction/);
+    expect(snakeSource).toMatch(/control\.while\(foodPlaced\.eq\(false\)/);
+    expect(snake.assetReport).toEqual(expect.arrayContaining([expect.objectContaining({ type: "map-runtime", bytes: 300, objects: 2 })]));
     expect(maze.asm).toMatch(/ORA #\$10/);
     expect(snake.prgBytes.length).toBeLessThan(6000);
     expect(maze.prgBytes.length).toBeLessThan(6000);

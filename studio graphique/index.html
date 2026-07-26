@@ -74,6 +74,7 @@
             <select id="charsetMode"><option value="hires">Hires 1 bit</option><option value="multicolor">Multicolore 2 bits</option></select>
           </label>
           <div class="button-row">
+            <button id="installSystemCharset" class="button ghost">Restaurer A–Z / 0–9</button>
             <button id="addChar" class="button">+ Vide</button>
             <button id="duplicateChar" class="button">Dupliquer</button>
             <button id="deleteChar" class="button danger">Supprimer</button>
@@ -110,6 +111,11 @@
           <article class="panel preview-panel">
             <div class="panel-heading"><h2>Aperçu</h2><span>Couleurs de travail</span></div>
             <canvas id="charPreview" width="256" height="256" aria-label="Aperçu du caractère"></canvas>
+            <div>
+              <label for="textPreviewInput">Tester un texte ou un score</label>
+              <input id="textPreviewInput" value="SCORE: 000" maxlength="32">
+              <canvas id="textPreviewCanvas" width="256" height="32" aria-label="Aperçu texte du charset"></canvas>
+            </div>
             <div>
               <label>Premier plan</label>
               <div id="charForegroundPalette" class="palette" aria-label="Couleur de premier plan"></div>
