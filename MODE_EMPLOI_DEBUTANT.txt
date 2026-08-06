@@ -1465,7 +1465,9 @@ se croiser verticalement. Leur numero n'impose aucune zone.
 3. Le C64 ne peut toujours afficher que 8 sprites sur une meme ligne raster.
 Si un neuvieme sprite recouvre le meme intervalle vertical, aucun canal
 materiel n'est disponible : ce sprite est omis pendant cette image. Il pourra
-reapparaitre automatiquement a l'image suivante si une place se libere.
+reapparaitre automatiquement a l'image suivante si une place se libere. Le
+choix est deterministe : tri par Y, puis par numero logique en cas d'egalite ;
+les sprites les plus tardifs sont omis jusqu'a ce qu'un canal soit libre.
 
 4. expandY: true double la hauteur raster utilisee. Il est donc plus facile
 d'atteindre la limite de 8 chevauchements avec des sprites agrandis en Y.
@@ -1480,6 +1482,13 @@ c64.sprite.create(). Le compilateur signale ce melange comme une erreur.
 
 7. Gardez la boucle de jeu courte et bornee. Le tri et la preparation des
 premiers canaux doivent etre termines avant le retour de l'image visible.
+
+Le rapport de build contient sprite-multiplexer-budget. Il indique le maximum
+de sprites qui se chevauchent, les lignes disponibles pour reprogrammer le
+VIC-II et la politique de depassement. La commande c64js affiche aussi
+SPRITE_RASTER_BUDGET si plus de huit sprites occupent la meme bande ou si deux
+groupes sont trop proches. Le PRG reste deterministe, mais la scene doit alors
+etre espacee verticalement.
 
 En mode multiplexe, la mise a jour logique commence automatiquement vers la
 ligne raster 200. Seule la memoire logique est modifiee a ce moment : les
@@ -1571,7 +1580,7 @@ Les maps dynamiques utilisent maintenant un index 16 bits. Elles peuvent conteni
 jusqu'a 8 192 cases au total dans la zone RAM sure $8000-$9FFF. Le rapport assetReport
 indique les plages utilisees et le compilateur refuse un chevauchement avec le
 programme, un charset ou des sprites. Une map plus grande que l'ecran peut etre
-interrogee et modifiee, mais son affichage avec scrolling appartient a la v0.10.
+affichee avec le scroller de la v0.10 explique ci-dessous.
 
 CONVERTIR DES COORDONNEES
 
@@ -1635,6 +1644,324 @@ encore de score.
 L'editeur graphique n'est pas inclus dans le coeur de la librairie pour le
 moment. Il pourra etre developpe comme outil separe et produire exactement le
 meme JSON.
+
+
+7.6 SCROLLING X/Y ET PANNEAU DE SCORE FIXE (V0.10)
+--------------------------------------------------
+
+Pour afficher seulement une partie d'une grande map et la deplacer en douceur,
+creez un scroller :
+
+const scroll = c64.map.scroller(room, {
+  sourceX: 0,
+  sourceY: 0,
+  width: 28,
+  height: 8,
+  x: 6,
+  y: 6,
+  panel: "bottom"
+});
+
+width et height sont la taille visible en caracteres. x et y indiquent ou cette
+fenetre commence sur l'ecran. Les tiles doivent actuellement mesurer 1 x 1
+caractere. Pour masquer les colonnes de travail du VIC-II, la fenetre doit rester
+entre les colonnes 1 et 38.
+
+Dans l'initialisation, dessinez une premiere fois la fenetre :
+
+c64.game.init(() => {
+  c64.clearScreen();
+  c64.printCentered(22, "SCORE 0000");
+  scroll.draw();
+});
+
+Puis deplacez-la dans la boucle de jeu :
+
+c64.game.frame(() => {
+  c64.control.if(joystick.left(),  () => scroll.left());
+  c64.control.if(joystick.right(), () => scroll.right());
+  c64.control.if(joystick.up(),    () => scroll.up());
+  c64.control.if(joystick.down(),  () => scroll.down());
+});
+
+Chaque appel avance d'un pixel. Vous pouvez demander de 1 a 8 pixels avec, par
+exemple, scroll.right(2). La camera s'arrete automatiquement aux quatre bords de
+la map.
+
+panel: "bottom" conserve la zone en dessous et permet le scroll fin X/Y. Le
+compilateur active $D011 avant la premiere badline visible. Avant le panneau,
+une IRQ demarree assez tot effectue toute la transition avec une attente precise
+des lignes raster. Elle normalise non seulement les badlines, mais aussi les
+compteurs internes RC et VCBASE du VIC-II. Les huit phases YSCROLL atteignent
+ainsi le panneau avec exactement la meme adresse Screen RAM. panel: "top" permet actuellement le scroll
+horizontal, mais up() et down() sont refuses : un scroll Y sous un panneau texte
+superieur exige une compensation FLD/badline plus avancee pour ne pas repeter des
+lignes de caracteres. Les IRQ partagent le dispatcher avec celles de
+l'utilisateur, la musique SID et les animations de sprites.
+
+Pour garantir que l'IRQ d'entree ne soit jamais retardee d'une frame, un
+scroller desactive automatiquement le timer CIA du KERNAL et utilise uniquement
+les IRQ du VIC-II. Cela evite le rare scintillement de 7 pixels qui pouvait se
+produire meme sans mouvement. Les entrees c64.input continuent de fonctionner
+car elles lisent directement le joystick et le clavier. L'horloge systeme du
+KERNAL et son tampon clavier ne doivent en revanche pas etre utilises dans ce
+mode temps reel.
+
+TAILLE EXACTE DU PANNEAU
+
+Avec la forme historique panel: "bottom" ou panel: "top", ce sont toujours y et
+height qui determinent indirectement la place restante. Cette forme reste
+compatible.
+
+Pour reserver exactement 2 lignes en bas, utilisez maintenant :
+
+const scroll = c64.map.scroller(room, {
+  width: 28,
+  x: 1,
+  panel: { position: "bottom", rows: 2 }
+});
+
+La forme courte panel: { bottom: 2 } est equivalente.
+
+Pour reserver exactement 5 lignes en haut, utilisez
+panel: { position: "top", rows: 5 } ou la forme courte panel: { top: 5 }.
+
+Dans cette nouvelle forme, il ne faut plus calculer y et height : le compilateur
+place le viewport dans les 25 lignes de l'ecran et garde exactement le nombre de
+lignes demande. La map source doit etre au moins aussi haute que le viewport
+obtenu. Sans mouvement vertical, 2 lignes en bas laissent 23 lignes de map
+lorsque le viewport commence a y = 0. Si up() ou down() est utilise, la derniere
+de ces lignes devient une bande de transition protegee : il reste donc 22 lignes
+de map visibles, une ligne de transition et 2 lignes fixes.
+
+Le scroll vertical reserve une ligne complete entre la map mobile et le panneau.
+Pendant cette transition, le runtime selectionne temporairement un charset vide
+puis coupe DEN seulement apres la fin de la ligne VIC-II courante. Les caracteres
+vides prennent la couleur de fond : la bande ne devient donc pas une couture
+noire. La meme IRQ restaure ensuite $D011, $D016 et $D018 avant le panneau.
+
+Vous continuez a utiliser les coordonnees normales avec printAt(), writeChar(),
+fillRect(), clearLine() et drawFrame(). Le compilateur place automatiquement les
+donnees du panneau une ligne plus tot en Screen RAM pour correspondre au VCBASE
+normalise. C'est cette correction de l'adresse interne du VIC-II qui empeche le
+panneau de sauter d'un caractere complet pendant le scroll Y.
+
+Tous les 8 pixels, le runtime decale Screen RAM et Color RAM ensemble puis ne
+charge que la colonne ou la ligne qui entre dans la fenetre. Les lignes sont
+copiees de haut en bas, deux cellules par branche, afin que chaque ligne soit
+prete avant le retour du faisceau. Si rasterLine n'est pas indique dans
+c64.game.frame(), le compilateur choisit automatiquement la premiere ligne sure
+apres la bande de scroll. Le rapport de build map-scroll indique cette ligne et
+si les wraps respectent les budgets PAL et NTSC.
+Si un sens de scroll vertical ne peut pas terminer avant le retour du faisceau
+PAL, le compilateur refuse maintenant le build au lieu de produire un affichage
+qui scintille. Reduisez alors width ou height du viewport.
+
+Exemple complet :
+
+examples/tilemap-scroll-x.js
+
+
+7.7 OBJETS DE MAP ET SPRITES (DEBUT V0.10.1)
+------------------------------------------------
+
+Un objet de map peut maintenant avoir un identifiant unique :
+
+{
+  "id": "player",
+  "type": "player-spawn",
+  "x": 10,
+  "y": 7,
+  "sprite": "hero",
+  "properties": { "direction": "right" }
+}
+
+x et y restent des positions de tuiles faciles a placer dans le studio. Le
+compilateur calcule aussi worldX et worldY en pixels. Ces coordonnees monde sont
+independantes de l'ecran et utilisent 16 bits.
+
+Pour retrouver puis relier cet objet a l'un des 16 sprites logiques :
+
+const hero = c64.assets.loadSprite("assets/hero.sprite.json", {
+  address: 0x2e00
+});
+const spawn = c64.map.object(room, "player");
+const player = c64.map.spawn(room, spawn.id, {
+  sprite: 0
+});
+
+Le fichier de map contient "sprite": "hero" dans l'objet player. loadSprite()
+doit donc etre appele avant spawn(). L'id du fichier sprite doit etre exactement
+le meme. Si le fichier ou l'id manque, le compilateur indique le fichier de map
+et l'objet fautif.
+
+FORMAT SPRITE-ASSET-V1
+
+Un fichier sprite JSON contient :
+
+- version: 1 et un id unique utilisable par les objets de map ;
+- mode: "hires" ou "multicolor" ;
+- color, et aussi multicolor1/multicolor2 en mode multicolore ;
+- une ou plusieurs frames de exactement 63 octets, soit 24 x 21 pixels C64 ;
+- origin et hitbox ;
+- animations avec la liste des frames, la vitesse et loop ;
+- initialAnimation, facultatif.
+
+Exemple complet : examples/assets/v10-hero.sprite.json
+
+Dans l'objet de map, cette propriete lance automatiquement une animation :
+
+"properties": {
+  "direction": "right",
+  "animation": "idle-right"
+}
+
+Pour changer d'animation dans le jeu :
+
+player.play("run-right");
+player.play("run", "right"); // cherche aussi "run-right"
+player.pauseAnimation();
+player.resumeAnimation();
+
+moveAndCollide() avance automatiquement l'animation d'une frame logique. Les
+tables de pixels de l'asset sont partagees entre les entites qui l'utilisent.
+Il n'est donc plus necessaire de recopier les 63 octets du sprite dans chaque
+fichier JS.
+
+Attention : tous les sprites multicolores du VIC-II partagent les deux couleurs
+multicolor1 et multicolor2. Le compilateur refuse deux assets utilises avec des
+valeurs incompatibles. L'adresse optionnelle doit etre multiple de 64 et rester
+dans la banque VIC entre $2000 et $3FFF. Le rapport memoire detecte les conflits
+avec le programme, le charset et les autres sprites.
+
+Vous pouvez aussi rechercher un type avec c64.map.objects(room, "enemy-spawn").
+object() exige un seul resultat. S'il existe plusieurs ennemis du meme type,
+utilisez objects() ou donnez leur identifiant unique.
+
+player.worldX et player.worldY indiquent la position exacte dans le niveau.
+player.screenX et player.screenY sont les coordonnees du sprite sur l'ecran.
+Apres un deplacement, projetez l'entite :
+
+player.worldX.add(1);
+player.project({
+  cameraX: cameraX,
+  cameraY: cameraY,
+  viewportWidth: 320,
+  viewportHeight: 200
+});
+
+project() masque automatiquement l'entite si son origine est hors de la fenetre.
+Les sprites 8 a 15 activent toujours automatiquement le multiplexeur.
+
+Pour eviter un clignotement au bord, ajoutez une marge de culling :
+
+camera.project(enemy, { cullingMargin: { x: 24, y: 21 } });
+
+La marge conserve le sprite juste avant et apres le viewport. Elle doit encore
+tenir dans les coordonnees X/Y du VIC-II.
+
+Pour bloquer le personnage contre les tuiles dont Collision est different de 0 :
+
+player.setVelocity(0, 0);
+c64.control.if(joystick.left(),  () => player.velocityX.set(-2));
+c64.control.if(joystick.right(), () => player.velocityX.set(2));
+c64.control.if(joystick.up(),    () => player.velocityY.set(-2));
+c64.control.if(joystick.down(),  () => player.velocityY.set(2));
+player.moveAndCollide();
+
+Le moteur deplace d'abord l'axe X, puis l'axe Y. Il avance pixel par pixel afin
+de ne pas traverser un mur avec une vitesse superieure a 1. La vitesse maximale
+testee vaut 8 pixels par frame par defaut et peut etre reglee avec
+maxCollisionSpeed, entre 1 et 16.
+
+Sans sprite-asset, la hitbox peut encore etre definie dans spriteOptions :
+
+spriteOptions: {
+  hitbox: { offsetX: 4, offsetY: 1, width: 16, height: 20 }
+}
+
+Les etats player.onGround, player.hitCeiling, player.hitLeft et player.hitRight
+sont des booleens runtime. player.isOnGround() fournit directement une condition
+pour c64.control.if(). player.jump(4) place une vitesse verticale negative.
+La projection du scroller tient compte de la phase fine $D016=7 : le bord de la
+hitbox et le bord du caractere de collision utilisent donc le meme pixel monde.
+Lorsque le scroll vertical est actif, elle compense aussi les 4 pixels entre la
+phase normale $D011=3 et la phase scroll $D011=7.
+
+COMPORTEMENTS DE COLLISION ET ENTITES
+
+Par defaut, 0 est traversable et toute autre valeur est solide. Une table
+optionnelle peut donner un sens aux autres valeurs :
+
+const behaviors = {
+  1: "solid",
+  2: "platform",
+  3: "danger",
+  4: "ladder",
+  5: "exit",
+  6: "passable"
+};
+
+const player = c64.map.spawn(room, "player", {
+  sprite: 0,
+  collisionBehaviors: behaviors
+});
+
+"platform" bloque une chute et la sonde au sol, mais se traverse par le bas et
+sur les cotes. danger, ladder, exit et passable ne bloquent pas. Le moteur met
+a jour isOnDanger(), isOnLadder() et isAtExit() apres moveAndCollide(). Une
+valeur absente de la table reste solide.
+
+player.collides(enemy) reutilise l'AABB logicielle des sprites. disable() masque
+durablement l'entite, meme si camera.project() est appele. enable() la reactive.
+respawn("nom-du-spawn") remet position, vitesses et contacts a zero sans recreer
+le moteur ; plusieurs points de spawn permettent de changer de zone.
+
+Pour faire suivre le joueur par le scroller, appelez follow() apres son
+deplacement :
+
+player.moveAndCollide();
+camera.follow(player, {
+  axis: "both",
+  deadZone: { x: 48, y: 32, width: 48, height: 32 },
+  maxSpeed: 2
+});
+
+La zone morte est un rectangle en pixels dans le viewport. Tant que le centre de
+la hitbox du joueur reste dedans, la camera ne bouge pas. Lorsqu'il en sort, la
+camera avance de maxSpeed pixels au maximum par frame et s'arrete automatiquement
+aux bords de la map.
+
+axis peut valoir "x", "y" ou "both". Le suivi vertical demande actuellement
+panel: "bottom". Avec panel: "top", utilisez axis: "x".
+
+Le joueur suivi est projete automatiquement. Pour afficher les autres entites
+avec exactement la meme camera :
+
+camera.project(enemy);
+camera.project(collectible);
+
+Cela fonctionne aussi pour les sprites virtuels 8 a 15. Appelez toujours
+camera.project() apres camera.follow() afin d'utiliser la position finale de la
+camera pour cette frame.
+
+PROGRAMMES PLUS GRANDS
+
+Un jeu complet peut occuper la zone normalement reservee aux donnees video.
+Placez alors le code dans une autre banque CPU, avant les autres appels :
+
+c64.program.start(0x4000);
+
+Le compilateur genere automatiquement le bon SYS dans le PRG, le BAS, l'ASM et
+le LST. Pour le PRG, un petit chargeur en $0810 copie le code vers $4000 : le
+fichier ne contient donc pas 14 Ko de zeros entre BASIC et le programme. Les
+sprites restent dans la banque VIC-II. platformer-mini.js utilise cette
+disposition et son rapport map-scroll valide les budgets PAL et NTSC.
+
+Exemple complet :
+
+examples/map-entity-spawn.js
+examples/platformer-mini.js
 
 
 8. GESTION DES IRQ RASTER

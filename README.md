@@ -397,6 +397,226 @@ c64.map.pixelToTile(level, { x: playerPixelX, y: playerPixelY }, { x: tileX, y: 
 c64.map.tileToCharacter(level, { x: tileX, y: tileY }, { x: charX, y: charY });
 ```
 
+### v0.10 viewport and horizontal fine scrolling
+
+`c64.map.drawViewport()` draws only a bounded window from a larger 16-bit map.
+The camera origin can be a runtime byte variable and is clamped to the last valid
+source column or row. Screen RAM and Color RAM are updated together.
+
+```js
+const cameraX = c64.var.byte("cameraX", { initial: 0 });
+
+c64.map.drawViewport(level, {
+  sourceX: cameraX,
+  sourceY: 0,
+  width: 16,
+  height: 8,
+  x: 12,
+  y: 8
+});
+```
+
+For a smooth two-axis camera, create one scroller and move it from the game
+frame. Every direction moves one pixel by default (or 1 to 8 pixels when an
+argument is supplied):
+
+```js
+const scroll = c64.map.scroller(level, {
+  sourceX: 0,
+  sourceY: 0,
+  width: 16,
+  height: 8,
+  x: 12,
+  y: 6,
+  panel: "bottom"
+});
+
+c64.game.init(() => scroll.draw());
+c64.game.frame(() => {
+  c64.control.if(joystick.left(), () => scroll.left());
+  c64.control.if(joystick.right(), () => scroll.right());
+  c64.control.if(joystick.up(), () => scroll.up());
+  c64.control.if(joystick.down(), () => scroll.down());
+});
+```
+
+The runtime uses `$D016` for fine X and `$D011` for fine Y. Every eight pixels it
+shifts only the viewport in Screen RAM and Color RAM, then streams only the
+incoming map column or row. The camera stops automatically at all four limits.
+
+`panel: "bottom"` supports fine scrolling on both axes and keeps rows below the
+viewport fixed. `$D011` is installed before the first display badline. Before
+the panel, one early IRQ performs a cycle-stable transition and controls the
+VIC-II row counter (`RC`) as well as its video-matrix base (`VCBASE`). Every
+fine-Y position therefore reaches the panel with the same Screen-RAM address,
+not merely the same number of badlines. `panel: "top"` currently supports horizontal fine
+scrolling only: calling `up()` or `down()` is rejected because changing YSCROLL
+below a fixed character panel needs FLD/badline compensation to avoid duplicated
+character rows. The raster handlers share the existing dispatcher with user
+effects, the SID player and sprite animation. `horizontalScroller()` remains as
+an alias for `scroller()`.
+
+Creating a scroller automatically disables the KERNAL CIA timer and uses a
+VIC-only IRQ chain. This prevents a timer IRQ from delaying the entry split by
+one frame, which previously appeared as an occasional seven-pixel flash even
+while the camera was idle. `c64.input` remains available because it snapshots
+the hardware ports directly; KERNAL jiffy-clock and buffered-keyboard services
+must not be relied on in this timing-critical mode.
+
+For an exact fixed-panel size, use the object form. The compiler derives the
+viewport `y` and `height` from the 25-row screen:
+
+```js
+panel: { position: "bottom", rows: 2 } // shorthand: { bottom: 2 }
+panel: { position: "top", rows: 5 }    // shorthand: { top: 5 }
+```
+
+String values remain backward compatible and keep using the explicitly supplied
+viewport geometry. With the object form, the source map must contain at least
+the resulting number of viewport rows. Without vertical movement, a two-row
+bottom panel leaves 23 scrolling rows when the viewport starts at row zero.
+When `up()` or `down()` is used, the last of those 23 rows becomes the protected
+transition band, leaving 22 rows of map plus the two fixed panel rows.
+
+The bottom-Y split reserves one complete character row between the moving map
+and the fixed panel. During that row it temporarily selects an empty charset,
+then briefly clears `DEN` only after the current VIC-II row has completed. The
+empty glyphs use the current background color, so the guard does not introduce a
+black seam. The saved `$D011`, `$D016` and `$D018` values are restored before the
+panel. Fixed-panel drawing coordinates do not change: the compiler stores those
+characters one Screen-RAM row earlier to match the deliberately normalized
+`VCBASE`. One early IRQ polls the exact transition rasters internally, removing
+dispatcher jitter between closely spaced register writes.
+
+Current limits are deliberate: tiles must be 1x1 character, the visible window
+must stay in columns 1 through 38, and movement should run inside
+`c64.game.frame()`. Coarse X copies finish each row from top to bottom and copy
+two cells per branch. When `rasterLine` is omitted, the compiler automatically
+synchronizes the game loop just after the scrolling band. The initial `draw()`
+remains a full viewport draw.
+
+The build `assetReport` contains `map-scroll` with separate horizontal and
+vertical wrap estimates, raster split lines, PAL/NTSC safety windows and eleven
+runtime state bytes when Y scrolling is used. It also reports `transitionRows`,
+`panelMemoryRowOffset` and the reserved blank-charset address. It reports the automatically selected frame raster, the
+beam-raced row strategy and PAL/NTSC budgets. The coarse `drawViewport()` API
+remains available and still reports `map-viewport`. See
+[examples/tilemap-scroll-x.js](./examples/tilemap-scroll-x.js).
+
+If an actually used vertical direction cannot finish before the PAL raster beam
+returns, compilation now fails instead of emitting a visibly unstable wrap.
+Reduce the viewport width or height until that direction is marked safe. NTSC
+safety remains visible separately in the build report.
+
+### v0.10.1 map entities (first foundation)
+
+Map objects may now define a stable `id` and an optional sprite-asset name.
+Their tile coordinates are normalized to exact `worldX`/`worldY` pixel
+coordinates. Older v1 maps remain valid and receive deterministic generated ids.
+
+```js
+const hero = c64.assets.loadSprite("assets/hero.sprite.json", { address: 0x2e00 });
+const level = c64.assets.loadMap("assets/room.json");
+const spawn = c64.map.object(level, "player-spawn");
+const player = c64.map.spawn(level, spawn.id, {
+  sprite: 0
+});
+
+c64.game.frame(() => {
+  player.worldX.add(1);
+  player.project({ cameraX, cameraY, viewportWidth: 320, viewportHeight: 200 });
+});
+```
+
+The map object may contain `"sprite": "hero"`. The referenced asset must first
+be loaded with `loadSprite()` (or created inline with `defineSprite()`). The
+versioned `sprite-asset-v1` JSON stores 63-byte 24x21 frames, hires/multicolor
+mode, the sprite and shared colors, origin, hitbox, named animations, speed and
+loop state. The compiler reports the asset file and object id when a sprite or
+animation reference is missing.
+
+An object property such as `"animation": "idle-right"` starts that sequence
+automatically. Runtime code can select another shared animation table with
+`player.play("run-right")` or `player.play("run", "right")`. Calling
+`moveAndCollide()` advances the entity animation once for that gameplay frame.
+Several entities can reuse the same `SpriteAsset` and frame storage.
+
+`worldX` and `worldY` are 16-bit level coordinates. `screenX` and `screenY`
+belong to the linked logical sprite (0..15). `project()` converts from world to
+VIC-II coordinates and hides an entity whose origin is outside the viewport.
+Use `cullingMargin: 24` or `{ x: 24, y: 21 }` to keep sprites alive just beyond
+the viewport edge. Projection preserves an explicit `disable()` state, while
+`respawn(id)` resets position, velocity and contacts without rebuilding the
+engine.
+Entity movement can now use the logical collision layer:
+
+```js
+player.setVelocity(0, 0);
+c64.control.if(joystick.left(), () => player.velocityX.set(-2));
+c64.control.if(joystick.right(), () => player.velocityX.set(2));
+player.moveAndCollide();
+
+c64.control.if(player.isOnGround(), () => player.jump(4));
+```
+
+`moveAndCollide()` resolves X then Y against the entity hitbox. Every non-zero
+tile collision value is solid by default. Movement is split into one-pixel
+steps (up to `maxCollisionSpeed`, 8 by default), preventing fast entities from
+crossing a wall. Contact states are available through `onGround`, `hitCeiling`,
+`hitLeft` and `hitRight`. Dynamic tile changes are read immediately from map
+RAM. Scroller projection includes the VIC-II's initial seven-pixel `$D016`
+phase, so the visual sprite hitbox and the logical tile edge share the same
+world-pixel origin. Vertical projection also includes the four-pixel difference
+between the normal `$D011=3` screen phase and the scrolling `$D011=7` phase.
+
+`collisionBehaviors` can map values to `solid`, `platform`, `danger`, `ladder`,
+`exit` or `passable`. One-way `platform` values block downward motion but remain
+traversable from below and from the sides. Entities expose `isOnDanger()`,
+`isOnLadder()` and `isAtExit()`. `entity.collides(other)` reuses the software
+AABB path for entity/entity contacts.
+
+The fine scroller can now follow an entity and project every other visible
+entity from the same 16-bit camera position:
+
+```js
+const camera = c64.map.scroller(level, {
+  width: 18, height: 12, x: 1, y: 1, panel: "bottom"
+});
+
+c64.game.frame(() => {
+  player.moveAndCollide();
+  camera.follow(player, {
+    axis: "both",
+    deadZone: { x: 48, y: 32, width: 48, height: 32 },
+    maxSpeed: 2
+  });
+  camera.project(enemy);
+});
+```
+
+Call `follow()` after moving the player. It updates the scroller by at most 1 to
+8 pixels per frame, clamps to all map limits, and projects the followed entity
+automatically. `camera.project()` uses the same camera for additional physical
+or multiplexed sprites. A top fixed panel currently supports X-only following;
+Y or `both` requires `panel: "bottom"` until FLD compensation is implemented.
+
+Multicolor sprites all share the VIC-II `$D025`/`$D026` colors. js-c64 therefore
+rejects two used multicolor assets that request incompatible shared colors.
+Frame addresses remain 64-byte aligned inside VIC bank 0, and the normal memory
+report detects overlaps with the program, charset, blank scroll charset and
+other sprite data. See [the schema](./schemas/sprite-asset-v1.schema.json),
+[the example asset](./examples/assets/v10-hero.sprite.json) and
+[examples/map-entity-spawn.js](./examples/map-entity-spawn.js).
+
+The build report adds `map-entity-budget` and `sprite-multiplexer-budget`,
+including sprite memory, visible entity capacity, raster overlap and the stable
+overflow policy. Later Y-sorted sprites are skipped deterministically when no
+hardware slot is free; the CLI prints `SPRITE_RASTER_BUDGET` for unsafe scenes.
+Large games may call `c64.program.start(0x4000)` so generated code does not
+compete with VIC bank-0 assets. Relocated PRGs use a compact `$0810` copy loader
+instead of padding the file with zeroes up to `$4000`. See
+[examples/platformer-mini.js](./examples/platformer-mini.js).
+
 ### SID audio API
 
 Current `v0.6.0` layer includes:

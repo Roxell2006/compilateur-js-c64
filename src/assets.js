@@ -16,6 +16,147 @@ function bytes(values, expectedLength, label) {
   return result.map((value, index) => integer(value, 0, 255, `${label}[${index}]`));
 }
 
+function assetName(value, label, sourcePath, identifierOnly = false) {
+  if (typeof value !== "string" || value.length === 0 || value.length > 64) {
+    throw new Error(`${sourcePath}: ${label} must be a non-empty string up to 64 characters`);
+  }
+  const pattern = identifierOnly ? /^[A-Za-z_][A-Za-z0-9_]*$/ : /^[A-Za-z_][A-Za-z0-9_-]*$/;
+  if (!pattern.test(value)) {
+    throw new Error(`${sourcePath}: ${label} contains unsupported characters`);
+  }
+  return value;
+}
+
+function spriteInteger(value, min, max, label, sourcePath) {
+  try {
+    return integer(value, min, max, label);
+  } catch (error) {
+    throw new Error(`${sourcePath}: ${error.message}`);
+  }
+}
+
+export function normalizeSpriteAsset(definition, sourcePath = "<inline sprite>") {
+  if (!definition || typeof definition !== "object" || Array.isArray(definition)) {
+    throw new Error(`${sourcePath}: sprite asset must be a JSON object`);
+  }
+  if (definition.version !== 1) throw new Error(`${sourcePath}: sprite asset version must be 1`);
+  const id = assetName(definition.id, "sprite.id", sourcePath, true);
+  const mode = definition.mode ?? "hires";
+  if (mode !== "hires" && mode !== "multicolor") {
+    throw new Error(`${sourcePath}: sprite.mode must be hires or multicolor`);
+  }
+  const color = spriteInteger(definition.color ?? 1, 0, 15, "sprite.color", sourcePath);
+  const multicolor1 = definition.multicolor1 === undefined
+    ? null
+    : spriteInteger(definition.multicolor1, 0, 15, "sprite.multicolor1", sourcePath);
+  const multicolor2 = definition.multicolor2 === undefined
+    ? null
+    : spriteInteger(definition.multicolor2, 0, 15, "sprite.multicolor2", sourcePath);
+  if (mode === "multicolor" && (multicolor1 === null || multicolor2 === null)) {
+    throw new Error(`${sourcePath}: a multicolor sprite needs multicolor1 and multicolor2`);
+  }
+
+  const originDefinition = definition.origin ?? {};
+  const origin = Object.freeze({
+    x: spriteInteger(originDefinition.x ?? 0, 0, 23, "sprite.origin.x", sourcePath),
+    y: spriteInteger(originDefinition.y ?? 0, 0, 20, "sprite.origin.y", sourcePath)
+  });
+  const hitboxDefinition = definition.hitbox ?? {};
+  const hitbox = {
+    offsetX: spriteInteger(hitboxDefinition.offsetX ?? 0, 0, 23, "sprite.hitbox.offsetX", sourcePath),
+    offsetY: spriteInteger(hitboxDefinition.offsetY ?? 0, 0, 20, "sprite.hitbox.offsetY", sourcePath),
+    width: spriteInteger(hitboxDefinition.width ?? 24, 1, 24, "sprite.hitbox.width", sourcePath),
+    height: spriteInteger(hitboxDefinition.height ?? 21, 1, 21, "sprite.hitbox.height", sourcePath)
+  };
+  if (hitbox.offsetX + hitbox.width > 24 || hitbox.offsetY + hitbox.height > 21) {
+    throw new Error(`${sourcePath}: sprite.hitbox must fit inside the 24x21 sprite canvas`);
+  }
+
+  const frameIds = new Set();
+  const frames = Array.from(definition.frames ?? []).map((frame, index) => {
+    const normalizedFrame = Array.isArray(frame) ? { data: frame } : frame;
+    if (!normalizedFrame || typeof normalizedFrame !== "object" || Array.isArray(normalizedFrame)) {
+      throw new Error(`${sourcePath}: sprite.frames[${index}] must be an object with 63 data bytes`);
+    }
+    const frameId = assetName(normalizedFrame.id ?? `frame_${index}`, `sprite.frames[${index}].id`, sourcePath);
+    if (frameIds.has(frameId)) throw new Error(`${sourcePath}: sprite frame id ${frameId} is duplicated`);
+    frameIds.add(frameId);
+    let data;
+    try {
+      data = bytes(normalizedFrame.data, 63, `sprite.frames[${index}].data`);
+    } catch (error) {
+      throw new Error(`${sourcePath}: ${error.message}`);
+    }
+    return Object.freeze({ id: frameId, data: Object.freeze(data) });
+  });
+  if (frames.length === 0 || frames.length > 128) {
+    throw new Error(`${sourcePath}: sprite.frames must contain between 1 and 128 frames`);
+  }
+  const frameIndexes = new Map(frames.map((frame, index) => [frame.id, index]));
+  const animationDefinition = definition.animations ?? {};
+  if (!animationDefinition || typeof animationDefinition !== "object" || Array.isArray(animationDefinition)) {
+    throw new Error(`${sourcePath}: sprite.animations must be an object keyed by animation name`);
+  }
+  const animations = {};
+  for (const [name, animation] of Object.entries(animationDefinition)) {
+    assetName(name, `sprite.animations.${name}`, sourcePath);
+    if (!animation || typeof animation !== "object" || Array.isArray(animation)) {
+      throw new Error(`${sourcePath}: sprite.animations.${name} must be an object`);
+    }
+    const references = Array.from(animation.frames ?? []);
+    if (references.length === 0 || references.length > 255) {
+      throw new Error(`${sourcePath}: sprite.animations.${name}.frames must contain between 1 and 255 entries`);
+    }
+    const indexes = references.map((reference, index) => {
+      if (typeof reference === "string") {
+        if (!frameIndexes.has(reference)) {
+          throw new Error(`${sourcePath}: sprite.animations.${name}.frames[${index}] references missing frame ${reference}`);
+        }
+        return frameIndexes.get(reference);
+      }
+      return spriteInteger(reference, 0, frames.length - 1, `sprite.animations.${name}.frames[${index}]`, sourcePath);
+    });
+    animations[name] = Object.freeze({
+      name,
+      frames: Object.freeze(indexes),
+      speed: spriteInteger(animation.speed ?? 6, 1, 255, `sprite.animations.${name}.speed`, sourcePath),
+      loop: animation.loop !== false
+    });
+  }
+  const animationNames = Object.keys(animations);
+  const initialAnimation = definition.initialAnimation ?? animationNames[0] ?? null;
+  if (initialAnimation !== null && !Object.hasOwn(animations, initialAnimation)) {
+    throw new Error(`${sourcePath}: sprite.initialAnimation references missing animation ${initialAnimation}`);
+  }
+  return Object.freeze({
+    type: "spriteAsset",
+    version: 1,
+    sourcePath,
+    id,
+    mode,
+    color,
+    multicolor1,
+    multicolor2,
+    origin,
+    hitbox: Object.freeze(hitbox),
+    frames: Object.freeze(frames),
+    animations: Object.freeze(animations),
+    initialAnimation
+  });
+}
+
+export function loadSpriteAsset(filePath, baseDirectory = process.cwd()) {
+  if (typeof filePath !== "string" || filePath.length === 0) throw new Error("sprite asset path must be a non-empty string");
+  const absolutePath = path.resolve(baseDirectory, filePath);
+  let definition;
+  try {
+    definition = JSON.parse(fs.readFileSync(absolutePath, "utf8"));
+  } catch (error) {
+    throw new Error(`Cannot load sprite asset ${absolutePath}: ${error.message}`);
+  }
+  return normalizeSpriteAsset(definition, absolutePath);
+}
+
 function normalizeCharset(definition = {}) {
   const mode = definition.mode ?? "hires";
   if (mode !== "hires" && mode !== "multicolor") throw new Error("charset.mode must be hires or multicolor");
@@ -85,12 +226,30 @@ export function normalizeMapAsset(definition, sourcePath = "<inline>") {
     if (object.properties !== undefined && (!object.properties || typeof object.properties !== "object" || Array.isArray(object.properties))) {
       throw new Error(`map.objects[${index}].properties must be an object`);
     }
+    const id = object.id ?? `${type}-${index + 1}`;
+    if (typeof id !== "string" || id.length === 0 || id.length > 64) {
+      throw new Error(`map.objects[${index}].id must be a non-empty string up to 64 characters`);
+    }
+    if (object.sprite !== undefined && (typeof object.sprite !== "string" || object.sprite.length === 0 || object.sprite.length > 64)) {
+      throw new Error(`map.objects[${index}].sprite must be a non-empty string up to 64 characters`);
+    }
+    const x = integer(object.x, 0, width - 1, `map.objects[${index}].x`);
+    const y = integer(object.y, 0, height - 1, `map.objects[${index}].y`);
     return Object.freeze({
+      id,
       type,
-      x: integer(object.x, 0, width - 1, `map.objects[${index}].x`),
-      y: integer(object.y, 0, height - 1, `map.objects[${index}].y`),
+      x,
+      y,
+      worldX: x * tileWidth * 8,
+      worldY: y * tileHeight * 8,
+      ...(object.sprite === undefined ? {} : { sprite: object.sprite }),
       properties: Object.freeze({ ...(object.properties ?? {}) })
     });
+  });
+  const objectIds = new Set();
+  objects.forEach((object, index) => {
+    if (objectIds.has(object.id)) throw new Error(`map.objects[${index}].id duplicates ${object.id}`);
+    objectIds.add(object.id);
   });
   return Object.freeze({
     type: "mapAsset",

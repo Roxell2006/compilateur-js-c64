@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "id": "platformerCoin",
+  "mode": "hires",
+  "color": 10,
+  "origin": { "x": 0, "y": 0 },
+  "hitbox": { "offsetX": 7, "offsetY": 3, "width": 10, "height": 12 },
+  "frames": [
+    { "id": "coin", "data": [0,0,0,0,0,0,0,24,0,0,60,0,0,126,0,0,102,0,0,102,0,0,102,0,0,102,0,0,126,0,0,60,0,0,24,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] }
+  ],
+  "animations": { "coin": { "frames": ["coin"], "speed": 8, "loop": true } },
+  "initialAnimation": "coin"
+}

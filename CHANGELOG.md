@@ -2,6 +2,60 @@
 
 ## Unreleased
 
+- Fixed advanced map collision tables incorrectly treating collision value `0` as solid, which prevented `platformer-mini` from moving
+- Expanded `platformer-mini` to a 36 x 20 map viewport with a five-line fixed panel, cleared the BASIC screen on startup and shortened the multiplexer's lower-border raster wait
+- Added compact relocated PRGs: code configured at `$4000` is copied by a small `$0810` loader instead of storing 14 KB of zero padding
+- Completed v0.10.1 with persistent entity activation, spawn-based respawn, configurable viewport culling margins and entity/entity AABB collisions
+- Added collision behavior tables with solid, one-way platform, danger, ladder, exit and passable tile semantics
+- Added deterministic sprite-multiplexer budget reports and CLI warnings for raster overlap or insufficient reprogramming gaps
+- Added `c64.program.start()` and custom-address PRG generation for games whose code must live outside VIC bank 0
+- Added the two-zone `platformer-mini.js` example with X/Y camera follow, fixed panel, PAL/NTSC-safe scrolling, animation, SID, raster sharing and physical/virtual sprites
+- Added drag-and-drop and direct X/Y editing for map objects in the asset studio, with bounds and occupied-cell validation
+- Fixed repeated map-object creation in the asset studio by generating the next free id automatically (`objet1`, `objet2`, ...)
+- Extended the offline asset studio with hires/multicolor sprite editing, frame management, named animations, hitbox/origin preview and `sprite-asset-v1` import/export
+- Added studio selectors that attach a sprite asset and initial animation to map objects without manual JSON edits
+- Added map-side sprite, spawn and hitbox overlays plus lossless full-project import/export for maps, charsets and sprite libraries
+- Added the versioned `sprite-asset-v1` schema with reusable hires/multicolor frames, colors, origin, hitbox and named animations
+- Added `c64.assets.loadSprite()`/`defineSprite()` and automatic map-object sprite resolution
+- Added entity animation selection through object properties and `entity.play(name, direction)` without duplicating frame storage
+- Added sprite-asset build diagnostics, shared multicolor validation and the external `v10-hero.sprite.json` example
+- Made repeated `play()` calls keep the current animation position and initialized animation state deterministically
+- Fixed the seven-pixel `$D016` phase mismatch between scrolling characters, projected sprites and tile hitboxes
+- Replaced height-dependent map index loops with constant shift/add multiplication for faster collision probes
+- Added paired top-to-bottom Screen/Color RAM coarse copies and automatic post-band frame synchronization
+- Moved the fixed-panel split IRQ one raster before its badline to remove the unstable seam
+- Stabilized bottom-panel text during vertical scrolling by normalizing the VIC-II `RC` and `VCBASE` state for all eight YSCROLL phases
+- Added a background-colored blank transition row and automatic one-row Screen/Color RAM remapping for fixed-panel drawing
+- Made map scrollers use VIC-only IRQ timing with the KERNAL CIA timer disabled to remove rare idle-frame flashes
+- Added the four-pixel D011 projection phase and paired vertical coarse-copy loops
+- Reject vertical directions that exceed their PAL beam deadline instead of emitting an unstable wrap
+- Started v0.10.1 with stable map-object ids, optional sprite references and exact world-pixel coordinates
+- Added `c64.map.object()`, `objects()`, `spawn()` and `spawnAll()` for map-linked logical sprites 0..15
+- Added 16-bit entity world state and explicit camera projection with off-viewport hiding
+- Added object id/sprite fields to the external studio and `examples/map-entity-spawn.js`
+- Added hitbox-based `moveAndCollide()` with separate X/Y resolution and bounded pixel steps
+- Added stable ground/ceiling/left/right contacts, entity velocity and `jump()`
+- Tile collisions now treat every non-zero logical collision value as solid and follow dynamic map RAM changes
+- Added a canonical 16-bit pixel camera synchronized with coarse and fine X/Y scrolling
+- Added `camera.follow(entity)` with axis selection, dead zone, bounded catch-up speed and map clamping
+- Added `camera.project(entity)` so physical and virtual sprites share the followed camera
+- Added `map-camera-follow` build diagnostics and camera/entity regression coverage
+- Replaced the old border-color guard with a short post-row `DEN` guard and an empty charset, preserving the configured background color
+- Added exact fixed-panel sizes through `{ position: "bottom"|"top", rows }`, `{ bottom: n }` and `{ top: n }`
+- Kept string `panel: "bottom"`/`"top"` behavior backward compatible
+- Started v0.10 with bounded runtime map viewports through `c64.map.drawViewport()`
+- Added 16-bit source-map viewport rendering with synchronized screen and Color RAM writes
+- Added coarse-viewport CPU estimates against PAL and NTSC frame budgets in `assetReport`
+- Added the joystick-controlled `examples/tilemap-scroll-x.js` camera foundation
+- Added `c64.map.horizontalScroller()` with bounded bidirectional pixel scrolling through VIC-II `$D016`
+- Added compact Screen RAM and Color RAM shifts plus incoming-column streaming on each 8-pixel wrap
+- Added PAL/NTSC scroll-cycle estimates and rebuilt the joystick camera demo
+- Extended the map scroller with `$D011` fine Y, `up()`/`down()` and optimized incoming-row streaming
+- Added shared raster-band IRQs for fixed top or bottom score panels without replacing existing IRQ systems
+- Replaced the scroll report with `map-scroll`, including X/Y wrap budgets and raster split lines
+- Fixed vertical staircase motion by installing YSCROLL before the first badline when using a fixed bottom panel
+- Reject vertical scrolling below a fixed top character panel until FLD/badline compensation is implemented
+- Suppressed phase-dependent extra Screen-RAM row loads before fixed bottom panels
 - Completed the v0.9 asset pipeline with 16-bit mutable-map indexes and up to 8,192 runtime cells
 - Added runtime pixel/tile and character/tile coordinate conversion helpers
 - Added hires and multicolor character modes with VIC-II color-register setup and validation

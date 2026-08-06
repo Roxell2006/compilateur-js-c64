@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "id": "platformerEnemy",
+  "mode": "hires",
+  "color": 2,
+  "origin": { "x": 0, "y": 0 },
+  "hitbox": { "offsetX": 4, "offsetY": 2, "width": 16, "height": 19 },
+  "frames": [
+    { "id": "enemy", "data": [0,0,0,0,126,0,1,255,128,3,255,192,7,231,224,7,231,224,7,255,224,7,126,224,7,255,224,3,255,192,1,255,128,0,255,0,1,189,128,3,24,192,6,24,96,12,24,48,24,24,24,48,24,12,96,24,6,96,0,6,0,0,0] }
+  ],
+  "animations": { "enemy": { "frames": ["enemy"], "speed": 8, "loop": true } },
+  "initialAnimation": "enemy"
+}

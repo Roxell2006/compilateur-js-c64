@@ -72,9 +72,11 @@
             "required": ["type", "x", "y"],
             "additionalProperties": false,
             "properties": {
+              "id": { "type": "string", "minLength": 1, "maxLength": 64 },
               "type": { "type": "string", "minLength": 1, "maxLength": 64 },
               "x": { "type": "integer", "minimum": 0, "maximum": 254 },
               "y": { "type": "integer", "minimum": 0, "maximum": 254 },
+              "sprite": { "type": "string", "minLength": 1, "maxLength": 64 },
               "properties": { "type": "object", "default": {} }
             }
           }

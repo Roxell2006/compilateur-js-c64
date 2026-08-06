@@ -539,16 +539,46 @@ plates-formes ou un shooter à scrolling.
 
 ### Fonctionnalités prioritaires
 
-- fine scroll X/Y via `$D016` et `$D011` ;
-- grossier scroll par déplacement de lignes/colonnes ;
-- streaming d'une colonne ou d'une ligne de tiles au wrap ;
-- caméra bornée suivant une position logique ;
-- double écran ou buffer adapté lorsque nécessaire ;
-- gestion correcte de Color RAM ;
-- carte plus grande que 256 cases avec coordonnées 16 bits ;
-- hooks de chargement de salle et de zone ;
-- stratégie de décompression par morceaux ;
-- limites de vitesse selon le budget CPU.
+- [x] fine scroll X via `$D016` en mode 38 colonnes ;
+- [x] fine scroll Y via `$D011` en mode 24 lignes dans la bande scrollée ;
+- [x] scroll horizontal grossier optimisé par déplacement des lignes visibles ;
+- [x] streaming d'une seule colonne de tiles au wrap horizontal ;
+- [x] streaming d'une seule ligne de tiles au wrap vertical ;
+- [x] première caméra bornée suivant une position logique runtime ;
+- [ ] double écran ou buffer adapté lorsque nécessaire ;
+- [x] gestion conjointe de l'écran et de Color RAM dans le viewport ;
+- [x] carte plus grande que 256 cases avec coordonnées 16 bits ;
+- [ ] hooks de chargement de salle et de zone ;
+- [ ] stratégie de décompression par morceaux ;
+- [x] première estimation de coût selon les budgets CPU PAL/NTSC.
+
+### État d'avancement initial
+
+- [x] API `c64.map.drawViewport()` avec origine runtime et position écran ;
+- [x] origine X/Y bornée automatiquement aux dimensions de la map ;
+- [x] rendu d'une fenêtre de map sans développer toute la map à l'écran ;
+- [x] collisions conservées en coordonnées monde, indépendantes de la caméra ;
+- [x] rapport `map-viewport` : tuiles visibles, stratégie et cycles estimés ;
+- [x] exemple `examples/tilemap-scroll-x.js` contrôlé au joystick ;
+- [x] remplacer le redraw complet horizontal par le streaming de la colonne entrante ;
+- [x] ajouter le fine scroll X, les bornes automatiques et la synchronisation à la frame ;
+- [x] déplacer Screen RAM et Color RAM ensemble dans les deux directions ;
+- [x] rapport `map-scroll` avec coûts X/Y, lignes raster et fenêtres PAL/NTSC ;
+- [x] IRQ de bande partagée pour le scroll X avec panneau fixe au-dessus ou en dessous ;
+- [x] scroll X/Y avec panneau inférieur, YSCROLL installé avant la première badline ;
+- [x] transition verticale dans une IRQ longue et déterministe : normalisation
+  de `RC` et `VCBASE` pour les huit phases YSCROLL, puis restauration de
+  `$D011`, `$D016` et `$D018` avant le panneau ;
+- [x] ligne de transition réservée avec charset vide couleur de fond, sans
+  couture noire ni saut de 40 octets du panneau fixe ;
+- [x] remappage automatique des écritures du panneau d'une ligne Screen RAM,
+  sans changement des coordonnées JS utilisées par le programme ;
+- [x] panneau exact via `{ position: "bottom"|"top", rows }` et les raccourcis
+  `{ bottom: n }` / `{ top: n }` ;
+- [x] compatibilité conservée avec `panel: "bottom"` et `panel: "top"` ;
+- [ ] compensation FLD/badline pour autoriser le scroll Y sous un panneau supérieur fixe ;
+- [x] coexistence de l'IRQ de bande avec le dispatcher raster, SID et animation de sprites ;
+- [ ] valider visuellement l'absence de déchirement sur machines PAL et NTSC réelles/émulées.
 
 ### Risques techniques à traiter explicitement
 
@@ -561,15 +591,331 @@ plates-formes ou un shooter à scrolling.
 
 ### Critères de sortie
 
-- scroll horizontal unidirectionnel sans déchirement ;
-- scroll horizontal bidirectionnel avec caméra bornée ;
-- collision correcte pendant le déplacement de la caméra ;
-- exemple `examples/tilemap-scroll-x.js` ;
-- exemple `examples/platformer-mini.js` avec au moins deux zones jouables ;
-- profil CPU/mémoire inclus dans le rapport de build.
+- [x] scroll horizontal unidirectionnel synchronisé avec streaming de colonne ;
+- [x] scroll horizontal bidirectionnel fin avec caméra bornée ;
+- [x] scroll vertical bidirectionnel fin avec caméra bornée, streaming de ligne et panneau inférieur ;
+- [x] collision démontrée pendant le déplacement de la caméra ;
+- [x] exemple fin et bidirectionnel `examples/tilemap-scroll-x.js` ;
+- [x] exemple `examples/platformer-mini.js` avec au moins deux zones jouables ;
+- [x] premier profil CPU/mémoire inclus dans le rapport de build.
 
 Le scroll vertical complet peut être livré après le scroll horizontal si le
 budget de la version devient trop important.
+
+---
+
+## v0.10.1 — Entités de map, 16 sprites et caméra de gameplay
+
+### Objectif
+
+Relier la tilemap, les objets placés dans le studio, les huit sprites matériels
+et les huit sprites virtuels dans une seule API de gameplay. Un objet tel que
+`player-spawn` doit pouvoir créer une entité, lui associer un sprite et une
+hitbox, la déplacer dans le monde, tester les collisions de tuiles et servir de
+cible à la caméra.
+
+Cette version est le pont entre le moteur de scrolling de la v0.10.0 et les
+jeux complets. Elle ne promet pas seize sprites matériels simultanés : les
+indices 8 à 15 restent multiplexés et partagent les contraintes raster du
+VIC-II.
+
+### Principes d'architecture non négociables
+
+- séparer les coordonnées monde des coordonnées écran du VIC-II ;
+- stocker les positions monde et caméra sur 16 bits au minimum ;
+- conserver une seule implémentation de sprite pour les indices 0 à 15 ;
+- projeter à chaque frame `écran = monde - caméra + origine du viewport` ;
+- masquer les sprites hors écran sans perdre leur position monde ;
+- trier les sprites visibles selon Y avant de préparer le multiplexeur ;
+- utiliser la couche logique de collision de la map, jamais la couleur ou le
+  caractère affiché ;
+- considérer par défaut `collision = 0` comme traversable et toute autre valeur
+  comme bloquante ;
+- utiliser des pools de taille connue à la compilation, sans allocation dans la
+  boucle de jeu ;
+- garder le studio graphique externe au package runtime : il produit des assets
+  validés que le compilateur consomme.
+
+La position 9 bits d'un sprite VIC-II n'est donc plus utilisée comme position
+dans le niveau. Elle devient uniquement le résultat temporaire de la projection
+de l'entité sur l'écran.
+
+### Contrat des objets et des assets
+
+- [x] donner à chaque objet de map un identifiant stable, un type, une position,
+  des propriétés et, si nécessaire, une référence de sprite ;
+- [x] normaliser les positions des objets en pixels monde pendant la compilation,
+  tout en permettant au studio de les aligner sur la grille des tuiles ;
+- [x] faire évoluer le schéma de map sans interprétation ambiguë des coordonnées
+  des anciens fichiers JSON ;
+- [x] ajouter un schéma versionné `sprite-asset-v1` séparé et réutilisable entre
+  plusieurs maps ;
+- [x] décrire dans cet asset le mode hires ou multicolore, les frames 24×21, les
+  couleurs, l'origine, la hitbox et les animations nommées ;
+- [x] permettre à un objet de sélectionner l'asset, l'animation initiale, le sens
+  et les propriétés de gameplay ;
+- [x] valider à la compilation les références manquantes, tailles, couleurs,
+  frames, limites mémoire et conflits de banque VIC ;
+- [x] produire des messages d'erreur qui citent le fichier, l'objet et la
+  propriété concernés.
+
+Exemple de donnée conforme au schéma :
+
+```json
+{
+  "id": "player",
+  "type": "player-spawn",
+  "x": 6,
+  "y": 18,
+  "sprite": "hero",
+  "properties": {
+    "direction": "right",
+    "animation": "idle-right"
+  }
+}
+```
+
+### API compilateur et runtime cible
+
+L'API exacte pourra être ajustée pendant l'implémentation, mais le code utilisateur
+doit rester aussi direct que ceci :
+
+```js
+const level = c64.assets.loadMap("assets/platformer-room.json");
+const player = c64.map.spawn(level, "player-spawn", {
+  sprite: 0,
+  hitbox: { x: 4, y: 2, width: 16, height: 19 }
+});
+
+const camera = c64.map.scroller(level, {
+  x: 0,
+  y: 0,
+  width: 40,
+  height: 22,
+  panel: "bottom"
+});
+
+camera.follow(player, {
+  axis: "both",
+  deadZone: { x: 120, y: 72, width: 80, height: 56 },
+  clampToMap: true
+});
+
+player.moveAndCollide(dx, dy);
+
+if (player.isOnGround() && joystick.firePressed()) {
+  player.jump(4);
+}
+
+player.play("run-right");
+```
+
+Fonctions prévues :
+
+- [x] `c64.map.object()` et `c64.map.objects()` pour retrouver un objet ou une
+  famille d'objets par identifiant ou par type ;
+- [x] `c64.map.spawn()` et `c64.map.spawnAll()` pour créer et lier les entités aux
+  objets de la map ;
+- [x] propriétés lisibles `worldX`, `worldY`, `screenX`, `screenY`, `velocityX`
+  et `velocityY` ;
+- [x] déplacement avec résolution des collisions et états `onGround`,
+  `hitCeiling`, `hitLeft` et `hitRight` ;
+- [x] animation par nom et orientation sans recopier les tables de frames ;
+- [x] association automatique aux sprites logiques 0 à 15, réels ou virtuels ;
+- [x] désactivation, réapparition et changement de zone/spawn sans recréer le moteur ;
+- [x] accès à l'objet source et à ses propriétés depuis l'entité.
+
+### Premier incrément livré
+
+- [x] champs JSON optionnels `id` et `sprite`, avec identifiants uniques validés ;
+- [x] migration transparente des anciennes maps par identifiant déterministe ;
+- [x] coordonnées constantes `worldX` et `worldY` calculées depuis la grille ;
+- [x] coordonnées runtime 16 bits propres à chaque entité ;
+- [x] projection explicite `entity.project()` avec caméra 16 bits optionnelle ;
+- [x] masquage automatique lorsque l'origine de l'entité sort du viewport ;
+- [x] champs identifiant et référence de sprite dans le studio graphique ;
+- [x] exemple initial `examples/map-entity-spawn.js` ;
+- [x] tests de sélection, ambiguïté, coordonnées monde, sprite virtuel, projection,
+  hitbox et génération des contacts de tuiles.
+
+La projection explicite reste disponible en complément du suivi automatique
+pour les entités secondaires.
+
+### Incrément sprite-asset-v1 livré
+
+- [x] schéma JSON externe `schemas/sprite-asset-v1.schema.json` ;
+- [x] `c64.assets.loadSprite()` et `defineSprite()` avec diagnostic du fichier ;
+- [x] frames 24×21 hires ou multicolores, origine, hitbox et couleurs validées ;
+- [x] animations nommées partageant les mêmes frames, avec vitesse et boucle ;
+- [x] sélection automatique par `map.objects[].sprite` et
+  `properties.animation` ;
+- [x] `entity.play(name, direction)`, pause et reprise de l'animation ;
+- [x] couleurs multicolores partagées contrôlées et conflits refusés ;
+- [x] rapport `sprite-asset` avec source, mémoire, frames et animations ;
+- [x] exemple `examples/assets/v10-hero.sprite.json` utilisé par
+  `examples/map-entity-spawn.js`.
+
+### Incrément caméra suiveuse livré
+
+- [x] position caméra canonique en pixels monde 16 bits, synchronisée avec les
+  phases fines et grossières du scroller ;
+- [x] `camera.follow(entity)` avec axe X, Y ou les deux ;
+- [x] zone morte configurable en pixels du viewport ;
+- [x] vitesse de rattrapage déterministe de 1 à 8 pixels par frame ;
+- [x] bornes automatiques aux quatre limites de la map ;
+- [x] projection automatique de l'entité suivie ;
+- [x] `camera.project(entity)` pour les autres sprites réels ou virtuels ;
+- [x] rapport `map-camera-follow` avec cible, axe, zone morte et vitesse ;
+- [x] tests du panneau inférieur, du suivi X seul, du suivi X/Y, des erreurs de
+  configuration et de la projection d'un sprite virtuel.
+
+Le suivi doit être appelé après le déplacement de l'entité dans
+`c64.game.frame()`. Un panneau supérieur reste limité au suivi horizontal tant
+que la compensation FLD/badline du scroll vertical n'est pas disponible.
+
+### Stabilisation professionnelle du scroll X livrée
+
+- [x] origine pixel commune entre la phase initiale `$D016=7`, la caméra, les
+  sprites projetés et les hitboxes de collision ;
+- [x] calcul `y * largeur de map` par multiplication constante shift/add au lieu
+  d'une boucle proportionnelle à la hauteur ;
+- [x] copie grossière Screen RAM + Color RAM ligne par ligne, avec deux cellules
+  traitées par branche pour respecter le faisceau PAL ;
+- [x] IRQ de sortie placée une ligne avant la badline du panneau fixe ;
+- [x] pré-transition verticale placée treize lignes avant le panneau afin que les
+  huit phases YSCROLL chargent exactement le même nombre de lignes de map ;
+- [x] timer CIA du KERNAL désactivé automatiquement pour empêcher une collision
+  CIA/VIC de retarder la phase fine pendant une frame au repos ;
+- [x] origine verticale compensée de 4 pixels entre `$D011=3` et `$D011=7` ;
+- [x] copies verticales accélérées deux cellules par branche, avec diagnostics
+  séparés pour les wraps haut et bas ;
+- [x] refus de compilation d'un sens vertical qui dépasse encore le budget PAL,
+  plutôt que de produire un wrap visuellement instable ;
+- [x] ligne de boucle de jeu choisie automatiquement après la bande scrollée,
+  tout en conservant `rasterLine` comme réglage manuel prioritaire ;
+- [x] rapport de build enrichi avec la ligne recommandée, la stratégie
+  `beamRacedRows` et les budgets PAL/NTSC.
+
+Une fenêtre 38×20 avec panneau inférieur de cinq lignes respecte maintenant le
+budget horizontal PAL. Le rapport signale encore qu'une fenêtre aussi haute
+dépasse le budget NTSC et que le wrap vertical plein écran reste à optimiser.
+
+### Collisions entre sprites et tilemap
+
+- [x] utiliser la hitbox de l'entité, indépendante des 24×21 pixels graphiques ;
+- [x] convertir seulement les bords utiles de la hitbox en coordonnées de tuiles ;
+- [x] résoudre séparément les axes X puis Y pour obtenir des contacts stables ;
+- [x] empêcher la traversée d'une tuile lorsque la vitesse dépasse un pixel par
+  frame, par balayage ou sous-pas bornés ;
+- [x] remettre l'entité exactement contre le bord de la tuile après un contact ;
+- [x] prendre immédiatement en compte les modifications faites avec
+  `level.map(x, y).set(value)` ;
+- [x] permettre une table optionnelle de comportements pour préparer les
+  plateformes traversables, dangers, échelles et sorties de niveau ;
+- [x] réutiliser l'AABB existante pour les collisions entre entités, sans la
+  confondre avec la collision de décor.
+
+La première livraison doit garantir les blocs pleins. Les pentes, collisions au
+pixel près et plateformes mobiles complexes restent hors périmètre tant que le
+socle n'est pas stable.
+
+### Caméra, affichage et multiplexage
+
+- [x] `camera.follow(entity)` avec choix de l'axe, décalage, zone morte et bornes
+  automatiques de la map ;
+- [x] suivi déterministe sans interpolation coûteuse, avec vitesse maximale
+  optionnelle ;
+- [x] première projection et synchronisation explicite des sprites visibles après le
+  déplacement de la caméra ;
+- [x] culling des entités hors viewport, avec marge configurable pour éviter le
+  clignotement aux bords ;
+- [x] tri Y automatique des sprites virtuels après projection écran ;
+- [x] conservation correcte du bit X supérieur pour les positions visibles
+  supérieures à 255 ;
+- [x] coexistence testée avec le scroll X/Y, le panneau fixe, les animations,
+  le SID et le dispatcher raster ;
+- [x] avertissement de build lorsqu'une scène demande plus de huit sprites sur
+  une même bande raster ou ne laisse pas assez de lignes pour reprogrammer le
+  VIC-II ;
+- [x] comportement documenté et déterministe lorsqu'une scène dépasse le budget
+  d'affichage.
+
+### Extension du studio graphique externe
+
+- [x] ajouter un éditeur de sprites hires 24×21 en pixels 1 bit ;
+- [x] ajouter un éditeur multicolore 12×21 en pixels logiques 2 bits avec aperçu
+  24×21 ;
+- [x] configurer la couleur propre au sprite et les deux couleurs multicolores
+  partagées ;
+- [x] créer, dupliquer, supprimer et réordonner les frames ;
+- [x] créer des animations nommées avec vitesse, boucle et frame initiale ;
+- [x] éditer l'origine et la hitbox avec retour visuel dans l'aperçu ;
+- [x] prévisualiser l'animation, le retournement et les couleurs C64 ;
+- [x] associer un asset et une animation à un objet placé sur la map ;
+- [x] afficher l'emprise de la hitbox et la position de spawn dans l'éditeur de
+  map ;
+- [x] importer/exporter individuellement le JSON `sprite-asset-v1` ;
+- [x] importer/exporter un projet regroupant map, charset, sprites et
+  références ;
+- [x] vérifier un aller-retour import/export sans perte et sans dépendance au
+  runtime npm.
+
+### Exemple cible : `examples/platformer-mini.js`
+
+Créer un mini jeu de plates-formes original, inspiré des classiques 8 bits sans
+reprendre de graphismes, noms ni niveaux protégés :
+
+- joueur créé depuis l'objet `player-spawn` ;
+- marche gauche/droite, gravité, saut et contact stable avec les plateformes ;
+- animations idle, course et saut dans les deux directions ;
+- collisions pilotées par les valeurs logiques de la tilemap ;
+- caméra suivant le joueur avec zone morte et limites de niveau ;
+- au moins deux zones ou salles jouables ;
+- ennemis, objets ou collectibles provenant eux aussi d'objets de map ;
+- utilisation simultanée de sprites matériels et virtuels ;
+- chute hors niveau, réapparition au spawn et petit objectif de fin ;
+- sons non bloquants et panneau de score fixe compatible avec le scrolling.
+
+### Ordre d'implémentation
+
+1. [x] figer les schémas d'objets et de sprites avec tests de validation ;
+2. [x] introduire les coordonnées monde et le pool d'entités ;
+3. [x] ajouter hitboxes, mouvement et collisions de tuiles ;
+4. [x] relier la caméra, le culling et le multiplexeur ;
+5. [x] étendre le studio graphique et vérifier les exports ;
+6. [x] produire le mini jeu, les tests PAL/NTSC, la documentation et les profils.
+
+### Critères de sortie
+
+- [x] seize entités peuvent être liées aux sprites logiques 0 à 15 depuis des
+  objets de map ;
+- [x] leur position monde reste exacte lorsque la caméra et le viewport bougent ;
+- [x] un sprite ne traverse pas une tuile dont `collision != 0` et traverse une
+  tuile dont `collision == 0` ;
+- [x] les contacts au sol, plafond, gauche et droite sont testés aux limites des
+  tuiles et à plusieurs vitesses ;
+- [x] la caméra suit une entité sur les deux axes sans sortir de la map ;
+- [x] les sprites hors écran sont masqués puis réapparaissent à la bonne position ;
+- [x] les contraintes des huit sprites virtuels sont testées, diagnostiquées et
+  expliquées dans `MODE_EMPLOI_DEBUTANT.txt` ;
+- [x] le studio crée un sprite hires, un sprite multicolore et une animation,
+  puis les rattache à un objet de map sans retouche manuelle du JSON ;
+- [x] `examples/platformer-mini.js` compile en ASM, BAS, LST et PRG avec un
+  profil horizontal sûr en PAL/NTSC ; le scroll X/Y reste couvert séparément ;
+- [x] le rapport de build indique la mémoire des sprites, le nombre d'entités
+  visibles et le budget raster maximal ;
+- [x] les tests existants de scroll, map dynamique, sprites et multiplexage ne
+  régressent pas.
+
+### Risques à mesurer avant validation
+
+- coût CPU du cumul scroll, collision, animation et multiplexage dans une frame ;
+- pression sur la banque VIC et alignement des données de sprites ;
+- limite physique de huit sprites sur une même ligne raster malgré les seize
+  indices logiques ;
+- mémoire des frames d'animation et duplication involontaire des assets ;
+- différences de budget entre PAL et NTSC ;
+- stabilité du panneau fixe pendant un suivi vertical de caméra.
 
 ---
 
@@ -608,9 +954,9 @@ Rendre les jeux agréables à produire, déboguer et optimiser avant de figer l'
 
 ### Option avancée
 
-Un multiplexeur de sprites peut être étudié ici, mais il ne doit pas bloquer la
-1.0. Les petits jeux visés peuvent déjà fonctionner avec les huit sprites
-matériels et des éléments de décor en caractères.
+Le multiplexeur introduit avant la v0.10.1 doit ici être profilé et optimisé avec
+les autres systèmes. Une augmentation au-delà des seize sprites logiques peut
+être étudiée, mais elle ne doit pas bloquer la 1.0.
 
 ---
 

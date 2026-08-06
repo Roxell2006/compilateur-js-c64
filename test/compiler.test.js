@@ -291,6 +291,16 @@ describe("v0.4 sprite animation", () => {
       { op: "spriteAnimateTo", args: [0, { x: 240, speedX: 2 }] }
     ])).toThrow(/position is unknown/i);
   });
+
+  it("packs relocated code behind a small BASIC copy loader instead of zero-padding the PRG", () => {
+    const code = Uint8Array.from([0xa9, 0x05, 0x8d, 0x20, 0xd0, 0x60]);
+    const prg = createPrg(code, 0x4000, 0x0801, 0x4000);
+    expect(prg.length).toBeLessThan(128);
+    expect(Array.from(prg.slice(-code.length))).toEqual(Array.from(code));
+    expect(Array.from(prg.slice(-3))).toEqual([0x20, 0xd0, 0x60]);
+    expect(Buffer.from(prg.slice(2, 18)).toString("ascii")).toContain("2064");
+    expect(Array.from(prg)).toEqual(expect.arrayContaining([0x4c, 0x00, 0x40]));
+  });
 });
 
 describe("v0.7 gameplay foundations", () => {
@@ -524,8 +534,8 @@ describe("v0.8.2 virtual sprite multiplexer", () => {
     expect(result.asm.match(/JSR runtime_sprite_mux_render/g)).toHaveLength(1);
     expect(result.asm).toMatch(/runtime_sprite_mux_sort:/);
     expect(result.asm).toMatch(/runtime_sprite_mux_schedule_next:/);
-    expect(result.asm).toMatch(/runtime_sprite_mux_wait_high_raster:/);
-    expect(result.asm).toMatch(/runtime_sprite_mux_wait_low_raster:/);
+    expect(result.asm).toMatch(/runtime_sprite_mux_wait_safe_raster:/);
+    expect(result.asm).not.toMatch(/runtime_sprite_mux_wait_low_raster:/);
     expect(result.asm).toMatch(/CMP #\$C8/);
     expect(result.asm).toMatch(/LDA \$C500,Y/);
     expect(result.asm).toMatch(/LDA \$C405,Y/);
@@ -648,8 +658,8 @@ describe("v0.9 static charset and map assets", () => {
     `);
     expect(result.asm).toMatch(/STA \$8000,X/);
     expect(result.asm).toMatch(/asset_map_collisions_\d+:/);
-    expect(result.asm).toMatch(/map_index_rows_/);
-    expect(result.asm).toMatch(/ADC #\$03/);
+    expect(result.asm).toMatch(/ASL \$C7B7[\s\S]*ROL \$C7BF/);
+    expect(result.asm).not.toMatch(/map_index_rows_/);
   });
 
   it("reads, writes and redraws callable two-dimensional map cells", async () => {
@@ -770,6 +780,582 @@ describe("v0.9 static charset and map assets", () => {
     expect(maze.asm).toMatch(/ORA #\$10/);
     expect(snake.prgBytes.length).toBeLessThan(6000);
     expect(maze.prgBytes.length).toBeLessThan(6000);
+  });
+});
+
+describe("v0.10 scrolling and viewport", () => {
+  it("draws a bounded runtime viewport from a map larger than 256 cells", async () => {
+    const result = await compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({
+        charset: { characters: [[0,0,0,0,0,0,0,0], [255,255,255,255,255,255,255,255]] },
+        tiles: [{ chars: [0], colors: [0] }, { chars: [1], colors: [7], collision: 1 }],
+        map: { width: 48, height: 10, data: Array.from({ length: 480 }, (_, index) => index % 48 === 0 || index % 48 === 47 ? 1 : 0) }
+      });
+      const cameraX = c64.var.byte("viewportCameraX", { initial: 0 });
+      c64.game.init(() => c64.map.drawViewport(level, { sourceX: cameraX, sourceY: 0, width: 20, height: 10, x: 1, y: 5 }));
+      c64.game.frame(() => c64.map.drawViewport(level, { sourceX: cameraX, sourceY: 0, width: 20, height: 10, x: 1, y: 5 }));
+    `);
+    expect(result.asm).toMatch(/runtime_map_viewport_0:/);
+    expect(result.asm).toMatch(/map_viewport_x_ok_/);
+    expect(result.asm).toMatch(/STA \(\$FB\),Y/);
+    expect(result.asm).toMatch(/STA \(\$FD\),Y/);
+    expect(result.assetReport).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "map-runtime", bytes: 480, indexBits: 16 }),
+      expect.objectContaining({ type: "map-viewport", width: 20, height: 10, visibleTiles: 200, strategy: "coarse-full-redraw", palFrameBudget: 19656 })
+    ]));
+  });
+
+  it("rejects a viewport that exceeds the map or C64 screen", async () => {
+    await expect(compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({ charset: { characters: [[0,0,0,0,0,0,0,0]] }, tiles: [{ chars: [0] }], map: { width: 10, height: 10, data: Array(100).fill(0) } });
+      c64.map.drawViewport(level, { width: 11, height: 10 });
+    `)).rejects.toThrow(/viewport dimensions/i);
+    await expect(compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({ charset: { characters: [[0,0,0,0,0,0,0,0]] }, tiles: [{ chars: [0] }], map: { width: 20, height: 10, data: Array(200).fill(0) } });
+      c64.map.drawViewport(level, { width: 20, height: 10, x: 25 });
+    `)).rejects.toThrow(/does not fit/i);
+  });
+
+  it("compiles a raster-banded bidirectional X/Y scroller with streamed Screen and Color RAM", async () => {
+    const result = await compileFile("examples/tilemap-scroll-x.js");
+    expect(result.asm).toMatch(/runtime_map_scroll_apply_0:/);
+    expect(result.asm).toMatch(/LDA \$D016[\s\S]*AND #\$F0[\s\S]*STA \$D016/);
+    expect(result.asm).toMatch(/LDA \$D011[\s\S]*AND #\$F0[\s\S]*STA \$D011/);
+    expect(result.asm).toMatch(/runtime_map_scroll_restore_0:/);
+    expect(result.asm).toMatch(/irq_handler_0:[\s\S]*JSR runtime_map_scroll_apply_0/);
+    expect(result.asm).toMatch(/irq_handler_1:[\s\S]*JSR runtime_map_scroll_prepare_panel_0/);
+    expect(result.asm).not.toMatch(/irq_handler_2:/);
+    const preparePanel = result.asm.match(/runtime_map_scroll_prepare_panel_0:[\s\S]*?RTS/)?.[0] ?? "";
+    const leaveScroller = result.asm.match(/runtime_map_scroll_leave_0:[\s\S]*?RTS/)?.[0] ?? "";
+    expect(preparePanel).toMatch(/runtime_map_scroll_wait_normalize_0:[\s\S]*CMP #\$95[\s\S]*AND #\$F0[\s\S]*ORA #\$07[\s\S]*STA \$D011/);
+    expect(preparePanel).toMatch(/runtime_map_scroll_wait_blank_0:[\s\S]*CMP #\$96[\s\S]*AND #\$F0[\s\S]*ORA #\$0E[\s\S]*STA \$D018/);
+    expect(preparePanel).toMatch(/runtime_map_scroll_wait_den_off_0:[\s\S]*CMP #\$9E[\s\S]*AND #\$E0[\s\S]*ORA #\$07[\s\S]*STA \$D011/);
+    expect(preparePanel).toMatch(/runtime_map_scroll_wait_panel_y_0:[\s\S]*CMP #\$A0[\s\S]*STA \$D011[\s\S]*STA \$D018/);
+    expect(preparePanel).toMatch(/runtime_map_scroll_wait_panel_x_0:[\s\S]*CMP #\$A2[\s\S]*STA \$D016/);
+    expect(result.asm).toMatch(/LDX #\$00[\s\S]*map_scroll_blank_charset_\d+:[\s\S]*STA \$3800,X[\s\S]*STA \$3F00,X/);
+    expect(leaveScroller).toMatch(/STA \$D016/);
+    expect(leaveScroller).not.toMatch(/STA \$D011/);
+    expect(result.asm).toMatch(/runtime_map_scroll_shift_left_0:/);
+    expect(result.asm).toMatch(/runtime_map_scroll_shift_right_0:/);
+    expect(result.asm).toMatch(/runtime_map_scroll_shift_up_0:/);
+    expect(result.asm).toMatch(/runtime_map_scroll_shift_down_0:/);
+    expect(result.asm).toMatch(/LDA \$05[0-9A-F]{2},X[\s\S]*STA \$05[0-9A-F]{2},X/);
+    expect(result.asm).toMatch(/LDA \$D9[0-9A-F]{2},X[\s\S]*STA \$D9[0-9A-F]{2},X/);
+    // Paired row copies spend a little more code to keep coarse-scroll color
+    // updates inside the raster budget without duplicating whole routines.
+    expect(result.prgBytes.length).toBeLessThan(4400);
+    expect(result.assetReport).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: "map-scroll",
+        strategy: "fine-scroll-xy-stream",
+        panel: "bottom",
+        height: 7,
+        configuredHeight: 8,
+        panelRows: 11,
+        panelScreenRow: 14,
+        exitRasterLine: 162,
+        prepareRasterLine: 140,
+        normalizeRasterLine: 149,
+        blankRasterLine: 150,
+        denOffRasterLine: 158,
+        panelRasterLine: 160,
+        recommendedFrameRasterLine: 166,
+        assumedRasterLine: 166,
+        horizontalWrapFitsPal: true,
+        horizontalWrapFitsNtsc: true,
+        verticalWrapFitsPal: true,
+        verticalWrapFitsNtsc: true,
+        verticalUpWrapFitsPal: true,
+        verticalUpWrapFitsNtsc: true,
+        verticalDownWrapFitsPal: true,
+        verticalDownWrapFitsNtsc: true,
+        verticalPhaseTransitionLines: 23,
+        transitionRows: 1,
+        panelMemoryRowOffset: -1,
+        guardRasterLines: 8,
+        guardColor: "background",
+        blankCharsetAddress: 0x3800,
+        beamRacedRows: true,
+        kernalTimerDisabled: true,
+        irqTiming: "vic-only",
+        stateBytes: 11
+      })
+    ]));
+    const scrollReport = result.assetReport.find((entry) => entry.type === "map-scroll");
+    const panelStart = scrollReport.exitRasterLine + 1;
+    const vcBaseAtPanel = (fineY) => {
+      let rowCounter = 7;
+      let vcBase = 0;
+      let displayState = false;
+      let phase = fineY;
+      let displayEnabled = true;
+      for (let raster = 48; raster <= panelStart; raster += 1) {
+        if (raster === scrollReport.normalizeRasterLine) phase = 7;
+        if (raster === scrollReport.denOffRasterLine) displayEnabled = false;
+        if (raster === scrollReport.panelRasterLine) {
+          displayEnabled = true;
+          phase = 3;
+        }
+        if (raster === panelStart) return vcBase;
+        const badLine = displayEnabled && (raster & 7) === phase;
+        let videoCounter = vcBase;
+        if (badLine) {
+          rowCounter = 0;
+          displayState = true;
+        }
+        if (displayState) videoCounter += 40;
+        if (rowCounter === 7) {
+          displayState = false;
+          vcBase = videoCounter;
+        }
+        if (displayState) rowCounter = (rowCounter + 1) & 7;
+      }
+      return vcBase;
+    };
+    expect(Array.from({ length: 8 }, (_, fineY) => vcBaseAtPanel(fineY))).toEqual(Array(8).fill((scrollReport.panelScreenRow - 1) * 40));
+    expect(result.asm).toMatch(/STA \$0701,X/);
+    expect(result.asm).toMatch(/STA \$074B,X/);
+    expect(result.asm).toMatch(/game_frame_wait_target:[\s\S]*CMP #\$A6/);
+    expect(result.asm).toMatch(/LDA #\$7F[\s\S]*STA \$DC0D[\s\S]*STA \$DD0D/);
+    expect(result.asm).not.toMatch(/JMP \$EA31/);
+  });
+
+  it("reserves hidden side columns and rejects metatiles wider than one character", async () => {
+    await expect(compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({ charset: { characters: [[0,0,0,0,0,0,0,0]] }, tiles: [{ chars: [0] }], map: { width: 48, height: 8, data: Array(384).fill(0) } });
+      c64.map.horizontalScroller(level, { width: 39, height: 8, x: 0 });
+    `)).rejects.toThrow(/columns 1\.\.38/i);
+    await expect(compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({ tileWidth: 2, charset: { characters: [[0,0,0,0,0,0,0,0]] }, tiles: [{ chars: [0,0] }], map: { width: 20, height: 8, data: Array(160).fill(0) } });
+      c64.map.horizontalScroller(level, { width: 10, height: 8, x: 1 });
+    `)).rejects.toThrow(/1x1-character tiles/i);
+  });
+
+  it("supports a fixed bottom panel and shares the dispatcher with a user raster IRQ", async () => {
+    const result = await compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({
+        charset: { characters: [[0,0,0,0,0,0,0,0]] },
+        tiles: [{ chars: [0], colors: [1] }],
+        map: { width: 32, height: 16, data: Array(512).fill(0) }
+      });
+      const scroll = c64.map.scroller(level, { width: 20, height: 8, x: 1, y: 1, panel: "bottom" });
+      c64.irq.raster(80, () => c64.borderColor(c64.COLOR_BLUE));
+      c64.irq.install();
+      c64.game.init(() => scroll.draw());
+      c64.game.frame(() => scroll.down());
+    `);
+    expect(result.asm).toMatch(/irq_handler_0:/);
+    expect(result.asm).toMatch(/irq_handler_1:/);
+    expect(result.asm).toMatch(/irq_handler_2:/);
+    expect(result.asm).not.toMatch(/irq_handler_3:/);
+    expect(result.asm).toMatch(/STA \$D020/);
+    expect(result.assetReport).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "map-scroll", panel: "bottom" })
+    ]));
+  });
+
+  it("rejects vertical fine scrolling below a fixed top character panel until FLD compensation exists", async () => {
+    await expect(compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({
+        charset: { characters: [[0,0,0,0,0,0,0,0]] },
+        tiles: [{ chars: [0] }],
+        map: { width: 24, height: 16, data: Array(384).fill(0) }
+      });
+      const scroll = c64.map.scroller(level, { width: 20, height: 8, x: 1, y: 6, panel: "top" });
+      c64.game.init(() => scroll.draw());
+      c64.game.frame(() => scroll.down());
+    `)).rejects.toThrow(/requires panel: "bottom"/i);
+  });
+
+  it("rejects a vertical direction that cannot beat the PAL raster beam", async () => {
+    await expect(compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({ charset: { characters: [[0,0,0,0,0,0,0,0]] }, tiles: [{ chars: [0] }], map: { width: 80, height: 30, data: Array(2400).fill(0) } });
+      const scroll = c64.map.scroller(level, { width: 38, x: 1, panel: { bottom: 5 } });
+      c64.game.init(() => scroll.draw());
+      c64.game.frame(() => scroll.up());
+    `)).rejects.toThrow(/vertical scroll up exceeds the PAL raster budget/i);
+  });
+
+  it("supports an exact panel row count while keeping string panels compatible", async () => {
+    const bottom = await compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({ charset: { characters: [[0,0,0,0,0,0,0,0]] }, tiles: [{ chars: [0] }], map: { width: 32, height: 30, data: Array(960).fill(0) } });
+      const scroll = c64.map.scroller(level, { width: 20, x: 1, panel: { position: "bottom", rows: 2 } });
+      c64.game.init(() => scroll.draw());
+      c64.game.frame(() => scroll.down());
+    `);
+    expect(bottom.assetReport).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: "map-scroll",
+        panel: "bottom",
+        panelRows: 2,
+        height: 22,
+        configuredHeight: 23,
+        prepareRasterLine: 212,
+        normalizeRasterLine: 221,
+        blankRasterLine: 222,
+        denOffRasterLine: 230,
+        panelRasterLine: 232,
+        exitRasterLine: 234,
+        transitionRows: 1,
+        panelMemoryRowOffset: -1
+      })
+    ]));
+
+    const top = await compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({ charset: { characters: [[0,0,0,0,0,0,0,0]] }, tiles: [{ chars: [0] }], map: { width: 32, height: 25, data: Array(800).fill(0) } });
+      const scroll = c64.map.scroller(level, { width: 20, x: 1, panel: { top: 5 } });
+      c64.game.init(() => scroll.draw());
+      c64.game.frame(() => scroll.right());
+    `);
+    expect(top.assetReport).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "map-scroll", panel: "top", panelRows: 5, height: 20, panelRasterLine: null })
+    ]));
+
+    await expect(compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({ charset: { characters: [[0,0,0,0,0,0,0,0]] }, tiles: [{ chars: [0] }], map: { width: 32, height: 25, data: Array(800).fill(0) } });
+      c64.map.scroller(level, { width: 20, x: 1, panel: { position: "bottom", rows: 25 } });
+    `)).rejects.toThrow(/panel\.rows must be between 1 and 24/);
+  });
+});
+
+describe("v0.10.1 map entities foundation", () => {
+  it("normalizes reusable sprite assets and validates named animation references", async () => {
+    const { normalizeSpriteAsset } = await import("../src/assets.js");
+    const sprite = normalizeSpriteAsset({
+      version: 1,
+      id: "hero",
+      mode: "multicolor",
+      color: 7,
+      multicolor1: 5,
+      multicolor2: 10,
+      origin: { x: 12, y: 20 },
+      hitbox: { offsetX: 4, offsetY: 1, width: 16, height: 20 },
+      frames: [
+        { id: "idle", data: Array(63).fill(0) },
+        { id: "step", data: Array(63).fill(1) }
+      ],
+      animations: { "run-right": { frames: ["idle", "step"], speed: 4, loop: true } },
+      initialAnimation: "run-right"
+    }, "hero.sprite.json");
+    expect(sprite).toEqual(expect.objectContaining({
+      type: "spriteAsset", id: "hero", mode: "multicolor", color: 7,
+      multicolor1: 5, multicolor2: 10, initialAnimation: "run-right"
+    }));
+    expect(sprite.animations["run-right"].frames).toEqual([0, 1]);
+    expect(() => normalizeSpriteAsset({
+      version: 1, id: "broken", mode: "hires",
+      frames: [{ id: "idle", data: Array(63).fill(0) }],
+      animations: { run: { frames: ["missing"] } }
+    }, "broken.sprite.json")).toThrow(/broken\.sprite\.json.*missing frame missing/i);
+  });
+
+  it("normalizes stable object ids and exact world pixel coordinates", async () => {
+    const { normalizeMapAsset } = await import("../src/assets.js");
+    const asset = normalizeMapAsset({
+      version: 1,
+      charset: { characters: [[0,0,0,0,0,0,0,0]] },
+      tileWidth: 2,
+      tileHeight: 3,
+      tiles: [{ chars: [0,0,0,0,0,0] }],
+      map: {
+        width: 8,
+        height: 8,
+        data: Array(64).fill(0),
+        objects: [
+          { id: "hero", type: "player-spawn", x: 3, y: 2, sprite: "hero-sprite", properties: { direction: "right" } },
+          { type: "enemy-spawn", x: 5, y: 4 }
+        ]
+      }
+    });
+    expect(asset.map.objects[0]).toEqual(expect.objectContaining({
+      id: "hero", type: "player-spawn", x: 3, y: 2, worldX: 48, worldY: 48, sprite: "hero-sprite"
+    }));
+    expect(asset.map.objects[1]).toEqual(expect.objectContaining({ id: "enemy-spawn-2", worldX: 80, worldY: 96 }));
+    expect(() => normalizeMapAsset({
+      charset: { characters: [[0,0,0,0,0,0,0,0]] },
+      tiles: [{ chars: [0] }],
+      map: { width: 2, height: 1, data: [0,0], objects: [
+        { id: "same", type: "a", x: 0, y: 0 }, { id: "same", type: "b", x: 1, y: 0 }
+      ] }
+    })).toThrow(/duplicates same/);
+  });
+
+  it("spawns a logical sprite from a map object and projects 16-bit world coordinates", async () => {
+    const result = await compileFile("examples/map-entity-spawn.js");
+    expect(result.asm).toMatch(/map_entity_x_/);
+    expect(result.asm).toMatch(/map_entity_y_/);
+    expect(result.asm).toMatch(/STA \$D000/);
+    expect(result.asm).toMatch(/STA \$D001/);
+    expect(result.asm).toMatch(/runtime_map_entity_move_\d+:/);
+    expect(result.asm).toMatch(/runtime_map_entity_point_solid_0:/);
+    expect(result.asm).toMatch(/LDA asset_map_collisions_0,X/);
+    expect(result.asm).toMatch(/runtime_map_entity_\d+_ground_probe/);
+    expect(result.asm).toMatch(/sprite_sequence_0_idle-right:/);
+    expect(result.asm).toMatch(/sprite_sequence_0_run-right:/);
+    expect(result.asm).toMatch(/sprite_play_start_0_0_/);
+    expect(result.asm).toMatch(/sprite_play_start_0_1_/);
+    expect(result.asm).toMatch(/sprite_anim_advance_0_/);
+    expect(result.asm).toMatch(/map_camera_follow_x_/);
+    expect(result.asm).not.toMatch(/map_camera_follow_y_/);
+    // Screen column 1 starts at VIC X=32 and XSCROLL=7 adds the exact
+    // fine-scroll phase used by the character map: 24 + 8 + 7 = 39 ($27).
+    expect(result.asm).toMatch(/map_entity_x_visible_\d+:[\s\S]*ADC #\$27/);
+    expect(result.assetReport).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: "map-entity", objectType: "player-spawn", sprite: 0,
+        spriteAsset: "hero", initialAnimation: "idle-right",
+        worldX: 24, worldY: 128, coordinateBits: 16
+      })
+    ]));
+    expect(result.assetReport).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: "sprite-asset", id: "hero", mode: "hires", frames: 2,
+        animations: ["idle-right", "run-right"], bytes: 128,
+        hitbox: { offsetX: 4, offsetY: 1, width: 16, height: 20 }
+      }),
+      expect.objectContaining({
+        type: "map-runtime", bytes: 1600, indexBits: 16
+      }),
+      expect.objectContaining({
+        type: "map-scroll", width: 38, height: 20,
+        panel: "bottom", panelRows: 5
+      }),
+      expect.objectContaining({
+        type: "map-camera-follow", entity: "player", axis: "x",
+        deadZone: { x: 104, y: 48, width: 96, height: 64 }, maxSpeed: 2,
+        coordinateBits: 16, clampToMap: true
+      })
+    ]));
+  });
+
+  it("reports a map object that references an unloaded sprite asset", async () => {
+    await expect(compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({
+        charset: { characters: [[0,0,0,0,0,0,0,0]] },
+        tiles: [{ chars: [0] }],
+        map: { width: 2, height: 1, data: [0,0], objects: [
+          { id: "player", type: "player-spawn", x: 0, y: 0, sprite: "missing_hero" }
+        ] }
+      });
+      c64.map.spawn(level, "player", { sprite: 0 });
+    `)).rejects.toThrow(/<inline>: map\.objects\["player"\]\.sprite references missing sprite asset missing_hero/i);
+
+    await expect(compileJsToC64Outputs(`
+      c64.assets.defineSprite({ version: 1, id: "red", mode: "multicolor", color: 2, multicolor1: 5, multicolor2: 6, frames: [{ id: "idle", data: Array(63).fill(0) }] });
+      c64.assets.defineSprite({ version: 1, id: "blue", mode: "multicolor", color: 6, multicolor1: 3, multicolor2: 4, frames: [{ id: "idle", data: Array(63).fill(0) }] });
+      const level = c64.assets.defineMap({ charset: { characters: [[0,0,0,0,0,0,0,0]] }, tiles: [{ chars: [0] }], map: { width: 2, height: 1, data: [0,0], objects: [
+        { id: "a", type: "actor", x: 0, y: 0, sprite: "red" }, { id: "b", type: "actor", x: 1, y: 0, sprite: "blue" }
+      ] } });
+      c64.map.spawn(level, "a", { sprite: 0 });
+      c64.map.spawn(level, "b", { sprite: 1 });
+    `)).rejects.toThrow(/multicolor sprite colors conflict/i);
+  });
+
+  it("generates bounded pixel steps and validates collision hitboxes", async () => {
+    const result = await compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({
+        charset: { characters: [[0,0,0,0,0,0,0,0]] },
+        tiles: [{ chars: [0], collision: 0 }, { chars: [0], collision: 7 }],
+        map: { width: 8, height: 4, data: [1,1,1,1,1,1,1,1, 1,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,1, 1,1,1,1,1,1,1,1],
+          objects: [{ id: "player", type: "player-spawn", x: 2, y: 1 }] }
+      });
+      const player = c64.map.spawn(level, "player", {
+        sprite: 0,
+        spriteOptions: { hitbox: { offsetX: 4, offsetY: 1, width: 16, height: 20 } },
+        maxCollisionSpeed: 6
+      });
+      c64.game.frame(() => {
+        player.moveAndCollide(6, 5);
+        c64.control.if(player.isOnGround(), () => player.jump(4));
+        player.project();
+      });
+    `);
+    expect(result.asm).toMatch(/CMP #\$07/);
+    expect(result.asm).toMatch(/runtime_map_entity_\d+_x_positive_hit:/);
+    expect(result.asm).toMatch(/runtime_map_entity_\d+_y_positive_hit:/);
+    expect(result.asm).toMatch(/LSR \$C7BC/);
+    expect(result.asm).toMatch(/ROR \$C7BB/);
+
+    await expect(compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({ charset: { characters: [[0,0,0,0,0,0,0,0]] }, tiles: [{ chars: [0] }], map: { width: 1, height: 1, data: [0], objects: [{ id: "p", type: "spawn", x: 0, y: 0 }] } });
+      const player = c64.map.spawn(level, "p", { sprite: 0, maxCollisionSpeed: 17 });
+      c64.game.frame(() => player.moveAndCollide());
+    `)).rejects.toThrow(/maxCollisionSpeed must be between 1 and 16/);
+  });
+
+  it("selects objects by id or type and rejects an ambiguous spawn", async () => {
+    await expect(compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({
+        charset: { characters: [[0,0,0,0,0,0,0,0]] }, tiles: [{ chars: [0] }],
+        map: { width: 2, height: 1, data: [0,0], objects: [
+          { id: "enemy-a", type: "enemy", x: 0, y: 0 },
+          { id: "enemy-b", type: "enemy", x: 1, y: 0 }
+        ] }
+      });
+      c64.map.spawn(level, "enemy", { sprite: 0 });
+    `)).rejects.toThrow(/Several map objects match/);
+
+    const result = await compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({
+        charset: { characters: [[0,0,0,0,0,0,0,0]] }, tiles: [{ chars: [0] }],
+        map: { width: 2, height: 1, data: [0,0], objects: [
+          { id: "enemy-a", type: "enemy", x: 0, y: 0 },
+          { id: "enemy-b", type: "enemy", x: 1, y: 0 }
+        ] }
+      });
+      const enemies = c64.map.objects(level, "enemy");
+      const enemy = c64.map.spawn(level, enemies[1].id, { sprite: 8 });
+      const cameraX = c64.var.word("entityCameraX", { initial: 0 });
+      const cameraY = c64.var.word("entityCameraY", { initial: 0 });
+      c64.game.frame(() => enemy.project({ cameraX, cameraY, viewportWidth: 320, viewportHeight: 200 }));
+    `);
+    expect(result.assetReport).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "map-entity", id: "enemy-b", sprite: 8, worldX: 8 })
+    ]));
+    expect(result.asm).toMatch(/Dynamic 16-to-8 sprite multiplexer/);
+  });
+
+  it("projects other entities through the followed scroller and validates follow limits", async () => {
+    const result = await compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({
+        charset: { characters: [[0,0,0,0,0,0,0,0]] }, tiles: [{ chars: [0] }],
+        map: { width: 32, height: 12, data: Array(384).fill(0), objects: [
+          { id: "player", type: "player", x: 2, y: 2 },
+          { id: "enemy", type: "enemy", x: 12, y: 2 }
+        ] }
+      });
+      const player = c64.map.spawn(level, "player", { sprite: 0 });
+      const enemy = c64.map.spawn(level, "enemy", { sprite: 8 });
+      const camera = c64.map.scroller(level, { width: 20, height: 8, x: 1, y: 1, panel: "bottom" });
+      c64.game.init(() => camera.draw());
+      c64.game.frame(() => {
+        camera.follow(player, { axis: "x", maxSpeed: 3, project: false });
+        camera.project(player);
+        camera.project(enemy);
+      });
+    `);
+    expect(result.asm).toMatch(/map_camera_follow_x_/);
+    expect(result.asm).not.toMatch(/map_camera_follow_y_/);
+    expect(result.asm.match(/map_entity_project_done_/g)?.length).toBeGreaterThanOrEqual(2);
+    expect(result.assetReport).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "map-camera-follow", entity: "player", axis: "x", maxSpeed: 3 })
+    ]));
+
+    const vertical = await compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({ charset: { characters: [[0,0,0,0,0,0,0,0]] }, tiles: [{ chars: [0] }], map: { width: 24, height: 16, data: Array(384).fill(0), objects: [{ id: "p", type: "player", x: 1, y: 1 }] } });
+      const player = c64.map.spawn(level, "p", { sprite: 0 });
+      const camera = c64.map.scroller(level, { width: 20, height: 8, x: 1, y: 1, panel: "bottom" });
+      c64.game.init(() => camera.draw());
+      c64.game.frame(() => camera.follow(player, { axis: "both" }));
+    `);
+    // Standard screen Y starts at 50, row 1 adds 8 and fine Y phase 7 is four
+    // pixels below the normal D011 phase 3: 50 + 8 + 4 = 62 ($3E).
+    expect(vertical.asm).toMatch(/map_entity_y_visible_\d+:[\s\S]*ADC #\$3E/);
+
+    await expect(compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({ charset: { characters: [[0,0,0,0,0,0,0,0]] }, tiles: [{ chars: [0] }], map: { width: 24, height: 12, data: Array(288).fill(0), objects: [{ id: "p", type: "player", x: 1, y: 1 }] } });
+      const player = c64.map.spawn(level, "p", { sprite: 0 });
+      const camera = c64.map.scroller(level, { width: 20, height: 8, x: 1, y: 3, panel: "top" });
+      c64.game.init(() => camera.draw());
+      c64.game.frame(() => camera.follow(player, { axis: "both" }));
+    `)).rejects.toThrow(/vertical camera follow.*panel: "bottom"/i);
+
+    await expect(compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({ charset: { characters: [[0,0,0,0,0,0,0,0]] }, tiles: [{ chars: [0] }], map: { width: 24, height: 12, data: Array(288).fill(0), objects: [{ id: "p", type: "player", x: 1, y: 1 }] } });
+      const player = c64.map.spawn(level, "p", { sprite: 0 });
+      const camera = c64.map.scroller(level, { width: 20, height: 8, x: 1, y: 1, panel: "bottom" });
+      c64.game.init(() => camera.draw());
+      c64.game.frame(() => camera.follow(player, { deadZone: { x: 150, y: 0, width: 20, height: 20 } }));
+    `)).rejects.toThrow(/deadZone must fit/);
+  });
+
+  it("keeps disabled entities hidden, respawns them and applies a configurable culling margin", async () => {
+    const result = await compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({ charset: { characters: [[0,0,0,0,0,0,0,0]] }, tiles: [{ chars: [0] }], map: { width: 50, height: 12, data: Array(600).fill(0), objects: [{ id: "p", type: "player", x: 3, y: 2 }] } });
+      const player = c64.map.spawn(level, "p", { sprite: 0 });
+      const camera = c64.map.scroller(level, { width: 38, height: 8, x: 1, y: 1, panel: "bottom" });
+      c64.game.init(() => camera.draw());
+      c64.game.frame(() => {
+        player.disable();
+        camera.project(player, { cullingMargin: { x: 24, y: 21 } });
+        player.respawn();
+      });
+    `);
+    expect(result.asm).toMatch(/map_entity_enabled_/);
+    expect(result.asm).toMatch(/ADC #\$18[\s\S]*SBC/);
+    expect(result.assetReport).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "map-entity", cullingMargin: { x: 24, y: 21 } })
+    ]));
+  });
+
+  it("supports behavior tables and reuses software AABB for map entities", async () => {
+    const result = await compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({ charset: { characters: [[0,0,0,0,0,0,0,0]] }, tiles: [{ chars: [0], collision: 0 }, { chars: [0], collision: 1 }, { chars: [0], collision: 2 }, { chars: [0], collision: 3 }], map: { width: 8, height: 4, data: [1,1,1,1,1,1,1,1, 1,0,0,2,3,0,0,1, 1,0,0,0,0,0,0,1, 1,1,1,1,1,1,1,1], objects: [{ id: "p", type: "player", x: 1, y: 1 }, { id: "e", type: "enemy", x: 2, y: 1 }] } });
+      const behaviors = { 1: "solid", 2: "danger", 3: "exit", 4: "platform" };
+      const player = c64.map.spawn(level, "p", { sprite: 0, collisionBehaviors: behaviors });
+      const enemy = c64.map.spawn(level, "e", { sprite: 1, collisionBehaviors: behaviors });
+      c64.game.frame(() => {
+        player.moveAndCollide(2, 2);
+        c64.control.if(player.isOnDanger(), () => player.respawn());
+        c64.control.if(player.isAtExit(), () => player.disable());
+        c64.control.if(player.collides(enemy), () => enemy.disable());
+      });
+    `);
+    expect(result.asm).toMatch(/runtime_map_entity_point_value_0:/);
+    expect(result.asm).toMatch(/CMP #\$FF[\s\S]*CMP #\$00[\s\S]*BEQ runtime_map_entity_point_0_clear/);
+    expect(result.asm).toMatch(/LDA \$C7C9/);
+    expect(result.asm).toMatch(/runtime_sprite_aabb_compare|aabb_a_active_/);
+    expect(result.assetReport).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "map-entity", collisionBehaviors: { 1: "solid", 2: "danger", 3: "exit", 4: "platform" } })
+    ]));
+  });
+
+  it("reports a deterministic raster overflow for sixteen overlapping entities", async () => {
+    const result = await compileJsToC64Outputs(`
+      const objects = Array.from({ length: 16 }, (_, index) => ({ id: "actor-" + index, type: "actor", x: index, y: 2 }));
+      const level = c64.assets.defineMap({ charset: { characters: [[0,0,0,0,0,0,0,0]] }, tiles: [{ chars: [0] }], map: { width: 40, height: 8, data: Array(320).fill(0), objects } });
+      const actors = c64.map.spawnAll(level, "actor", { firstSprite: 0 });
+      c64.game.frame(() => actors.forEach((actor) => actor.project({ viewportHeight: 180, cullingMargin: 8 })));
+    `);
+    expect(result.assetReport).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "map-entity-budget", entityCount: 16, logicalSpriteCount: 16, physicalSprites: 8, virtualSprites: 8 }),
+      expect.objectContaining({ type: "sprite-multiplexer-budget", initialMaxRasterOverlap: 16, maxRasterBudget: 8, deterministic: true, status: "warning" }),
+      expect.objectContaining({ type: "warning", code: "SPRITE_RASTER_BUDGET" })
+    ]));
+  });
+
+  it("builds the complete PAL/NTSC platformer profile with a relocated program", async () => {
+    const result = await compileFile("examples/platformer-mini.js");
+    expect(result.origin).toBe(0x4000);
+    expect(result.sysAddress).toBe(0x4000);
+    expect(result.prgBytes.length).toBeLessThan(result.bytes.length + 128);
+    expect(result.prgBytes[0]).toBe(0x01);
+    expect(result.prgBytes[1]).toBe(0x08);
+    expect(result.asm).toMatch(/runtime_map_entity_point_value_0:/);
+    expect(result.asm).toMatch(/Dynamic 16-to-8 sprite multiplexer/);
+    expect(result.asm).toMatch(/runtime_sprite_mux_wait_safe_raster:/);
+    expect(result.asm).not.toMatch(/runtime_sprite_mux_wait_low_raster:/);
+    expect(result.asm).toMatch(/Raster IRQ dispatcher/);
+    expect(result.assetReport).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: "map-scroll",
+        width: 36,
+        height: 20,
+        panelRows: 5,
+        horizontalWrapFitsPal: true,
+        horizontalWrapFitsNtsc: true,
+        strategy: "fine-scroll-xy-stream"
+      }),
+      expect.objectContaining({
+        type: "map-entity-budget",
+        entityCount: 3,
+        physicalSprites: 2,
+        virtualSprites: 1,
+        spriteMemoryBytes: 256
+      }),
+      expect.objectContaining({ type: "sprite-multiplexer-budget", status: "ok", maxRasterBudget: 8 }),
+      expect.objectContaining({ type: "memory-layout", conflicts: [] })
+    ]));
   });
 });
 

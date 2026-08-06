@@ -8,6 +8,8 @@ const initialState = () => ({
   colorBase: 0xd800,
   assetBaseDirectory: process.cwd(),
   dataDefinitions: new Map(),
+  spriteAssets: new Map(),
+  spriteSharedColors: null,
   input: {
     joystickPorts: [],
     keyboardKeys: []
@@ -39,6 +41,8 @@ export function resetRuntime() {
   state.colorBase = fresh.colorBase;
   state.assetBaseDirectory = fresh.assetBaseDirectory;
   state.dataDefinitions = fresh.dataDefinitions;
+  state.spriteAssets = fresh.spriteAssets;
+  state.spriteSharedColors = fresh.spriteSharedColors;
   state.input = fresh.input;
   state.irq = fresh.irq;
 }
@@ -90,6 +94,29 @@ export function defineRuntimeData(name, length) {
 
 export function getRuntimeDataLength(name) {
   return state.dataDefinitions.get(name);
+}
+
+export function registerSpriteAsset(asset) {
+  const existing = state.spriteAssets.get(asset.id);
+  if (existing) {
+    throw new Error(`Sprite asset id ${asset.id} is already registered from ${existing.sourcePath}`);
+  }
+  state.spriteAssets.set(asset.id, asset);
+}
+
+export function getSpriteAsset(id) {
+  return state.spriteAssets.get(id);
+}
+
+export function claimSpriteSharedColors(multicolor1, multicolor2, sourcePath) {
+  if (state.spriteSharedColors === null) {
+    state.spriteSharedColors = { multicolor1, multicolor2, sourcePath };
+    return true;
+  }
+  if (state.spriteSharedColors.multicolor1 !== multicolor1 || state.spriteSharedColors.multicolor2 !== multicolor2) {
+    throw new Error(`${sourcePath}: multicolor sprite colors conflict with ${state.spriteSharedColors.sourcePath}; all visible VIC-II sprites share multicolor1 and multicolor2`);
+  }
+  return false;
 }
 
 export function setTextColor(color) {

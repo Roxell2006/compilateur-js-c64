@@ -119,6 +119,24 @@ const MAP_CONVERT_HI = 0xc7bc;
 const MAP_CONVERT_RESULT_LO = 0xc7bd;
 const MAP_CONVERT_RESULT_HI = 0xc7be;
 const MAP_CONVERT_COUNT = 0xc7bf;
+const MAP_VIEW_SOURCE_X = 0xc7c0;
+const MAP_VIEW_SOURCE_Y = 0xc7c1;
+const MAP_SCREEN_TILE_X = 0xc7c2;
+const MAP_SCREEN_TILE_Y = 0xc7c3;
+const MAP_ENTITY_PIXEL_X_LO = 0xc7c4;
+const MAP_ENTITY_PIXEL_X_HI = 0xc7c5;
+const MAP_ENTITY_PIXEL_Y_LO = 0xc7c6;
+const MAP_ENTITY_PIXEL_Y_HI = 0xc7c7;
+const MAP_ENTITY_STEP_COUNT = 0xc7c8;
+const MAP_ENTITY_COLLISION_MODE = 0xc7c9;
+// The 38-column VIC-II window starts at XSCROLL=7. Screen characters are
+// therefore seven pixels to the right of their logical world coordinate at
+// camera pixel zero. Sprite projection must use the same phase origin.
+const MAP_SCROLL_FINE_X_ORIGIN = 7;
+// The normal 25-row screen uses YSCROLL=3. A scrolling band starts at phase 7,
+// so projected sprites need the corresponding four-pixel vertical origin when
+// D011 fine scrolling is active.
+const MAP_SCROLL_FINE_Y_ORIGIN = 4;
 const AUTO_VARIABLE_START = 0xc100;
 const AUTO_VARIABLE_END = 0xc2ff;
 const RESERVED_RUNTIME_RANGES = Object.freeze([
@@ -130,7 +148,7 @@ const RESERVED_RUNTIME_RANGES = Object.freeze([
   { start: SPRITE_LOGICAL_STATE_BASE, end: SPRITE_LOGICAL_STATE_BASE + SPRITE_LOGICAL_STATE_STRIDE * SPRITE_LOGICAL_COUNT - 1, name: "sprite logical state" },
   { start: SPRITE_MUX_SORTED_BASE, end: SPRITE_MUX_SLOT_END_BASE + 7, name: "Y-sorted sprite multiplexer" },
   { start: COLLISION_TEMP_BASE, end: VIC_BACKGROUND_COLLISION_SNAPSHOT, name: "collision runtime" },
-  { start: MAP_TEMP_X, end: MAP_CONVERT_COUNT, name: "dynamic map temporary state" }
+  { start: MAP_TEMP_X, end: MAP_ENTITY_COLLISION_MODE, name: "dynamic map, viewport and entity temporary state" }
 ]);
 
 // The compiler uses a fixed internal RAM layout for long-running systems such
@@ -1074,13 +1092,25 @@ function emitPrint(asm, text, compileState) {
   asm.label(doneLabel);
 }
 
+function fixedBottomPanelMemoryOffset(compileState, y) {
+  for (const scroller of compileState.assets.scrollers.values()) {
+    if (scroller.verticalUsed && scroller.panel === "bottom" && y >= scroller.panelScreenRow) {
+      // The VIC-II reaches the fixed panel with VCBASE one character row before
+      // its physical raster position. The preceding physical row is the hidden
+      // transition band, so fixed-panel writes are stored 40 bytes earlier.
+      return -40;
+    }
+  }
+  return 0;
+}
+
 function emitPrintAt(asm, x, y, text, color, screenBase, colorBase, compileState) {
   // printAt() writes directly to screen RAM and color RAM instead of using
   // CHROUT. This is faster and gives exact control over the target position.
   ensureByte(x, "x");
   ensureByte(y, "y");
   ensureByte(color, "color");
-  const rowOffset = y * 40;
+  const rowOffset = y * 40 + fixedBottomPanelMemoryOffset(compileState, y);
   const screen = screenBase + rowOffset + x;
   const colors = colorBase + rowOffset + x;
   const loopLabel = `printat_loop_${compileState.loopCounter++}`;
@@ -1099,11 +1129,11 @@ function emitPrintAt(asm, x, y, text, color, screenBase, colorBase, compileState
   asm.label(doneLabel);
 }
 
-function emitWriteChar(asm, x, y, char, color, screenBase, colorBase) {
+function emitWriteChar(asm, x, y, char, color, screenBase, colorBase, compileState) {
   ensureByte(x, "x");
   ensureByte(y, "y");
   ensureByte(color, "color");
-  const rowOffset = y * 40;
+  const rowOffset = y * 40 + fixedBottomPanelMemoryOffset(compileState, y);
   const screen = screenBase + rowOffset + x;
   const colors = colorBase + rowOffset + x;
   const screenCode = typeof char === "string" ? asciiToScreenCode(char[0] ?? " ") : char;
@@ -1112,7 +1142,7 @@ function emitWriteChar(asm, x, y, char, color, screenBase, colorBase) {
   emitStoreImmediate(asm, colors, color);
 }
 
-function emitFillRect(asm, x, y, w, h, char, color, screenBase, colorBase, currentTextColor = color) {
+function emitFillRect(asm, x, y, w, h, char, color, screenBase, colorBase, currentTextColor = color, compileState = null) {
   // Several special cases are optimized here to keep generated programs small.
   // Example: a full screen clear can become a single KERNAL call instead of
   // hundreds of LDA/STA instructions.
@@ -1140,8 +1170,10 @@ function emitFillRect(asm, x, y, w, h, char, color, screenBase, colorBase, curre
     return;
   }
 
-  if (x === 0 && w === 40) {
-    const start = y * 40;
+  const firstPanelOffset = compileState ? fixedBottomPanelMemoryOffset(compileState, y) : 0;
+  const lastPanelOffset = compileState ? fixedBottomPanelMemoryOffset(compileState, y + h - 1) : 0;
+  if (x === 0 && w === 40 && firstPanelOffset === lastPanelOffset) {
+    const start = y * 40 + firstPanelOffset;
     const total = h * 40;
     emitMemsetRange(asm, screenBase + start, screenCode, total);
     emitMemsetRange(asm, colorBase + start, color, total);
@@ -1149,13 +1181,15 @@ function emitFillRect(asm, x, y, w, h, char, color, screenBase, colorBase, curre
   }
 
   for (let row = 0; row < h; row += 1) {
-    const rowOffset = (y + row) * 40 + x;
+    const logicalY = y + row;
+    const rowOffset = logicalY * 40 + x
+      + (compileState ? fixedBottomPanelMemoryOffset(compileState, logicalY) : 0);
     emitMemset(asm, screenBase + rowOffset, screenCode, w);
     emitMemset(asm, colorBase + rowOffset, color, w);
   }
 }
 
-function emitDrawFrame(asm, x, y, w, h, char, color, screenBase, colorBase, currentTextColor = color) {
+function emitDrawFrame(asm, x, y, w, h, char, color, screenBase, colorBase, currentTextColor = color, compileState = null) {
   ensureByte(x, "x");
   ensureByte(y, "y");
   ensureByte(w, "w");
@@ -1164,14 +1198,14 @@ function emitDrawFrame(asm, x, y, w, h, char, color, screenBase, colorBase, curr
     return;
   }
 
-  emitFillRect(asm, x, y, w, 1, char, color, screenBase, colorBase, currentTextColor);
+  emitFillRect(asm, x, y, w, 1, char, color, screenBase, colorBase, currentTextColor, compileState);
   if (h > 1) {
-    emitFillRect(asm, x, y + h - 1, w, 1, char, color, screenBase, colorBase, currentTextColor);
+    emitFillRect(asm, x, y + h - 1, w, 1, char, color, screenBase, colorBase, currentTextColor, compileState);
   }
   for (let row = 1; row < h - 1; row += 1) {
-    emitWriteChar(asm, x, y + row, char, color, screenBase, colorBase);
+    emitWriteChar(asm, x, y + row, char, color, screenBase, colorBase, compileState);
     if (w > 1) {
-      emitWriteChar(asm, x + w - 1, y + row, char, color, screenBase, colorBase);
+      emitWriteChar(asm, x + w - 1, y + row, char, color, screenBase, colorBase, compileState);
     }
   }
 }
@@ -2457,7 +2491,12 @@ function emitMapRegister(asm, compileState, asset) {
     charsLabel: `asset_map_chars_${id}`,
     colorsLabel: `asset_map_colors_${id}`,
     rendererNeeded: false,
-    draw: null
+    viewportNeeded: false,
+    entityCollisionNeeded: false,
+    fullDrawConfigured: false,
+    draw: null,
+    viewport: null,
+    horizontalScroller: null
   };
   registerData(compileState, info.collisionLabel, asset.tiles.map((tile) => tile.collision));
   registerData(compileState, info.charsLabel, asset.tiles.flatMap((tile) => tile.chars));
@@ -2483,16 +2522,25 @@ function emitMapCoordinatesOrJumpInvalid(asm, compileState, asset, x, y, invalid
 
 function emitMapIndexToPointer(asm, info, id) {
   const asset = info.asset;
-  const loopLabel = `map_index_rows_${id}`;
-  const doneLabel = `map_index_done_${id}`;
+  // Compute y * mapWidth with a constant shift/add multiply. The former
+  // repeated-add loop cost increasingly more cycles on lower map rows, which
+  // made collision probes and coarse-scroll frames miss their raster budget.
   emitStoreImmediate(asm, MAP_TEMP_INDEX, 0);
   emitStoreImmediate(asm, MAP_TEMP_INDEX_HI, 0);
   asm.lda(abs(MAP_TEMP_Y)); asm.sta(abs(MAP_TEMP_ROWS));
-  asm.label(loopLabel); asm.lda(abs(MAP_TEMP_ROWS)); asm.beq(rel(doneLabel));
-  asm.clc(); asm.lda(abs(MAP_TEMP_INDEX)); asm.adc(imm(asset.map.width & 0xff)); asm.sta(abs(MAP_TEMP_INDEX));
-  asm.lda(abs(MAP_TEMP_INDEX_HI)); asm.adc(imm(0)); asm.sta(abs(MAP_TEMP_INDEX_HI));
-  asm.dec(abs(MAP_TEMP_ROWS)); asm.jmp(abs(loopLabel));
-  asm.label(doneLabel);
+  emitStoreImmediate(asm, MAP_CONVERT_COUNT, 0);
+  const highestWidthBit = Math.floor(Math.log2(asset.map.width));
+  for (let bit = 0; bit <= highestWidthBit; bit += 1) {
+    if ((asset.map.width & (1 << bit)) !== 0) {
+      asm.clc();
+      asm.lda(abs(MAP_TEMP_INDEX)); asm.adc(abs(MAP_TEMP_ROWS)); asm.sta(abs(MAP_TEMP_INDEX));
+      asm.lda(abs(MAP_TEMP_INDEX_HI)); asm.adc(abs(MAP_CONVERT_COUNT)); asm.sta(abs(MAP_TEMP_INDEX_HI));
+    }
+    if (bit < highestWidthBit) {
+      asm.asl(abs(MAP_TEMP_ROWS));
+      asm.rol(abs(MAP_CONVERT_COUNT));
+    }
+  }
   asm.clc(); asm.lda(abs(MAP_TEMP_INDEX)); asm.adc(abs(MAP_TEMP_X)); asm.sta(abs(MAP_TEMP_INDEX));
   asm.lda(abs(MAP_TEMP_INDEX_HI)); asm.adc(imm(0)); asm.sta(abs(MAP_TEMP_INDEX_HI));
   asm.clc(); asm.lda(abs(MAP_TEMP_INDEX)); asm.adc(imm(info.runtimeAddress & 0xff)); asm.sta(zp(HIRES_ZP_PTR_LO));
@@ -2511,8 +2559,588 @@ function configureMapDraw(compileState, info, options) {
   const draw = { x, y, screenBase: compileState.screenBase, colorBase: compileState.colorBase, width: expanded.width, height: expanded.height };
   if (info.draw && JSON.stringify(info.draw) !== JSON.stringify(draw)) throw new Error("a dynamic map currently supports one screen position per build");
   info.draw = draw;
+  info.fullDrawConfigured = true;
   info.rendererNeeded = true;
   return draw;
+}
+
+function configureMapViewport(compileState, info, options) {
+  const asset = info.asset;
+  const width = options?.width;
+  const height = options?.height;
+  ensurePositiveByte(width, "viewport width");
+  ensurePositiveByte(height, "viewport height");
+  if (width > asset.map.width || height > asset.map.height) throw new Error("viewport dimensions must fit inside the source map");
+  const x = options?.x ?? 0;
+  const y = options?.y ?? 0;
+  ensureByte(x, "viewport screen x"); ensureByte(y, "viewport screen y");
+  const screenWidth = width * asset.tileWidth;
+  const screenHeight = height * asset.tileHeight;
+  if (x + screenWidth > 40 || y + screenHeight > 25) {
+    throw new Error(`viewport (${screenWidth}x${screenHeight}) does not fit at (${x},${y}) on the 40x25 screen`);
+  }
+  const viewport = { width, height, x, y, screenWidth, screenHeight };
+  if (info.viewport && JSON.stringify(info.viewport) !== JSON.stringify(viewport)) {
+    throw new Error("a map currently supports one viewport size and screen position per build");
+  }
+  if (info.draw && (info.draw.x !== x || info.draw.y !== y || info.draw.screenBase !== compileState.screenBase || info.draw.colorBase !== compileState.colorBase)) {
+    throw new Error("full-map and viewport rendering must share the same screen position and memory layout");
+  }
+  info.viewport = viewport;
+  info.draw ??= { x, y, screenBase: compileState.screenBase, colorBase: compileState.colorBase, width: screenWidth, height: screenHeight };
+  info.rendererNeeded = true;
+  info.viewportNeeded = true;
+  return viewport;
+}
+
+function emitBoundedViewportOrigin(asm, compileState, value, maximum, target, axis, id) {
+  if (typeof value === "number") {
+    if (!Number.isInteger(value) || value < 0 || value > maximum) throw new Error(`viewport source ${axis} must be between 0 and ${maximum}`);
+    emitStoreImmediate(asm, target, value);
+    return;
+  }
+  emitRuntimeValueToA(asm, compileState, value, `viewport source ${axis}`);
+  const okLabel = `map_viewport_${axis}_ok_${id}`;
+  asm.cmp(imm(maximum + 1)); asm.bcc(rel(okLabel)); asm.lda(imm(maximum)); asm.label(okLabel); asm.sta(abs(target));
+}
+
+function emitMapViewportDraw(asm, compileState, asset, options) {
+  const info = requireDynamicMap(compileState, asset);
+  const viewport = configureMapViewport(compileState, info, options);
+  const id = compileState.loopCounter++;
+  emitBoundedViewportOrigin(asm, compileState, options?.sourceX ?? 0, asset.map.width - viewport.width, MAP_VIEW_SOURCE_X, "x", id);
+  emitBoundedViewportOrigin(asm, compileState, options?.sourceY ?? 0, asset.map.height - viewport.height, MAP_VIEW_SOURCE_Y, "y", id);
+  asm.jsr(abs(`runtime_map_viewport_${info.id}`));
+  if (!info.reportedViewport) {
+    const tileCells = asset.tileWidth * asset.tileHeight;
+    const visibleTiles = viewport.width * viewport.height;
+    const estimatedCycles = visibleTiles * (120 + tileCells * 30);
+    compileState.assets.report.push({
+      type: "map-viewport",
+      sourcePath: asset.sourcePath,
+      width: viewport.width,
+      height: viewport.height,
+      screenWidth: viewport.screenWidth,
+      screenHeight: viewport.screenHeight,
+      visibleTiles,
+      strategy: "coarse-full-redraw",
+      estimatedCycles,
+      palFrameBudget: 19656,
+      ntscFrameBudget: 17095,
+      fullRedrawFitsPalFrame: estimatedCycles <= 19656
+    });
+    info.reportedViewport = true;
+  }
+}
+
+function requireHorizontalScroller(compileState, ref) {
+  if (!ref || ref.type !== "mapHorizontalScrollerRef") {
+    throw new Error("expected a scroller created with c64.map.horizontalScroller()");
+  }
+  const scroller = compileState.assets.scrollers.get(ref.id);
+  if (!scroller) throw new Error("horizontal scroller must be created before it is used");
+  return scroller;
+}
+
+function addMapScrollRasterHandler(compileState, line, instruction) {
+  let handler = compileState.irq.handlers.find((entry) => entry.line === line);
+  if (!handler) {
+    handler = { line, instructions: [] };
+    compileState.irq.handlers.push(handler);
+  }
+  handler.instructions.push(instruction);
+  compileState.irq.handlers.sort((left, right) => left.line - right.line);
+  // A KERNAL CIA timer hit immediately before the entry raster can postpone
+  // D016/D011 until the visible area has started, producing a rare one-frame
+  // seven-pixel flash even while the camera is idle. Scrolling games already
+  // use direct joystick/keyboard snapshots, so keep this timing-critical chain
+  // VIC-only. A later explicit c64.irq.enableKernalTimer()/chainToKernal() call
+  // can still override this choice when an advanced program really needs it.
+  compileState.irq.disableKernalTimer = true;
+  compileState.irq.chainToKernal = false;
+  compileState.irq.autoInstallRequested = true;
+}
+
+function emitMapHorizontalScrollerCreate(asm, compileState, ref, asset, options) {
+  if (!ref || ref.type !== "mapHorizontalScrollerRef") throw new Error("invalid horizontal scroller reference");
+  if (compileState.assets.scrollers.has(ref.id)) throw new Error("horizontal scroller is already created");
+  const info = requireDynamicMap(compileState, asset);
+  if (asset.tileWidth !== 1 || asset.tileHeight !== 1) {
+    throw new Error("fine scrolling currently requires 1x1-character tiles");
+  }
+  const configuredViewport = configureMapViewport(compileState, info, options);
+  const verticalUsed = compileState.optimization.usesVerticalMapScroll;
+  if (configuredViewport.screenWidth < 2) throw new Error("horizontal scroller width must be at least 2 characters");
+  // CSEL=0 gives the VIC-II a 38-column display. Keeping one hidden character
+  // at each side lets the fine-scroll register move without exposing garbage.
+  if (configuredViewport.x < 1 || configuredViewport.x + configuredViewport.screenWidth > 39) {
+    throw new Error("horizontal fine scrolling must stay inside columns 1..38 (use x >= 1 and x + width <= 39)");
+  }
+  const sourceX = options?.sourceX ?? 0;
+  const sourceY = options?.sourceY ?? 0;
+  const panel = options?.panel ?? (configuredViewport.y > 0 ? "top" : "bottom");
+  if (panel !== "top" && panel !== "bottom") throw new Error("scroller panel must be \"top\" or \"bottom\"");
+  if (panel === "top" && configuredViewport.y === 0) throw new Error("a top fixed panel needs at least one screen row above the scrolling viewport");
+  if (panel === "bottom" && configuredViewport.y + configuredViewport.screenHeight >= 25) throw new Error("a bottom fixed panel needs at least one screen row below the scrolling viewport");
+  if (verticalUsed && panel === "bottom" && configuredViewport.screenHeight < 2) {
+    throw new Error("vertical scrolling with a fixed bottom panel needs at least two viewport rows (one is reserved for the VIC-II transition)");
+  }
+  const panelRows = panel === "bottom" ? 25 - (configuredViewport.y + configuredViewport.screenHeight) : configuredViewport.y;
+  if (options?.panelRows !== undefined && options.panelRows !== panelRows) {
+    throw new Error(`panel.rows=${options.panelRows} does not match the ${panelRows} fixed screen rows left by the viewport`);
+  }
+  // A real fixed text panel needs one complete character row for the VIC-II to
+  // finish RC/VCBASE after a variable YSCROLL phase. That last configured row is
+  // a background-only transition band; map drawing and streaming stop above it.
+  const viewport = verticalUsed && panel === "bottom"
+    ? {
+        ...configuredViewport,
+        height: configuredViewport.height - 1,
+        screenHeight: configuredViewport.screenHeight - 1
+      }
+    : configuredViewport;
+  if (viewport !== configuredViewport) {
+    info.viewport = viewport;
+    info.draw = { ...info.draw, width: viewport.screenWidth, height: viewport.screenHeight };
+  }
+  const maxX = asset.map.width - viewport.width;
+  const maxY = asset.map.height - viewport.height;
+  if (!Number.isInteger(sourceX) || sourceX < 0 || sourceX > maxX) throw new Error(`horizontal scroller sourceX must be between 0 and ${maxX}`);
+  if (!Number.isInteger(sourceY) || sourceY < 0 || sourceY > maxY) throw new Error(`horizontal scroller sourceY must be between 0 and ${maxY}`);
+  if (info.horizontalScroller || compileState.assets.scrollers.size > 0) throw new Error("a program currently supports one raster-banded map scroller");
+
+  const cameraAddress = allocateVariableAddress(compileState, 1);
+  registerVariable(compileState, `__mapScroller${ref.id}_cameraX`, cameraAddress, 1);
+  const fineAddress = allocateVariableAddress(compileState, 1);
+  registerVariable(compileState, `__mapScroller${ref.id}_fineX`, fineAddress, 1);
+  const cameraYAddress = allocateVariableAddress(compileState, 1);
+  registerVariable(compileState, `__mapScroller${ref.id}_cameraY`, cameraYAddress, 1);
+  const fineYAddress = allocateVariableAddress(compileState, 1);
+  registerVariable(compileState, `__mapScroller${ref.id}_fineY`, fineYAddress, 1);
+  const fixedD011Address = allocateVariableAddress(compileState, 1);
+  registerVariable(compileState, `__mapScroller${ref.id}_fixedD011`, fixedD011Address, 1);
+  const fixedD016Address = allocateVariableAddress(compileState, 1);
+  registerVariable(compileState, `__mapScroller${ref.id}_fixedD016`, fixedD016Address, 1);
+  const fixedD018Address = verticalUsed ? allocateVariableAddress(compileState, 1) : null;
+  if (fixedD018Address !== null) {
+    registerVariable(compileState, `__mapScroller${ref.id}_fixedD018`, fixedD018Address, 1);
+  }
+  const cameraPixelXName = `__mapScroller${ref.id}_cameraPixelX`;
+  const cameraPixelXAddress = allocateVariableAddress(compileState, 2);
+  registerVariable(compileState, cameraPixelXName, cameraPixelXAddress, 2);
+  const cameraPixelYName = `__mapScroller${ref.id}_cameraPixelY`;
+  const cameraPixelYAddress = allocateVariableAddress(compileState, 2);
+  registerVariable(compileState, cameraPixelYName, cameraPixelYAddress, 2);
+  // A bottom panel lets YSCROLL be installed before the first display
+  // badline. A top character panel would require an FLD/badline compensation
+  // routine before vertical fine scrolling can start cleanly below it.
+  const panelScreenRow = configuredViewport.y + configuredViewport.screenHeight;
+  const enterRasterLine = panel === "bottom" ? 30 : 48 + configuredViewport.y * 8;
+  const panelStartRasterLine = 51 + panelScreenRow * 8;
+  const exitRasterLine = panelStartRasterLine - 1;
+  // The handler starts early, then polls D012 inside one IRQ. This removes all
+  // dispatcher jitter from the phase-7 normalization, DEN guard and final split.
+  const prepareRasterLine = panel === "bottom" && verticalUsed ? panelStartRasterLine - 23 : null;
+  const normalizeRasterLine = panel === "bottom" && verticalUsed ? panelStartRasterLine - 14 : null;
+  // Select the empty charset one full raster before the transition badline.
+  // Changing D018 on the badline itself can be delayed by VIC bus stealing and
+  // leave the first character fetches sourced from the moving-map charset.
+  const blankRasterLine = panel === "bottom" && verticalUsed ? panelStartRasterLine - 13 : null;
+  const denOffRasterLine = panel === "bottom" && verticalUsed ? panelStartRasterLine - 5 : null;
+  const panelRasterLine = panel === "bottom" && verticalUsed ? panelStartRasterLine - 3 : null;
+  const blankCharsetAddress = verticalUsed ? ((compileState.screenBase & 0xc000) + 0x3800) : null;
+  const recommendedFrameRasterLine = Math.min(exitRasterLine + 4, 250);
+  const scroller = {
+    ref, info, viewport, panel, maxX, maxY,
+    cameraAddress, fineAddress, cameraYAddress, fineYAddress,
+    cameraPixelXAddress, cameraPixelYAddress,
+    cameraPixelXRef: { type: "varRef", valueType: "word", name: cameraPixelXName },
+    cameraPixelYRef: { type: "varRef", valueType: "word", name: cameraPixelYName },
+    fixedD011Address, fixedD016Address, fixedD018Address,
+    enterRasterLine, exitRasterLine, prepareRasterLine, normalizeRasterLine,
+    blankRasterLine, denOffRasterLine, panelRasterLine, blankCharsetAddress,
+    recommendedFrameRasterLine,
+    panelRows, panelScreenRow,
+    configuredViewport,
+    verticalUsed,
+    followEntityId: null
+  };
+  compileState.assets.scrollers.set(ref.id, scroller);
+  info.horizontalScroller = scroller;
+  emitStoreImmediate(asm, cameraAddress, sourceX);
+  emitStoreImmediate(asm, fineAddress, 7);
+  emitStoreImmediate(asm, cameraYAddress, sourceY);
+  emitStoreImmediate(asm, fineYAddress, 7);
+  emitStoreImmediate(asm, cameraPixelXAddress, (sourceX * 8) & 0xff);
+  emitStoreImmediate(asm, cameraPixelXAddress + 1, (sourceX * 8) >> 8);
+  emitStoreImmediate(asm, cameraPixelYAddress, (sourceY * 8) & 0xff);
+  emitStoreImmediate(asm, cameraPixelYAddress + 1, (sourceY * 8) >> 8);
+  // Bit 7 of a D011 read is the current raster MSB, not display state. Never
+  // save it as part of the fixed-panel control value.
+  asm.lda(abs(c64.VIC_CONTROL_1)); asm.and(imm(0x7f)); asm.sta(abs(fixedD011Address));
+  asm.lda(abs(c64.VIC_CONTROL_2)); asm.sta(abs(fixedD016Address));
+  if (verticalUsed) {
+    asm.lda(abs(c64.VIC_MEMORY_POINTERS)); asm.sta(abs(fixedD018Address));
+    const blankLoop = `map_scroll_blank_charset_${ref.id}`;
+    asm.lda(imm(0)); asm.ldx(imm(0));
+    asm.label(blankLoop);
+    for (let page = 0; page < 8; page += 1) asm.sta(absx(blankCharsetAddress + page * 256));
+    asm.inx(); asm.bne(rel(blankLoop));
+    compileState.assets.report.push({
+      type: "map-scroll-blank-charset",
+      address: blankCharsetAddress,
+      endAddress: blankCharsetAddress + 0x7ff,
+      bytes: 0x800
+    });
+  }
+  if (verticalUsed) {
+    const conflictingHandler = compileState.irq.handlers.find((handler) => (
+      handler.line > prepareRasterLine && handler.line <= exitRasterLine
+    ));
+    if (conflictingHandler) {
+      throw new Error(`raster IRQ line ${conflictingHandler.line} overlaps the vertical panel transition (${prepareRasterLine}..${exitRasterLine})`);
+    }
+  }
+  addMapScrollRasterHandler(compileState, enterRasterLine, { op: "mapScrollIrqEnter", args: [ref] });
+  if (prepareRasterLine !== null) {
+    addMapScrollRasterHandler(compileState, prepareRasterLine, { op: "mapScrollIrqPreparePanel", args: [ref] });
+  }
+  if (!verticalUsed) {
+    addMapScrollRasterHandler(compileState, exitRasterLine, { op: "mapScrollIrqExit", args: [ref] });
+  }
+
+  const shiftedCells = (viewport.screenWidth - 1) * viewport.screenHeight;
+  const shiftedCellsPerRow = viewport.screenWidth - 1;
+  const pairedShiftCyclesPerRow = Math.floor(shiftedCellsPerRow / 2) * 43
+    + (shiftedCellsPerRow % 2 === 0 ? 0 : 16)
+    + (shiftedCellsPerRow > 1 ? 2 : 0);
+  const horizontalShiftCyclesEstimate = pairedShiftCyclesPerRow * viewport.screenHeight
+    + 43 * viewport.height
+    + 180;
+  const pairedVerticalCyclesPerRow = Math.floor(viewport.screenWidth / 2) * 43
+    + (viewport.screenWidth % 2 === 0 ? 0 : 16)
+    + (viewport.screenWidth > 1 ? 2 : 0);
+  const verticalShiftCyclesEstimate = pairedVerticalCyclesPerRow * (viewport.screenHeight - 1)
+    + viewport.width * 34
+    + 180;
+  const firstRaster = 50 + viewport.y * 8;
+  const lastViewportRaster = firstRaster + (viewport.screenHeight - 1) * 8;
+  // Horizontal coarse copies are emitted row by row, top to bottom. A row is
+  // safe as long as it is ready before the beam reaches that same row on the
+  // next frame, so the last row provides the relevant complete-copy budget.
+  const palSafeCyclesEstimate = (312 - recommendedFrameRasterLine + lastViewportRaster) * 63;
+  const ntscSafeCyclesEstimate = (262 - recommendedFrameRasterLine + lastViewportRaster) * 65;
+  const palFirstRowCyclesEstimate = (312 - recommendedFrameRasterLine + firstRaster) * 63;
+  const ntscFirstRowCyclesEstimate = (262 - recommendedFrameRasterLine + firstRaster) * 65;
+  const verticalUpFitsPal = panel === "bottom" && verticalShiftCyclesEstimate <= palSafeCyclesEstimate;
+  const verticalUpFitsNtsc = panel === "bottom" && verticalShiftCyclesEstimate <= ntscSafeCyclesEstimate;
+  // A downward in-place row copy must run bottom-to-top. Until a second screen
+  // buffer exists, require the whole copy to finish before the first row.
+  const verticalDownFitsPal = panel === "bottom" && verticalShiftCyclesEstimate <= palFirstRowCyclesEstimate;
+  const verticalDownFitsNtsc = panel === "bottom" && verticalShiftCyclesEstimate <= ntscFirstRowCyclesEstimate;
+  scroller.verticalTiming = {
+    upFitsPal: verticalUpFitsPal,
+    upFitsNtsc: verticalUpFitsNtsc,
+    downFitsPal: verticalDownFitsPal,
+    downFitsNtsc: verticalDownFitsNtsc
+  };
+  compileState.assets.report.push({
+    type: "map-scroll",
+    sourcePath: asset.sourcePath,
+    width: viewport.width,
+    height: viewport.height,
+    screenWidth: viewport.screenWidth,
+    screenHeight: viewport.screenHeight,
+    configuredHeight: configuredViewport.height,
+    configuredScreenHeight: configuredViewport.screenHeight,
+    panel,
+    panelRows,
+    panelScreenRow,
+    enterRasterLine,
+    exitRasterLine,
+    prepareRasterLine,
+    normalizeRasterLine,
+    blankRasterLine,
+    denOffRasterLine,
+    panelRasterLine,
+    recommendedFrameRasterLine,
+    strategy: panel === "bottom" ? "fine-scroll-xy-stream" : "fine-scroll-x-column-stream",
+    verticalFineScrollSupported: panel === "bottom",
+    fineStepCyclesEstimate: 48,
+    horizontalWrapCyclesEstimate: horizontalShiftCyclesEstimate,
+    verticalWrapCyclesEstimate: verticalShiftCyclesEstimate,
+    assumedRasterLine: recommendedFrameRasterLine,
+    palSafeCyclesEstimate,
+    ntscSafeCyclesEstimate,
+    horizontalWrapFitsPal: horizontalShiftCyclesEstimate <= palSafeCyclesEstimate,
+    horizontalWrapFitsNtsc: horizontalShiftCyclesEstimate <= ntscSafeCyclesEstimate,
+    verticalUpWrapFitsPal: verticalUpFitsPal,
+    verticalUpWrapFitsNtsc: verticalUpFitsNtsc,
+    verticalDownWrapFitsPal: verticalDownFitsPal,
+    verticalDownWrapFitsNtsc: verticalDownFitsNtsc,
+    verticalWrapFitsPal: verticalUpFitsPal && verticalDownFitsPal,
+    verticalWrapFitsNtsc: verticalUpFitsNtsc && verticalDownFitsNtsc,
+    verticalPhaseTransitionLines: verticalUsed ? exitRasterLine - prepareRasterLine + 1 : 0,
+    guardRasterLines: verticalUsed ? 8 : 0,
+    guardColor: verticalUsed ? "background" : null,
+    transitionRows: verticalUsed ? 1 : 0,
+    panelMemoryRowOffset: verticalUsed ? -1 : 0,
+    blankCharsetAddress,
+    beamRacedRows: true,
+    kernalTimerDisabled: true,
+    irqTiming: "vic-only",
+    stateBytes: verticalUsed ? 11 : 10
+  });
+}
+
+function emitMapHorizontalScrollerDraw(asm, compileState, ref) {
+  const scroller = requireHorizontalScroller(compileState, ref);
+  asm.lda(abs(scroller.cameraAddress)); asm.sta(abs(MAP_VIEW_SOURCE_X));
+  asm.lda(abs(scroller.cameraYAddress)); asm.sta(abs(MAP_VIEW_SOURCE_Y));
+  asm.lda(abs(c64.VIC_CONTROL_1)); asm.and(imm(0x7f)); asm.sta(abs(scroller.fixedD011Address));
+  asm.lda(abs(c64.VIC_CONTROL_2)); asm.sta(abs(scroller.fixedD016Address));
+  if (scroller.verticalUsed) {
+    asm.lda(abs(c64.VIC_MEMORY_POINTERS)); asm.sta(abs(scroller.fixedD018Address));
+  }
+  asm.jsr(abs(`runtime_map_viewport_${scroller.info.id}`));
+  asm.jsr(abs(`runtime_map_scroll_restore_${scroller.info.id}`));
+}
+
+function emitMapHorizontalScrollerSingleStep(asm, compileState, scroller, direction) {
+  const id = compileState.loopCounter++;
+  const canMove = `map_scroll_can_move_${id}`;
+  const wrap = `map_scroll_wrap_${id}`;
+  const moved = `map_scroll_moved_${id}`;
+  const done = `map_scroll_done_${id}`;
+  if (direction > 0) {
+    // At maxX the viewport is already aligned with the last complete source
+    // column. Advancing the fine position would expose a non-existent column.
+    asm.lda(abs(scroller.cameraAddress)); asm.cmp(imm(scroller.maxX)); asm.beq(rel(done));
+    asm.label(canMove);
+    asm.lda(abs(scroller.fineAddress)); asm.beq(rel(wrap));
+    asm.dec(abs(scroller.fineAddress));
+    asm.jmp(abs(moved));
+    asm.label(wrap);
+    asm.inc(abs(scroller.cameraAddress));
+    asm.jsr(abs(`runtime_map_scroll_shift_left_${scroller.info.id}`));
+    emitStoreImmediate(asm, scroller.fineAddress, 7);
+    asm.label(moved);
+    emitEntityWordStep(asm, scroller.cameraPixelXAddress, 1, `map_scroll_pixel_x_inc_${id}`);
+  } else {
+    asm.lda(abs(scroller.cameraAddress)); asm.bne(rel(canMove));
+    asm.lda(abs(scroller.fineAddress)); asm.cmp(imm(7)); asm.beq(rel(done));
+    asm.label(canMove);
+    asm.lda(abs(scroller.fineAddress)); asm.cmp(imm(7)); asm.beq(rel(wrap));
+    asm.inc(abs(scroller.fineAddress));
+    asm.jmp(abs(moved));
+    asm.label(wrap);
+    asm.dec(abs(scroller.cameraAddress));
+    asm.jsr(abs(`runtime_map_scroll_shift_right_${scroller.info.id}`));
+    emitStoreImmediate(asm, scroller.fineAddress, 0);
+    asm.label(moved);
+    emitEntityWordStep(asm, scroller.cameraPixelXAddress, -1, `map_scroll_pixel_x_dec_${id}`);
+  }
+  asm.label(done);
+}
+
+function emitMapHorizontalScrollerMove(asm, compileState, ref, delta) {
+  const scroller = requireHorizontalScroller(compileState, ref);
+  if (!Number.isInteger(delta) || delta === 0 || Math.abs(delta) > 8) {
+    throw new Error("horizontal scroll movement must be between 1 and 8 pixels");
+  }
+  for (let pixel = 0; pixel < Math.abs(delta); pixel += 1) {
+    emitMapHorizontalScrollerSingleStep(asm, compileState, scroller, Math.sign(delta));
+  }
+}
+
+function emitMapVerticalScrollerSingleStep(asm, compileState, scroller, direction) {
+  if (scroller.maxY > 0) {
+    const safe = direction > 0 ? scroller.verticalTiming?.upFitsPal : scroller.verticalTiming?.downFitsPal;
+    if (!safe) {
+      const movement = direction > 0 ? "down" : "up";
+      throw new Error(`vertical scroll ${movement} exceeds the PAL raster budget for this viewport; reduce its width/height until the map-scroll report marks this direction safe`);
+    }
+  }
+  const id = compileState.loopCounter++;
+  const canMove = `map_scroll_y_can_move_${id}`;
+  const wrap = `map_scroll_y_wrap_${id}`;
+  const moved = `map_scroll_y_moved_${id}`;
+  const done = `map_scroll_y_done_${id}`;
+  if (direction > 0) {
+    asm.lda(abs(scroller.cameraYAddress)); asm.cmp(imm(scroller.maxY)); asm.beq(rel(done));
+    asm.label(canMove);
+    asm.lda(abs(scroller.fineYAddress)); asm.beq(rel(wrap));
+    asm.dec(abs(scroller.fineYAddress));
+    asm.jmp(abs(moved));
+    asm.label(wrap);
+    asm.inc(abs(scroller.cameraYAddress));
+    asm.jsr(abs(`runtime_map_scroll_shift_up_${scroller.info.id}`));
+    emitStoreImmediate(asm, scroller.fineYAddress, 7);
+    asm.label(moved);
+    emitEntityWordStep(asm, scroller.cameraPixelYAddress, 1, `map_scroll_pixel_y_inc_${id}`);
+  } else {
+    asm.lda(abs(scroller.cameraYAddress)); asm.bne(rel(canMove));
+    asm.lda(abs(scroller.fineYAddress)); asm.cmp(imm(7)); asm.beq(rel(done));
+    asm.label(canMove);
+    asm.lda(abs(scroller.fineYAddress)); asm.cmp(imm(7)); asm.beq(rel(wrap));
+    asm.inc(abs(scroller.fineYAddress));
+    asm.jmp(abs(moved));
+    asm.label(wrap);
+    asm.dec(abs(scroller.cameraYAddress));
+    asm.jsr(abs(`runtime_map_scroll_shift_down_${scroller.info.id}`));
+    emitStoreImmediate(asm, scroller.fineYAddress, 0);
+    asm.label(moved);
+    emitEntityWordStep(asm, scroller.cameraPixelYAddress, -1, `map_scroll_pixel_y_dec_${id}`);
+  }
+  asm.label(done);
+}
+
+function emitMapVerticalScrollerMove(asm, compileState, ref, delta) {
+  const scroller = requireHorizontalScroller(compileState, ref);
+  if (scroller.panel !== "bottom") {
+    throw new Error("vertical fine scrolling currently requires panel: \"bottom\"; a fixed top character panel needs FLD/badline compensation");
+  }
+  scroller.verticalUsed = true;
+  if (!Number.isInteger(delta) || delta === 0 || Math.abs(delta) > 8) {
+    throw new Error("vertical scroll movement must be between 1 and 8 pixels");
+  }
+  for (let pixel = 0; pixel < Math.abs(delta); pixel += 1) {
+    emitMapVerticalScrollerSingleStep(asm, compileState, scroller, Math.sign(delta));
+  }
+}
+
+function emitWordGreaterChoice(asm, leftAddress, rightAddress, trueLabel, falseLabel, prefix) {
+  asm.lda(abs(leftAddress + 1));
+  asm.cmp(abs(rightAddress + 1));
+  asm.beq(rel(`${prefix}_high_equal`));
+  asm.bcc(rel(`${prefix}_false`));
+  asm.jmp(abs(trueLabel));
+  asm.label(`${prefix}_high_equal`);
+  asm.lda(abs(leftAddress));
+  asm.cmp(abs(rightAddress));
+  asm.beq(rel(`${prefix}_false`));
+  asm.bcc(rel(`${prefix}_false`));
+  asm.jmp(abs(trueLabel));
+  asm.label(`${prefix}_false`);
+  asm.jmp(abs(falseLabel));
+}
+
+function normalizedCameraFollowOptions(scroller, entity, options) {
+  const axis = options.axis;
+  if (!["x", "y", "both"].includes(axis)) throw new Error("camera follow axis must be x, y or both");
+  if (!Number.isInteger(options.maxSpeed) || options.maxSpeed < 1 || options.maxSpeed > 8) {
+    throw new Error("camera follow maxSpeed must be between 1 and 8 pixels per frame");
+  }
+  if (!Number.isInteger(options.offsetX) || !Number.isInteger(options.offsetY)) throw new Error("camera follow offsets must be integers");
+  const viewportWidth = scroller.viewport.screenWidth * 8;
+  const viewportHeight = scroller.viewport.screenHeight * 8;
+  const deadZone = options.deadZone ?? {
+    x: Math.floor(viewportWidth * 3 / 8),
+    y: Math.floor(viewportHeight * 3 / 8),
+    width: Math.max(1, Math.floor(viewportWidth / 4)),
+    height: Math.max(1, Math.floor(viewportHeight / 4))
+  };
+  if (!deadZone || !Number.isInteger(deadZone.x) || !Number.isInteger(deadZone.y)
+    || !Number.isInteger(deadZone.width) || !Number.isInteger(deadZone.height)
+    || deadZone.x < 0 || deadZone.y < 0 || deadZone.width < 1 || deadZone.height < 1
+    || deadZone.x + deadZone.width > viewportWidth || deadZone.y + deadZone.height > viewportHeight) {
+    throw new Error("camera follow deadZone must fit inside the scrolling viewport in pixels");
+  }
+  const anchorX = entity.hitbox.offsetX + Math.floor(entity.hitbox.width / 2) + options.offsetX;
+  const anchorY = entity.hitbox.offsetY + Math.floor(entity.hitbox.height / 2) + options.offsetY;
+  if (anchorX < 0 || anchorX > 255 || anchorY < 0 || anchorY > 255) {
+    throw new Error("camera follow offset places the entity anchor outside its 0..255 pixel local range");
+  }
+  return { ...options, axis, deadZone, viewportWidth, viewportHeight, anchorX, anchorY,
+    ...normalizeProjectionMargin(options.cullingMargin ?? 0) };
+}
+
+function normalizeProjectionMargin(rawMargin) {
+  const marginX = typeof rawMargin === "number" ? rawMargin : rawMargin?.x ?? 0;
+  const marginY = typeof rawMargin === "number" ? rawMargin : rawMargin?.y ?? 0;
+  if (!Number.isInteger(marginX) || !Number.isInteger(marginY)
+    || marginX < 0 || marginY < 0 || marginX > 64 || marginY > 64) {
+    throw new Error("entity cullingMargin must be 0..64 or { x: 0..64, y: 0..64 }");
+  }
+  return { marginX, marginY };
+}
+
+function emitCameraFollowAxis(asm, compileState, scroller, entity, options, axis) {
+  const worldAddress = axis === "x" ? entity.worldX.address : entity.worldY.address;
+  const cameraAddress = axis === "x" ? scroller.cameraPixelXAddress : scroller.cameraPixelYAddress;
+  const anchor = axis === "x" ? options.anchorX : options.anchorY;
+  const deadStart = axis === "x" ? options.deadZone.x : options.deadZone.y;
+  const deadSize = axis === "x" ? options.deadZone.width : options.deadZone.height;
+  for (let step = 0; step < options.maxSpeed; step += 1) {
+    const prefix = `map_camera_follow_${axis}_${scroller.ref.id}_${entity.id}_${compileState.loopCounter++}_${step}`;
+    const checkLeft = `${prefix}_check_negative`;
+    const movePositive = `${prefix}_move_positive`;
+    const moveNegative = `${prefix}_move_negative`;
+    const done = `${prefix}_done`;
+    emitEntityPointCoordinate(asm, worldAddress, anchor, MAP_ENTITY_PIXEL_X_LO);
+    emitWordPlusImmediateTo(asm, cameraAddress, deadStart + deadSize - 1, MAP_CONVERT_RESULT_LO);
+    emitWordGreaterChoice(asm, MAP_ENTITY_PIXEL_X_LO, MAP_CONVERT_RESULT_LO, movePositive, checkLeft, `${prefix}_positive_compare`);
+    asm.label(checkLeft);
+    emitWordPlusImmediateTo(asm, cameraAddress, deadStart, MAP_CONVERT_RESULT_LO);
+    emitWordGreaterChoice(asm, MAP_CONVERT_RESULT_LO, MAP_ENTITY_PIXEL_X_LO, moveNegative, done, `${prefix}_negative_compare`);
+    asm.label(movePositive);
+    if (axis === "x") emitMapHorizontalScrollerSingleStep(asm, compileState, scroller, 1);
+    else emitMapVerticalScrollerSingleStep(asm, compileState, scroller, 1);
+    asm.jmp(abs(done));
+    asm.label(moveNegative);
+    if (axis === "x") emitMapHorizontalScrollerSingleStep(asm, compileState, scroller, -1);
+    else emitMapVerticalScrollerSingleStep(asm, compileState, scroller, -1);
+    asm.label(done);
+  }
+}
+
+function emitMapScrollerProjectEntity(asm, compileState, ref, entity, projectionOptions = {}) {
+  const scroller = requireHorizontalScroller(compileState, ref);
+  const registered = resolveMapEntity(compileState, entity);
+  if (mapAssetKey(registered.asset) !== scroller.info.key) throw new Error("camera and projected entity must use the same map asset");
+  emitMapEntityProject(asm, compileState, entity, {
+    cameraX: scroller.cameraPixelXRef,
+    cameraY: scroller.cameraPixelYRef,
+    // XSCROLL starts at seven: keep sprites and character cells on the exact
+    // same world-pixel origin throughout all eight fine-scroll phases.
+    screenOffsetX: 24 + scroller.viewport.x * 8 + MAP_SCROLL_FINE_X_ORIGIN,
+    screenOffsetY: 50 + scroller.viewport.y * 8
+      + (scroller.verticalUsed ? MAP_SCROLL_FINE_Y_ORIGIN : 0),
+    viewportWidth: scroller.viewport.screenWidth * 8,
+    viewportHeight: scroller.viewport.screenHeight * 8,
+    ...normalizeProjectionMargin(projectionOptions.cullingMargin ?? 0)
+  });
+}
+
+function emitMapScrollerFollow(asm, compileState, ref, entity, rawOptions) {
+  const scroller = requireHorizontalScroller(compileState, ref);
+  const registered = resolveMapEntity(compileState, entity);
+  if (mapAssetKey(registered.asset) !== scroller.info.key) throw new Error("camera and followed entity must use the same map asset");
+  if (scroller.followEntityId !== null && scroller.followEntityId !== entity.id) throw new Error("one scroller can follow only one entity");
+  const options = normalizedCameraFollowOptions(scroller, registered, rawOptions);
+  if ((options.axis === "y" || options.axis === "both") && scroller.panel !== "bottom") {
+    throw new Error("vertical camera follow currently requires panel: \"bottom\"");
+  }
+  scroller.followEntityId = entity.id;
+  if (options.axis === "x" || options.axis === "both") emitCameraFollowAxis(asm, compileState, scroller, registered, options, "x");
+  if (options.axis === "y" || options.axis === "both") {
+    scroller.verticalUsed = true;
+    emitCameraFollowAxis(asm, compileState, scroller, registered, options, "y");
+  }
+  if (options.project) emitMapScrollerProjectEntity(asm, compileState, ref, entity, options);
+  if (!scroller.followReported) {
+    compileState.assets.report.push({
+      type: "map-camera-follow",
+      sourcePath: registered.asset.sourcePath,
+      entity: registered.object.id,
+      axis: options.axis,
+      deadZone: { ...options.deadZone },
+      maxSpeed: options.maxSpeed,
+      coordinateBits: 16,
+      clampToMap: true
+    });
+    scroller.followReported = true;
+  }
 }
 
 function emitMapDraw(asm, compileState, asset, options) {
@@ -2539,7 +3167,7 @@ function emitMapRuntimeSet(asm, compileState, asset, x, y, value) {
   emitRuntimeValueToA(asm, compileState, value, "tile value"); asm.cmp(imm(asset.tiles.length)); asm.bcc(rel(`map_value_ok_${id}`)); asm.jmp(abs(doneLabel)); asm.label(`map_value_ok_${id}`); asm.sta(abs(MAP_TEMP_VALUE));
   emitMapIndexToPointer(asm, info, id);
   asm.lda(abs(MAP_TEMP_VALUE)); asm.sta(indy(HIRES_ZP_PTR_LO));
-  if (info.draw) {
+  if (info.fullDrawConfigured) {
     info.rendererNeeded = true;
     asm.jsr(abs(`runtime_map_draw_tile_${info.id}`));
   }
@@ -2574,6 +3202,489 @@ function emitMapEqualsOrJumpFalse(asm, compileState, query, falseLabel, passLabe
   emitMapIndexToPointer(asm, info, id); asm.lda(indy(HIRES_ZP_PTR_LO)); asm.cmp(runtimeValueOperand(compileState, query.value, "tile value"));
   if (negate) asm.bne(rel(passLabel)); else asm.beq(rel(passLabel));
   asm.jmp(abs(falseLabel)); asm.label(passLabel);
+}
+
+function resolveMapEntity(compileState, entity) {
+  if (!entity || entity.type !== "mapEntityRef") throw new Error("Expected an entity returned by c64.map.spawn()");
+  const registered = compileState.assets.entities.get(entity.id);
+  if (!registered) throw new Error(`Map entity ${entity.id} must be created before it is projected`);
+  return registered;
+}
+
+function projectionWordOperand(compileState, value, high, label) {
+  if (isVarRef(value)) {
+    const variable = resolveRuntimeVariable(compileState, value, label);
+    if (variable.size !== 2) throw new Error(`${label} must be a word variable`);
+    return addressMode(variable.address + (high ? 1 : 0));
+  }
+  ensureWord(value, label);
+  return imm(high ? ((value >> 8) & 0xff) : (value & 0xff));
+}
+
+function emitProjectionDifference(asm, compileState, source, camera, targetAddress, hiddenLabel, label, sourceOffset = 0) {
+  const sourceVariable = resolveRuntimeVariable(compileState, source, label);
+  if (sourceVariable.size !== 2) throw new Error(`${label} must be stored in a word variable`);
+  asm.clc();
+  asm.lda(addressMode(sourceVariable.address));
+  asm.adc(imm(sourceOffset & 0xff));
+  asm.sta(abs(targetAddress));
+  asm.lda(addressMode(sourceVariable.address + 1));
+  asm.adc(imm((sourceOffset >> 8) & 0xff));
+  asm.sta(abs(targetAddress + 1));
+  asm.sec();
+  asm.lda(abs(targetAddress));
+  asm.sbc(projectionWordOperand(compileState, camera, false, `${label} camera`));
+  asm.sta(abs(targetAddress));
+  asm.lda(abs(targetAddress + 1));
+  asm.sbc(projectionWordOperand(compileState, camera, true, `${label} camera`));
+  asm.sta(abs(targetAddress + 1));
+  asm.bcs(rel(`${label}_not_before_${compileState.loopCounter}`));
+  asm.jmp(abs(hiddenLabel));
+  asm.label(`${label}_not_before_${compileState.loopCounter++}`);
+}
+
+function emitProjectionLimit(asm, targetAddress, limit, hiddenLabel, passLabel) {
+  asm.lda(abs(targetAddress + 1));
+  asm.cmp(imm((limit >> 8) & 0xff));
+  asm.bcc(rel(passLabel));
+  asm.bne(rel(`${passLabel}_hidden`));
+  asm.lda(abs(targetAddress));
+  asm.cmp(imm(limit & 0xff));
+  asm.bcc(rel(passLabel));
+  asm.label(`${passLabel}_hidden`);
+  asm.jmp(abs(hiddenLabel));
+  asm.label(passLabel);
+}
+
+function emitMapEntityCreate(compileState, entity) {
+  if (!entity || entity.type !== "mapEntityRef") throw new Error("c64.map.spawn() produced an invalid entity");
+  if (compileState.assets.entities.has(entity.id)) throw new Error(`Map entity ${entity.id} is already created`);
+  getSpriteRuntime(compileState, entity.sprite);
+  const worldX = resolveRuntimeVariable(compileState, entity.worldX, "entity worldX");
+  const worldY = resolveRuntimeVariable(compileState, entity.worldY, "entity worldY");
+  if (worldX.size !== 2 || worldY.size !== 2) throw new Error("map entity world coordinates must be word variables");
+  const velocityX = resolveRuntimeVariable(compileState, entity.velocityX, "entity velocityX");
+  const velocityY = resolveRuntimeVariable(compileState, entity.velocityY, "entity velocityY");
+  const onGround = resolveRuntimeVariable(compileState, entity.onGround, "entity onGround");
+  const hitCeiling = resolveRuntimeVariable(compileState, entity.hitCeiling, "entity hitCeiling");
+  const hitLeft = resolveRuntimeVariable(compileState, entity.hitLeft, "entity hitLeft");
+  const hitRight = resolveRuntimeVariable(compileState, entity.hitRight, "entity hitRight");
+  const enabled = resolveRuntimeVariable(compileState, entity.enabled, "entity enabled");
+  const onDanger = resolveRuntimeVariable(compileState, entity.onDanger, "entity onDanger");
+  const onLadder = resolveRuntimeVariable(compileState, entity.onLadder, "entity onLadder");
+  const atExit = resolveRuntimeVariable(compileState, entity.atExit, "entity atExit");
+  if ([velocityX, velocityY, onGround, hitCeiling, hitLeft, hitRight, enabled, onDanger, onLadder, atExit].some((variable) => variable.size !== 1)) {
+    throw new Error("map entity velocity and contact states must be byte variables");
+  }
+  const hitbox = entity.hitbox;
+  if (!hitbox || !Number.isInteger(hitbox.offsetX) || !Number.isInteger(hitbox.offsetY)
+    || !Number.isInteger(hitbox.width) || !Number.isInteger(hitbox.height)
+    || hitbox.offsetX < 0 || hitbox.offsetY < 0 || hitbox.width < 1 || hitbox.height < 1
+    || hitbox.offsetX + hitbox.width > 255 || hitbox.offsetY + hitbox.height > 255) {
+    throw new Error("map entity hitbox needs non-negative offsets and a positive size fitting in 255 pixels");
+  }
+  if (!Number.isInteger(entity.maxCollisionSpeed) || entity.maxCollisionSpeed < 1 || entity.maxCollisionSpeed > 16) {
+    throw new Error("map entity maxCollisionSpeed must be between 1 and 16 pixels per frame");
+  }
+  const info = requireDynamicMap(compileState, entity.asset);
+  const behaviorSignature = JSON.stringify(entity.collisionBehaviors ?? null);
+  if (info.collisionBehaviorSignature !== undefined && info.collisionBehaviorSignature !== behaviorSignature) {
+    throw new Error(`${entity.asset.sourcePath}: map entities must share the same collisionBehaviors table`);
+  }
+  info.collisionBehaviorSignature = behaviorSignature;
+  info.collisionBehaviors = entity.collisionBehaviors;
+  const registered = { ...entity, worldX, worldY, velocityX, velocityY, onGround, hitCeiling, hitLeft, hitRight, enabled,
+    onDanger, onLadder, atExit, collisionNeeded: false, report: null };
+  compileState.assets.entities.set(entity.id, registered);
+  registered.report = {
+    type: "map-entity",
+    id: entity.object.id,
+    objectType: entity.object.type,
+    sprite: entity.sprite.index,
+    worldX: entity.object.worldX,
+    worldY: entity.object.worldY,
+    spriteAsset: entity.spriteAsset?.id ?? null,
+    initialAnimation: entity.initialAnimation,
+    coordinateBits: 16,
+    hitbox: { ...entity.hitbox },
+    maxCollisionSpeed: entity.maxCollisionSpeed,
+    collisionBehaviors: entity.collisionBehaviors,
+    collisionStrategy: "none"
+  };
+  compileState.assets.report.push(registered.report);
+}
+
+function emitMapEntityProject(asm, compileState, entity, options) {
+  const registered = resolveMapEntity(compileState, entity);
+  const spriteRuntime = getSpriteRuntime(compileState, entity.sprite);
+  const spriteVariables = spriteRefVariables(compileState, entity.sprite);
+  const viewportWidth = options.viewportWidth;
+  const viewportHeight = options.viewportHeight;
+  const screenOffsetX = options.screenOffsetX;
+  const screenOffsetY = options.screenOffsetY;
+  const { marginX, marginY } = normalizeProjectionMargin(
+    options.marginX === undefined ? (options.cullingMargin ?? 0) : { x: options.marginX, y: options.marginY }
+  );
+  if (!Number.isInteger(viewportWidth) || viewportWidth < 1 || viewportWidth > 512) throw new Error("entity viewportWidth must be between 1 and 512 pixels");
+  if (!Number.isInteger(viewportHeight) || viewportHeight < 1 || viewportHeight > 256) throw new Error("entity viewportHeight must be between 1 and 256 pixels");
+  if (!Number.isInteger(screenOffsetX) || screenOffsetX < 0 || screenOffsetX + viewportWidth > 512) throw new Error("entity screenOffsetX plus viewportWidth must fit in the VIC-II 9-bit X range");
+  if (!Number.isInteger(screenOffsetY) || screenOffsetY < 0 || screenOffsetY + viewportHeight > 256) throw new Error("entity screenOffsetY plus viewportHeight must fit in the VIC-II Y byte");
+  if (screenOffsetX < marginX || screenOffsetX + viewportWidth + marginX > 512) throw new Error("entity horizontal culling margin must fit in the VIC-II 9-bit X range");
+  if (screenOffsetY < marginY || screenOffsetY + viewportHeight + marginY > 256) throw new Error("entity vertical culling margin must fit in the VIC-II Y byte");
+  const id = compileState.loopCounter++;
+  const hiddenLabel = `map_entity_hidden_${entity.id}_${id}`;
+  const shownLabel = `map_entity_shown_${entity.id}_${id}`;
+  const doneLabel = `map_entity_project_done_${entity.id}_${id}`;
+  const relativeX = MAP_CONVERT_RESULT_LO;
+  const relativeY = MAP_CONVERT_LO;
+  asm.lda(addressMode(registered.enabled.address));
+  asm.bne(rel(`map_entity_enabled_${entity.id}_${id}`));
+  asm.jmp(abs(hiddenLabel));
+  asm.label(`map_entity_enabled_${entity.id}_${id}`);
+  emitProjectionDifference(asm, compileState, entity.worldX, options.cameraX, relativeX, hiddenLabel, `map_entity_x_${id}`, marginX);
+  emitProjectionLimit(asm, relativeX, viewportWidth + marginX * 2, hiddenLabel, `map_entity_x_visible_${id}`);
+  emitProjectionDifference(asm, compileState, entity.worldY, options.cameraY, relativeY, hiddenLabel, `map_entity_y_${id}`, marginY);
+  emitProjectionLimit(asm, relativeY, viewportHeight + marginY * 2, hiddenLabel, `map_entity_y_visible_${id}`);
+  asm.clc(); asm.lda(abs(relativeX)); asm.adc(imm((screenOffsetX - marginX) & 0xff)); asm.sta(addressMode(spriteVariables.x.address));
+  asm.lda(abs(relativeX + 1)); asm.adc(imm(((screenOffsetX - marginX) >> 8) & 0xff)); asm.sta(addressMode(spriteVariables.x.address + 1));
+  asm.clc(); asm.lda(abs(relativeY)); asm.adc(imm(screenOffsetY - marginY)); asm.sta(addressMode(spriteVariables.y.address));
+  emitStoreImmediate(asm, spriteVariables.active.address, 1);
+  asm.jmp(abs(shownLabel));
+  asm.label(hiddenLabel);
+  emitStoreImmediate(asm, spriteVariables.active.address, 0);
+  asm.label(shownLabel);
+  emitSpriteRuntimeSync(asm, compileState, entity.sprite, spriteRuntime);
+  asm.label(doneLabel);
+  registered.report.cullingMargin = { x: marginX, y: marginY };
+}
+
+function emitMapEntityMoveAndCollide(asm, compileState, entity) {
+  const registered = resolveMapEntity(compileState, entity);
+  const info = requireDynamicMap(compileState, entity.asset);
+  registered.collisionNeeded = true;
+  registered.report.collisionStrategy = "axis-separated-pixel-step";
+  registered.report.solidRule = "collision != 0";
+  info.entityCollisionNeeded = true;
+  asm.jsr(abs(`runtime_map_entity_move_${entity.id}`));
+  // Map entities own their named animation state. Advancing it alongside the
+  // bounded movement keeps player code compact and avoids a second update API
+  // call in the usual gameplay loop.
+  emitSpriteAnimationUpdate(asm, compileState, entity.sprite, getSpriteRuntime(compileState, entity.sprite));
+}
+
+function entityEdgeSampleOffsets(length, tilePixels) {
+  const last = length - 1;
+  const offsets = [0];
+  for (let offset = tilePixels; offset < last; offset += tilePixels) offsets.push(offset);
+  if (last > 0 && offsets.at(-1) !== last) offsets.push(last);
+  return offsets;
+}
+
+function emitEntityWordStep(asm, address, direction, label) {
+  if (direction > 0) {
+    asm.inc(addressMode(address));
+    asm.bne(rel(`${label}_done`));
+    asm.inc(addressMode(address + 1));
+    asm.label(`${label}_done`);
+    return;
+  }
+  asm.lda(addressMode(address));
+  asm.bne(rel(`${label}_low`));
+  asm.dec(addressMode(address + 1));
+  asm.label(`${label}_low`);
+  asm.dec(addressMode(address));
+}
+
+function emitEntityPointCoordinate(asm, sourceAddress, offset, targetAddress) {
+  asm.clc();
+  asm.lda(addressMode(sourceAddress));
+  asm.adc(imm(offset & 0xff));
+  asm.sta(abs(targetAddress));
+  asm.lda(addressMode(sourceAddress + 1));
+  asm.adc(imm((offset >> 8) & 0xff));
+  asm.sta(abs(targetAddress + 1));
+}
+
+function emitEntityCollisionJump(asm, info, collisionLabel, nextLabel) {
+  asm.jsr(abs(`runtime_map_entity_point_solid_${info.id}`));
+  asm.beq(rel(nextLabel));
+  asm.jmp(abs(collisionLabel));
+  asm.label(nextLabel);
+}
+
+function emitEntityVerticalEdgeChecks(asm, registered, info, xOffset, collisionLabel, prefix) {
+  const samples = entityEdgeSampleOffsets(registered.hitbox.height, registered.asset.tileHeight * 8);
+  emitEntityPointCoordinate(asm, registered.worldX.address, xOffset, MAP_ENTITY_PIXEL_X_LO);
+  samples.forEach((sample, index) => {
+    emitEntityPointCoordinate(asm, registered.worldY.address, registered.hitbox.offsetY + sample, MAP_ENTITY_PIXEL_Y_LO);
+    emitEntityCollisionJump(asm, info, collisionLabel, `${prefix}_sample_${index}_clear`);
+  });
+}
+
+function emitEntityHorizontalEdgeChecks(asm, registered, info, yOffset, collisionLabel, prefix) {
+  const samples = entityEdgeSampleOffsets(registered.hitbox.width, registered.asset.tileWidth * 8);
+  emitEntityPointCoordinate(asm, registered.worldY.address, yOffset, MAP_ENTITY_PIXEL_Y_LO);
+  samples.forEach((sample, index) => {
+    emitEntityPointCoordinate(asm, registered.worldX.address, registered.hitbox.offsetX + sample, MAP_ENTITY_PIXEL_X_LO);
+    emitEntityCollisionJump(asm, info, collisionLabel, `${prefix}_sample_${index}_clear`);
+  });
+}
+
+function emitClampEntityStepCount(asm, velocityAddress, maxSpeed, negative, prefix) {
+  asm.lda(addressMode(velocityAddress));
+  if (negative) {
+    asm.eor(imm(0xff));
+    asm.clc();
+    asm.adc(imm(1));
+  }
+  asm.cmp(imm(maxSpeed + 1));
+  asm.bcc(rel(`${prefix}_store`));
+  asm.lda(imm(maxSpeed));
+  asm.label(`${prefix}_store`);
+  asm.sta(abs(MAP_ENTITY_STEP_COUNT));
+}
+
+function emitMapEntityCollisionRoutine(asm, state, registered) {
+  const info = requireDynamicMap(state, registered.asset);
+  const id = registered.id;
+  const prefix = `runtime_map_entity_${id}`;
+  const xDone = `${prefix}_x_done`;
+  const yDone = `${prefix}_y_done`;
+  asm.comment(`Map entity ${id}: pixel-stepped X/Y tile collision`);
+  asm.label(`runtime_map_entity_move_${id}`);
+  emitStoreImmediate(asm, registered.onGround.address, 0);
+  emitStoreImmediate(asm, registered.hitCeiling.address, 0);
+  emitStoreImmediate(asm, registered.hitLeft.address, 0);
+  emitStoreImmediate(asm, registered.hitRight.address, 0);
+  emitStoreImmediate(asm, registered.onDanger.address, 0);
+  emitStoreImmediate(asm, registered.onLadder.address, 0);
+  emitStoreImmediate(asm, registered.atExit.address, 0);
+  emitStoreImmediate(asm, MAP_ENTITY_COLLISION_MODE, 0);
+
+  asm.lda(addressMode(registered.velocityX.address));
+  asm.bne(rel(`${prefix}_x_has_velocity`));
+  asm.jmp(abs(xDone));
+  asm.label(`${prefix}_x_has_velocity`);
+  asm.bpl(rel(`${prefix}_x_positive`));
+  asm.jmp(abs(`${prefix}_x_negative`));
+  asm.label(`${prefix}_x_positive`);
+  emitClampEntityStepCount(asm, registered.velocityX.address, registered.maxCollisionSpeed, false, `${prefix}_x_positive_count`);
+  asm.label(`${prefix}_x_positive_loop`);
+  emitEntityWordStep(asm, registered.worldX.address, 1, `${prefix}_x_positive_step`);
+  emitEntityVerticalEdgeChecks(asm, registered, info, registered.hitbox.offsetX + registered.hitbox.width - 1, `${prefix}_x_positive_hit`, `${prefix}_x_positive`);
+  asm.dec(abs(MAP_ENTITY_STEP_COUNT));
+  asm.lda(abs(MAP_ENTITY_STEP_COUNT));
+  asm.beq(rel(`${prefix}_x_positive_done`));
+  asm.jmp(abs(`${prefix}_x_positive_loop`));
+  asm.label(`${prefix}_x_positive_done`);
+  asm.jmp(abs(xDone));
+  asm.label(`${prefix}_x_positive_hit`);
+  emitEntityWordStep(asm, registered.worldX.address, -1, `${prefix}_x_positive_undo`);
+  emitStoreImmediate(asm, registered.hitRight.address, 1);
+  emitStoreImmediate(asm, registered.velocityX.address, 0);
+  asm.jmp(abs(xDone));
+
+  asm.label(`${prefix}_x_negative`);
+  emitClampEntityStepCount(asm, registered.velocityX.address, registered.maxCollisionSpeed, true, `${prefix}_x_negative_count`);
+  asm.label(`${prefix}_x_negative_loop`);
+  emitEntityWordStep(asm, registered.worldX.address, -1, `${prefix}_x_negative_step`);
+  emitEntityVerticalEdgeChecks(asm, registered, info, registered.hitbox.offsetX, `${prefix}_x_negative_hit`, `${prefix}_x_negative`);
+  asm.dec(abs(MAP_ENTITY_STEP_COUNT));
+  asm.lda(abs(MAP_ENTITY_STEP_COUNT));
+  asm.beq(rel(`${prefix}_x_negative_done`));
+  asm.jmp(abs(`${prefix}_x_negative_loop`));
+  asm.label(`${prefix}_x_negative_done`);
+  asm.jmp(abs(xDone));
+  asm.label(`${prefix}_x_negative_hit`);
+  emitEntityWordStep(asm, registered.worldX.address, 1, `${prefix}_x_negative_undo`);
+  emitStoreImmediate(asm, registered.hitLeft.address, 1);
+  emitStoreImmediate(asm, registered.velocityX.address, 0);
+  asm.label(xDone);
+
+  asm.lda(addressMode(registered.velocityY.address));
+  asm.bne(rel(`${prefix}_y_has_velocity`));
+  asm.jmp(abs(yDone));
+  asm.label(`${prefix}_y_has_velocity`);
+  asm.bpl(rel(`${prefix}_y_positive`));
+  asm.jmp(abs(`${prefix}_y_negative`));
+  asm.label(`${prefix}_y_positive`);
+  emitStoreImmediate(asm, MAP_ENTITY_COLLISION_MODE, 1);
+  emitClampEntityStepCount(asm, registered.velocityY.address, registered.maxCollisionSpeed, false, `${prefix}_y_positive_count`);
+  asm.label(`${prefix}_y_positive_loop`);
+  emitEntityWordStep(asm, registered.worldY.address, 1, `${prefix}_y_positive_step`);
+  emitEntityHorizontalEdgeChecks(asm, registered, info, registered.hitbox.offsetY + registered.hitbox.height - 1, `${prefix}_y_positive_hit`, `${prefix}_y_positive`);
+  asm.dec(abs(MAP_ENTITY_STEP_COUNT));
+  asm.lda(abs(MAP_ENTITY_STEP_COUNT));
+  asm.beq(rel(`${prefix}_y_positive_done`));
+  asm.jmp(abs(`${prefix}_y_positive_loop`));
+  asm.label(`${prefix}_y_positive_done`);
+  asm.jmp(abs(yDone));
+  asm.label(`${prefix}_y_positive_hit`);
+  emitEntityWordStep(asm, registered.worldY.address, -1, `${prefix}_y_positive_undo`);
+  emitStoreImmediate(asm, registered.onGround.address, 1);
+  emitStoreImmediate(asm, registered.velocityY.address, 0);
+  asm.jmp(abs(yDone));
+
+  asm.label(`${prefix}_y_negative`);
+  emitStoreImmediate(asm, MAP_ENTITY_COLLISION_MODE, 0);
+  emitClampEntityStepCount(asm, registered.velocityY.address, registered.maxCollisionSpeed, true, `${prefix}_y_negative_count`);
+  asm.label(`${prefix}_y_negative_loop`);
+  emitEntityWordStep(asm, registered.worldY.address, -1, `${prefix}_y_negative_step`);
+  emitEntityHorizontalEdgeChecks(asm, registered, info, registered.hitbox.offsetY, `${prefix}_y_negative_hit`, `${prefix}_y_negative`);
+  asm.dec(abs(MAP_ENTITY_STEP_COUNT));
+  asm.lda(abs(MAP_ENTITY_STEP_COUNT));
+  asm.beq(rel(`${prefix}_y_negative_done`));
+  asm.jmp(abs(`${prefix}_y_negative_loop`));
+  asm.label(`${prefix}_y_negative_done`);
+  asm.jmp(abs(yDone));
+  asm.label(`${prefix}_y_negative_hit`);
+  emitEntityWordStep(asm, registered.worldY.address, 1, `${prefix}_y_negative_undo`);
+  emitStoreImmediate(asm, registered.hitCeiling.address, 1);
+  emitStoreImmediate(asm, registered.velocityY.address, 0);
+  asm.label(yDone);
+
+  // Probe one pixel below the hitbox so onGround remains stable even when the
+  // caller supplies no vertical movement during a frame.
+  emitStoreImmediate(asm, MAP_ENTITY_COLLISION_MODE, 1);
+  emitEntityHorizontalEdgeChecks(asm, registered, info, registered.hitbox.offsetY + registered.hitbox.height, `${prefix}_grounded`, `${prefix}_ground_probe`);
+  asm.jmp(abs(`${prefix}_behavior_probe`));
+  asm.label(`${prefix}_grounded`);
+  emitStoreImmediate(asm, registered.onGround.address, 1);
+  asm.label(`${prefix}_behavior_probe`);
+  emitEntityBehaviorProbes(asm, registered, info, prefix);
+  asm.label(`${prefix}_done`);
+  asm.rts();
+}
+
+function emitEntityBehaviorValueChecks(asm, registered, info, prefix) {
+  const behaviors = info.collisionBehaviors ?? {};
+  for (const [valueText, behavior] of Object.entries(behaviors)) {
+    const target = behavior === "danger" ? registered.onDanger
+      : behavior === "ladder" ? registered.onLadder
+        : behavior === "exit" ? registered.atExit : null;
+    if (!target) continue;
+    const next = `${prefix}_${behavior}_${valueText}_next`;
+    asm.cmp(imm(Number(valueText)));
+    asm.bne(rel(next));
+    emitStoreImmediate(asm, target.address, 1);
+    asm.label(next);
+  }
+}
+
+function emitEntityBehaviorProbes(asm, registered, info, prefix) {
+  if (!info.collisionBehaviors) return;
+  const x = registered.hitbox.offsetX + Math.floor(registered.hitbox.width / 2);
+  const centerY = registered.hitbox.offsetY + Math.floor(registered.hitbox.height / 2);
+  const bottomY = registered.hitbox.offsetY + registered.hitbox.height - 1;
+  emitEntityPointCoordinate(asm, registered.worldX.address, x, MAP_ENTITY_PIXEL_X_LO);
+  emitEntityPointCoordinate(asm, registered.worldY.address, centerY, MAP_ENTITY_PIXEL_Y_LO);
+  asm.jsr(abs(`runtime_map_entity_point_value_${info.id}`));
+  emitEntityBehaviorValueChecks(asm, registered, info, `${prefix}_center`);
+  if (bottomY !== centerY) {
+    emitEntityPointCoordinate(asm, registered.worldY.address, bottomY, MAP_ENTITY_PIXEL_Y_LO);
+    asm.jsr(abs(`runtime_map_entity_point_value_${info.id}`));
+    emitEntityBehaviorValueChecks(asm, registered, info, `${prefix}_bottom`);
+  }
+}
+
+function emitWordOutsideMapJump(asm, loAddress, limit, outsideLabel, prefix) {
+  asm.lda(abs(loAddress + 1));
+  asm.cmp(imm((limit >> 8) & 0xff));
+  asm.bcc(rel(`${prefix}_inside`));
+  asm.bne(rel(`${prefix}_outside`));
+  asm.lda(abs(loAddress));
+  asm.cmp(imm(limit & 0xff));
+  asm.bcc(rel(`${prefix}_inside`));
+  asm.label(`${prefix}_outside`);
+  asm.jmp(abs(outsideLabel));
+  asm.label(`${prefix}_inside`);
+}
+
+function emitDivideEntityCoordinate(asm, inputAddress, divisor, outputAddress, prefix) {
+  asm.lda(abs(inputAddress)); asm.sta(abs(MAP_CONVERT_LO));
+  asm.lda(abs(inputAddress + 1)); asm.sta(abs(MAP_CONVERT_HI));
+  if ((divisor & (divisor - 1)) === 0) {
+    const shifts = Math.log2(divisor);
+    for (let shift = 0; shift < shifts; shift += 1) {
+      asm.lsr(abs(MAP_CONVERT_HI));
+      asm.ror(abs(MAP_CONVERT_LO));
+    }
+    asm.lda(abs(MAP_CONVERT_LO));
+    asm.sta(abs(outputAddress));
+    return;
+  }
+  emitStoreImmediate(asm, outputAddress, 0);
+  asm.label(`${prefix}_loop`);
+  asm.lda(abs(MAP_CONVERT_HI)); asm.bne(rel(`${prefix}_subtract`));
+  asm.lda(abs(MAP_CONVERT_LO)); asm.cmp(imm(divisor)); asm.bcc(rel(`${prefix}_done`));
+  asm.label(`${prefix}_subtract`);
+  asm.sec(); asm.lda(abs(MAP_CONVERT_LO)); asm.sbc(imm(divisor)); asm.sta(abs(MAP_CONVERT_LO));
+  asm.lda(abs(MAP_CONVERT_HI)); asm.sbc(imm(0)); asm.sta(abs(MAP_CONVERT_HI));
+  asm.inc(abs(outputAddress));
+  asm.jmp(abs(`${prefix}_loop`));
+  asm.label(`${prefix}_done`);
+}
+
+function emitMapEntityPointCollisionRoutine(asm, info) {
+  const asset = info.asset;
+  const prefix = `runtime_map_entity_point_${info.id}`;
+  const outsideLabel = `${prefix}_outside`;
+  const solidLabel = `${prefix}_solid`;
+  asm.comment(`Map ${info.id}: logical collision lookup from 16-bit world pixels`);
+  asm.label(`runtime_map_entity_point_value_${info.id}`);
+  emitWordOutsideMapJump(asm, MAP_ENTITY_PIXEL_X_LO, asset.map.width * asset.tileWidth * 8, outsideLabel, `${prefix}_x`);
+  emitWordOutsideMapJump(asm, MAP_ENTITY_PIXEL_Y_LO, asset.map.height * asset.tileHeight * 8, outsideLabel, `${prefix}_y`);
+  emitDivideEntityCoordinate(asm, MAP_ENTITY_PIXEL_X_LO, asset.tileWidth * 8, MAP_TEMP_X, `${prefix}_divide_x`);
+  emitDivideEntityCoordinate(asm, MAP_ENTITY_PIXEL_Y_LO, asset.tileHeight * 8, MAP_TEMP_Y, `${prefix}_divide_y`);
+  emitMapIndexToPointer(asm, info, `entity_point_${info.id}`);
+  asm.lda(indy(HIRES_ZP_PTR_LO));
+  asm.tax();
+  asm.lda(absx(info.collisionLabel));
+  asm.rts();
+  asm.label(outsideLabel);
+  asm.lda(imm(0xff));
+  asm.rts();
+  asm.label(`runtime_map_entity_point_solid_${info.id}`);
+  asm.jsr(abs(`runtime_map_entity_point_value_${info.id}`));
+  asm.cmp(imm(0xff));
+  asm.beq(rel(solidLabel));
+  if (info.collisionBehaviors) {
+    const passableValues = Object.entries(info.collisionBehaviors)
+      .filter(([, behavior]) => ["danger", "ladder", "exit", "passable"].includes(behavior))
+      .map(([value]) => Number(value));
+    // point_value() returns the collision value in A. The preceding CMP #$FF
+    // only identifies out-of-map coordinates; compare A explicitly with zero
+    // before applying optional named behaviors. Reusing the old Z flag made
+    // collision 0 fall through to the solid default.
+    asm.cmp(imm(0));
+    asm.beq(rel(`${prefix}_clear`));
+    for (const value of passableValues) {
+      asm.cmp(imm(value));
+      asm.beq(rel(`${prefix}_clear`));
+    }
+    const platformValues = Object.entries(info.collisionBehaviors)
+      .filter(([, behavior]) => behavior === "platform")
+      .map(([value]) => Number(value));
+    for (const value of platformValues) {
+      const notPlatform = `${prefix}_not_platform_${value}`;
+      asm.cmp(imm(value));
+      asm.bne(rel(notPlatform));
+      asm.lda(abs(MAP_ENTITY_COLLISION_MODE));
+      asm.cmp(imm(1));
+      asm.beq(rel(solidLabel));
+      asm.jmp(abs(`${prefix}_clear`));
+      asm.label(notPlatform);
+    }
+    asm.jmp(abs(solidLabel));
+  } else {
+    asm.beq(rel(`${prefix}_clear`));
+  }
+  asm.label(solidLabel);
+  asm.lda(imm(1));
+  asm.rts();
+  asm.label(`${prefix}_clear`);
+  asm.lda(imm(0));
+  asm.rts();
 }
 
 function emitCoordinateSourceWord(asm, compileState, value, label) {
@@ -2663,12 +3774,217 @@ function emitAddWordImmediateToZeroPagePointer(asm, pointer, value) {
   asm.lda(zp(pointer + 1)); asm.adc(imm((value >> 8) & 0xff)); asm.sta(zp(pointer + 1));
 }
 
+function emitMapHorizontalScrollerRoutines(asm, info) {
+  const scroller = info.horizontalScroller;
+  if (!scroller) return;
+  const viewport = scroller.viewport;
+  const screenBase = info.draw.screenBase + info.draw.y * 40 + info.draw.x;
+  const colorBase = info.draw.colorBase + info.draw.y * 40 + info.draw.x;
+  const emitStreamCell = (screenAddress, colorAddress) => {
+    asm.ldy(imm(0)); asm.lda(indy(HIRES_ZP_PTR_LO)); asm.tax();
+    asm.lda(absx(info.charsLabel)); asm.sta(abs(screenAddress));
+    asm.lda(absx(info.colorsLabel));
+    if (info.asset.charset.mode === "multicolor") asm.ora(imm(0x08));
+    asm.sta(abs(colorAddress));
+  };
+  const emitShiftCell = (sourceScreen, destinationScreen, sourceColor, destinationColor, indexed = false) => {
+    const mode = indexed ? absx : abs;
+    asm.lda(mode(sourceScreen)); asm.sta(mode(destinationScreen));
+    asm.lda(mode(sourceColor)); asm.sta(mode(destinationColor));
+  };
+  // Copy two neighboring cells per branch. Besides saving two cycles per cell
+  // compared with CPX loops, each row is completed from top to bottom before
+  // the raster beam returns on the next frame, avoiding partially recolored
+  // character rows during a coarse (8-pixel) step.
+  const emitShiftRowLeft = (row) => {
+    const count = viewport.screenWidth - 1;
+    const rowScreen = screenBase + row * 40;
+    const rowColor = colorBase + row * 40;
+    let start = 0;
+    if ((count & 1) !== 0) {
+      emitShiftCell(rowScreen + 1, rowScreen, rowColor + 1, rowColor);
+      start = 1;
+    }
+    const remaining = count - start;
+    if (remaining === 0) return;
+    const xStart = 256 - remaining;
+    const loop = `runtime_map_scroll_left_row_${info.id}_${row}`;
+    asm.ldx(imm(xStart));
+    asm.label(loop);
+    const sourceScreen = rowScreen + start + 1 - xStart;
+    const destinationScreen = rowScreen + start - xStart;
+    const sourceColor = rowColor + start + 1 - xStart;
+    const destinationColor = rowColor + start - xStart;
+    emitShiftCell(sourceScreen, destinationScreen, sourceColor, destinationColor, true);
+    asm.inx();
+    emitShiftCell(sourceScreen, destinationScreen, sourceColor, destinationColor, true);
+    asm.inx(); asm.bne(rel(loop));
+  };
+  const emitShiftRowRight = (row) => {
+    const count = viewport.screenWidth - 1;
+    const rowScreen = screenBase + row * 40;
+    const rowColor = colorBase + row * 40;
+    let remaining = count;
+    if ((count & 1) !== 0) {
+      const position = count - 1;
+      emitShiftCell(rowScreen + position, rowScreen + position + 1, rowColor + position, rowColor + position + 1);
+      remaining -= 1;
+    }
+    if (remaining === 0) return;
+    const loop = `runtime_map_scroll_right_row_${info.id}_${row}`;
+    asm.ldx(imm(remaining - 1));
+    asm.label(loop);
+    emitShiftCell(rowScreen, rowScreen + 1, rowColor, rowColor + 1, true);
+    asm.dex();
+    emitShiftCell(rowScreen, rowScreen + 1, rowColor, rowColor + 1, true);
+    asm.dex(); asm.bpl(rel(loop));
+  };
+  const emitShiftRowVertical = (sourceRow, destinationRow, label) => {
+    const count = viewport.screenWidth;
+    const sourceScreenRow = screenBase + sourceRow * 40;
+    const destinationScreenRow = screenBase + destinationRow * 40;
+    const sourceColorRow = colorBase + sourceRow * 40;
+    const destinationColorRow = colorBase + destinationRow * 40;
+    let start = 0;
+    if ((count & 1) !== 0) {
+      emitShiftCell(sourceScreenRow, destinationScreenRow, sourceColorRow, destinationColorRow);
+      start = 1;
+    }
+    const remaining = count - start;
+    if (remaining === 0) return;
+    const xStart = 256 - remaining;
+    asm.ldx(imm(xStart));
+    asm.label(label);
+    const sourceScreen = sourceScreenRow + start - xStart;
+    const destinationScreen = destinationScreenRow + start - xStart;
+    const sourceColor = sourceColorRow + start - xStart;
+    const destinationColor = destinationColorRow + start - xStart;
+    emitShiftCell(sourceScreen, destinationScreen, sourceColor, destinationColor, true);
+    asm.inx();
+    emitShiftCell(sourceScreen, destinationScreen, sourceColor, destinationColor, true);
+    asm.inx(); asm.bne(rel(label));
+  };
+
+  asm.comment(`Map ${info.id}: enter raster-banded fine X/Y viewport`);
+  asm.label(`runtime_map_scroll_apply_${info.id}`);
+  asm.lda(abs(c64.VIC_CONTROL_2)); asm.and(imm(0xf0)); asm.ora(abs(scroller.fineAddress)); asm.sta(abs(c64.VIC_CONTROL_2));
+  if (scroller.verticalUsed) {
+    asm.lda(abs(c64.VIC_CONTROL_1)); asm.and(imm(0xf0)); asm.ora(abs(scroller.fineYAddress)); asm.sta(abs(c64.VIC_CONTROL_1));
+  }
+  asm.rts();
+
+  asm.comment(`Map ${info.id}: cycle-stable VCBASE transition into the fixed panel`);
+  asm.label(`runtime_map_scroll_prepare_panel_${info.id}`);
+  if (scroller.verticalUsed) {
+    const waitFor = (name, rasterLine) => {
+      const label = `runtime_map_scroll_wait_${name}_${info.id}`;
+      asm.label(label);
+      asm.lda(abs(c64.VIC_RASTER)); asm.cmp(imm(rasterLine)); asm.bcc(rel(label));
+    };
+    waitFor("normalize", scroller.normalizeRasterLine);
+    // Force a common final badline. RSEL remains clear (24-row scroll mode),
+    // unlike the old OR #$0F sequence which accidentally selected 25 rows.
+    asm.lda(abs(scroller.fixedD011Address)); asm.and(imm(0xf0)); asm.ora(imm(0x07)); asm.sta(abs(c64.VIC_CONTROL_1));
+    waitFor("blank", scroller.blankRasterLine);
+    // All 256 glyphs are empty in this temporary charset, so the unavoidable
+    // repeated transition row has the current background color, never black.
+    asm.lda(abs(scroller.fixedD018Address)); asm.and(imm(0xf0)); asm.ora(imm(0x0e)); asm.sta(abs(c64.VIC_MEMORY_POINTERS));
+    waitFor("den_off", scroller.denOffRasterLine);
+    // Prevent the next phase-7 badline while allowing the current character row
+    // to reach RC=7 and copy VC into VCBASE.
+    asm.lda(abs(scroller.fixedD011Address)); asm.and(imm(0xe0)); asm.ora(imm(0x07)); asm.sta(abs(c64.VIC_CONTROL_1));
+    waitFor("panel_y", scroller.panelRasterLine);
+    asm.lda(abs(scroller.fixedD011Address)); asm.sta(abs(c64.VIC_CONTROL_1));
+    asm.lda(abs(scroller.fixedD018Address)); asm.sta(abs(c64.VIC_MEMORY_POINTERS));
+    waitFor("panel_x", scroller.exitRasterLine);
+    asm.lda(abs(scroller.fixedD016Address)); asm.sta(abs(c64.VIC_CONTROL_2));
+  }
+  asm.rts();
+
+  asm.comment(`Map ${info.id}: leave the scroll area with the fixed horizontal phase`);
+  asm.label(`runtime_map_scroll_leave_${info.id}`);
+  asm.lda(abs(scroller.fixedD016Address)); asm.sta(abs(c64.VIC_CONTROL_2));
+  asm.rts();
+
+  asm.comment(`Map ${info.id}: restore both fixed-panel VIC-II phases after a full redraw`);
+  asm.label(`runtime_map_scroll_restore_${info.id}`);
+  asm.lda(abs(scroller.fixedD016Address)); asm.sta(abs(c64.VIC_CONTROL_2));
+  if (scroller.verticalUsed) {
+    asm.lda(abs(scroller.fixedD011Address)); asm.sta(abs(c64.VIC_CONTROL_1));
+    asm.lda(abs(scroller.fixedD018Address)); asm.sta(abs(c64.VIC_MEMORY_POINTERS));
+  }
+  asm.rts();
+
+  asm.comment(`Map ${info.id}: shift Screen RAM and Color RAM one character left`);
+  asm.label(`runtime_map_scroll_shift_left_${info.id}`);
+  asm.lda(abs(scroller.cameraAddress)); asm.clc(); asm.adc(imm(viewport.width - 1)); asm.sta(abs(MAP_TEMP_X));
+  asm.lda(abs(scroller.cameraYAddress)); asm.sta(abs(MAP_TEMP_Y));
+  emitMapIndexToPointer(asm, info, `scroll_left_stream_${info.id}`);
+  for (let row = 0; row < viewport.height; row += 1) {
+    emitShiftRowLeft(row);
+    emitStreamCell(screenBase + row * 40 + viewport.screenWidth - 1, colorBase + row * 40 + viewport.screenWidth - 1);
+    if (row + 1 < viewport.height) emitAddWordImmediateToZeroPagePointer(asm, HIRES_ZP_PTR_LO, info.asset.map.width);
+  }
+  asm.rts();
+
+  asm.comment(`Map ${info.id}: shift Screen RAM and Color RAM one character right`);
+  asm.label(`runtime_map_scroll_shift_right_${info.id}`);
+  asm.lda(abs(scroller.cameraAddress)); asm.sta(abs(MAP_TEMP_X));
+  asm.lda(abs(scroller.cameraYAddress)); asm.sta(abs(MAP_TEMP_Y));
+  emitMapIndexToPointer(asm, info, `scroll_right_stream_${info.id}`);
+  for (let row = 0; row < viewport.height; row += 1) {
+    emitShiftRowRight(row);
+    emitStreamCell(screenBase + row * 40, colorBase + row * 40);
+    if (row + 1 < viewport.height) emitAddWordImmediateToZeroPagePointer(asm, HIRES_ZP_PTR_LO, info.asset.map.width);
+  }
+  asm.rts();
+
+  asm.comment(`Map ${info.id}: shift Screen RAM and Color RAM one character up`);
+  asm.label(`runtime_map_scroll_shift_up_${info.id}`);
+  for (let row = 0; row < viewport.screenHeight - 1; row += 1) {
+    emitShiftRowVertical(row + 1, row, `runtime_map_scroll_up_row_${info.id}_${row}`);
+  }
+  asm.lda(abs(scroller.cameraYAddress)); asm.clc(); asm.adc(imm(viewport.height - 1)); asm.sta(abs(MAP_TEMP_Y));
+  asm.lda(abs(scroller.cameraAddress)); asm.sta(abs(MAP_TEMP_X));
+  emitMapIndexToPointer(asm, info, `scroll_up_stream_${info.id}`);
+  asm.ldy(imm(0));
+  asm.label(`runtime_map_scroll_up_line_${info.id}`);
+  asm.lda(indy(HIRES_ZP_PTR_LO)); asm.tax();
+  asm.lda(absx(info.charsLabel)); asm.sta(absy(screenBase + (viewport.screenHeight - 1) * 40));
+  asm.lda(absx(info.colorsLabel));
+  if (info.asset.charset.mode === "multicolor") asm.ora(imm(0x08));
+  asm.sta(absy(colorBase + (viewport.screenHeight - 1) * 40));
+  asm.iny(); asm.cpy(imm(viewport.width)); asm.bne(rel(`runtime_map_scroll_up_line_${info.id}`));
+  asm.rts();
+
+  asm.comment(`Map ${info.id}: shift Screen RAM and Color RAM one character down`);
+  asm.label(`runtime_map_scroll_shift_down_${info.id}`);
+  for (let row = viewport.screenHeight - 2; row >= 0; row -= 1) {
+    emitShiftRowVertical(row, row + 1, `runtime_map_scroll_down_row_${info.id}_${row}`);
+  }
+  asm.lda(abs(scroller.cameraYAddress)); asm.sta(abs(MAP_TEMP_Y));
+  asm.lda(abs(scroller.cameraAddress)); asm.sta(abs(MAP_TEMP_X));
+  emitMapIndexToPointer(asm, info, `scroll_down_stream_${info.id}`);
+  asm.ldy(imm(0));
+  asm.label(`runtime_map_scroll_down_line_${info.id}`);
+  asm.lda(indy(HIRES_ZP_PTR_LO)); asm.tax();
+  asm.lda(absx(info.charsLabel)); asm.sta(absy(screenBase));
+  asm.lda(absx(info.colorsLabel));
+  if (info.asset.charset.mode === "multicolor") asm.ora(imm(0x08));
+  asm.sta(absy(colorBase));
+  asm.iny(); asm.cpy(imm(viewport.width)); asm.bne(rel(`runtime_map_scroll_down_line_${info.id}`));
+  asm.rts();
+}
+
 function emitMapRendererRoutine(asm, info) {
   const asset = info.asset;
   const tileCells = asset.tileWidth * asset.tileHeight;
   const rendererId = `renderer_${info.id}`;
   asm.comment(`Dynamic map ${info.id}: draw one changed metatile`);
   asm.label(`runtime_map_draw_tile_${info.id}`);
+  asm.lda(abs(MAP_TEMP_X)); asm.sta(abs(MAP_SCREEN_TILE_X));
+  asm.lda(abs(MAP_TEMP_Y)); asm.sta(abs(MAP_SCREEN_TILE_Y));
+  asm.label(`runtime_map_draw_tile_body_${info.id}`);
   emitMapIndexToPointer(asm, info, rendererId);
   asm.lda(indy(HIRES_ZP_PTR_LO)); asm.sta(abs(MAP_TEMP_TILE));
 
@@ -2689,7 +4005,7 @@ function emitMapRendererRoutine(asm, info) {
   const screenStart = info.draw.screenBase + info.draw.y * 40 + info.draw.x;
   emitStoreImmediate(asm, HIRES_ZP_PTR_LO, screenStart & 0xff);
   emitStoreImmediate(asm, HIRES_ZP_PTR_HI, (screenStart >> 8) & 0xff);
-  asm.lda(abs(MAP_TEMP_Y)); asm.sta(abs(MAP_TEMP_ROWS));
+  asm.lda(abs(MAP_SCREEN_TILE_Y)); asm.sta(abs(MAP_TEMP_ROWS));
   asm.label(`runtime_map_screen_y_loop_${info.id}`);
   asm.lda(abs(MAP_TEMP_ROWS)); asm.beq(rel(`runtime_map_screen_y_done_${info.id}`));
   emitAddWordImmediateToZeroPagePointer(asm, HIRES_ZP_PTR_LO, asset.tileHeight * 40);
@@ -2697,10 +4013,10 @@ function emitMapRendererRoutine(asm, info) {
   asm.label(`runtime_map_screen_y_done_${info.id}`);
 
   if (asset.tileWidth === 1) {
-    asm.lda(abs(MAP_TEMP_X)); asm.sta(abs(MAP_TEMP_PIXEL_OFFSET));
+    asm.lda(abs(MAP_SCREEN_TILE_X)); asm.sta(abs(MAP_TEMP_PIXEL_OFFSET));
   } else {
     emitStoreImmediate(asm, MAP_TEMP_PIXEL_OFFSET, 0);
-    asm.lda(abs(MAP_TEMP_X)); asm.sta(abs(MAP_TEMP_ROWS));
+    asm.lda(abs(MAP_SCREEN_TILE_X)); asm.sta(abs(MAP_TEMP_ROWS));
     asm.label(`runtime_map_screen_x_loop_${info.id}`);
     asm.lda(abs(MAP_TEMP_ROWS)); asm.beq(rel(`runtime_map_screen_x_done_${info.id}`));
     asm.clc(); asm.lda(abs(MAP_TEMP_PIXEL_OFFSET)); asm.adc(imm(asset.tileWidth)); asm.sta(abs(MAP_TEMP_PIXEL_OFFSET));
@@ -2731,8 +4047,30 @@ function emitMapRendererRoutine(asm, info) {
   }
   asm.rts();
 
-  asm.comment(`Dynamic map ${info.id}: redraw every cell from runtime RAM`);
+  if (info.viewportNeeded) {
+    const viewport = info.viewport;
+    asm.comment(`Map ${info.id}: bounded coarse viewport ${viewport.width}x${viewport.height}`);
+    asm.label(`runtime_map_viewport_${info.id}`);
+    emitStoreImmediate(asm, MAP_SCREEN_TILE_Y, 0);
+    asm.label(`runtime_map_viewport_row_${info.id}`);
+    asm.clc(); asm.lda(abs(MAP_VIEW_SOURCE_Y)); asm.adc(abs(MAP_SCREEN_TILE_Y)); asm.sta(abs(MAP_TEMP_Y));
+    emitStoreImmediate(asm, MAP_SCREEN_TILE_X, 0);
+    asm.label(`runtime_map_viewport_column_${info.id}`);
+    asm.clc(); asm.lda(abs(MAP_VIEW_SOURCE_X)); asm.adc(abs(MAP_SCREEN_TILE_X)); asm.sta(abs(MAP_TEMP_X));
+    asm.jsr(abs(`runtime_map_draw_tile_body_${info.id}`));
+    asm.inc(abs(MAP_SCREEN_TILE_X)); asm.lda(abs(MAP_SCREEN_TILE_X)); asm.cmp(imm(viewport.width)); asm.bne(rel(`runtime_map_viewport_column_${info.id}`));
+    asm.inc(abs(MAP_SCREEN_TILE_Y)); asm.lda(abs(MAP_SCREEN_TILE_Y)); asm.cmp(imm(viewport.height)); asm.bne(rel(`runtime_map_viewport_row_${info.id}`));
+    asm.rts();
+  }
+
+  emitMapHorizontalScrollerRoutines(asm, info);
+
+  asm.comment(`Dynamic map ${info.id}: redraw visible cells from runtime RAM`);
   asm.label(`runtime_map_redraw_${info.id}`);
+  if (!info.fullDrawConfigured && info.viewportNeeded) {
+    asm.jmp(abs(`runtime_map_viewport_${info.id}`));
+    return;
+  }
   emitStoreImmediate(asm, MAP_TEMP_Y, 0);
   asm.label(`runtime_map_redraw_row_${info.id}`);
   emitStoreImmediate(asm, MAP_TEMP_X, 0);
@@ -2744,10 +4082,15 @@ function emitMapRendererRoutine(asm, info) {
 }
 
 function emitMapRoutines(asm, state) {
+  for (const entity of state.assets.entities.values()) {
+    if (entity.collisionNeeded) emitMapEntityCollisionRoutine(asm, state, entity);
+  }
   for (const info of state.assets.mapTables.values()) {
-    if (!info.rendererNeeded) continue;
-    if (!info.draw) throw new Error("dynamic map renderer is missing c64.map.draw() screen configuration");
-    emitMapRendererRoutine(asm, info);
+    if (info.entityCollisionNeeded) emitMapEntityPointCollisionRoutine(asm, info);
+    if (info.rendererNeeded) {
+      if (!info.draw) throw new Error("dynamic map renderer is missing c64.map.draw() screen configuration");
+      emitMapRendererRoutine(asm, info);
+    }
   }
 }
 
@@ -3026,11 +4369,20 @@ function emitSpritePlaySequence(asm, compileState, spriteRef, name) {
   const sequence = runtime.sequences.get(name);
   if (!sequence) throw new Error(`Unknown sprite sequence ${name} for sprite ${spriteRef.index}`);
   const internal = spriteRuntimeInternal(spriteRef.index);
+  const startLabel = `sprite_play_start_${spriteRef.index}_${sequence.id}_${compileState.loopCounter++}`;
+  const doneLabel = `sprite_play_done_${spriteRef.index}_${sequence.id}_${compileState.loopCounter++}`;
+  // Calling play() from a joystick branch every frame must not continually
+  // rewind an animation that is already running. A stopped/non-looping sequence
+  // still restarts normally.
+  asm.lda(abs(internal.sequence)); asm.cmp(imm(sequence.id)); asm.bne(rel(startLabel));
+  asm.lda(abs(internal.playing)); asm.bne(rel(doneLabel));
+  asm.label(startLabel);
   emitStoreImmediate(asm, internal.sequence, sequence.id);
   emitStoreImmediate(asm, internal.frame, 0);
   emitStoreImmediate(asm, internal.tick, 0);
   emitStoreImmediate(asm, internal.playing, 1);
   emitRuntimeSpritePointer(asm, compileState, spriteRef, abs(sequence.tableLabel));
+  asm.label(doneLabel);
 }
 
 function emitSpriteAnimationUpdate(asm, compileState, spriteRef, runtime) {
@@ -3222,13 +4574,15 @@ function emitSpriteMultiplexerRoutine(asm, state) {
   asm.label("runtime_sprite_mux_render");
   asm.jsr(abs("runtime_sprite_mux_sort"));
 
-  // Synchronize with the real start of the next frame before touching VIC
-  // registers. If a worst-case sort ended just after the NTSC wrap, a low
-  // raster value tells us that we are already inside the new top border.
-  asm.lda(abs(c64.VIC_CONTROL_1)); asm.bmi(rel("runtime_sprite_mux_wait_low_raster"));
+  // Raster 256 is already below the visible sprite area. The previous code
+  // waited for bit 8 to rise and then fall again, wasting the complete lower
+  // border and making debuggers appear parked in a $D011 loop. Program the
+  // next frame as soon as the raster enters its high range; if we are already
+  // near the top (line < 64), no wait is needed.
+  asm.label("runtime_sprite_mux_wait_safe_raster");
+  asm.lda(abs(c64.VIC_CONTROL_1)); asm.bmi(rel("runtime_sprite_mux_frame_ready"));
   asm.lda(abs(c64.VIC_RASTER)); asm.cmp(imm(64)); asm.bcc(rel("runtime_sprite_mux_frame_ready"));
-  asm.label("runtime_sprite_mux_wait_high_raster"); asm.lda(abs(c64.VIC_CONTROL_1)); asm.bpl(rel("runtime_sprite_mux_wait_high_raster"));
-  asm.label("runtime_sprite_mux_wait_low_raster"); asm.lda(abs(c64.VIC_CONTROL_1)); asm.bmi(rel("runtime_sprite_mux_wait_low_raster"));
+  asm.jmp(abs("runtime_sprite_mux_wait_safe_raster"));
   asm.label("runtime_sprite_mux_frame_ready");
   emitStoreImmediate(asm, c64.VIC_SPRITE_ENABLE, 0);
   asm.ldx(imm(0));
@@ -3614,7 +4968,13 @@ const MULTIPLEX_CONFLICTING_LEGACY_OPS = new Set([
 ]);
 
 function collectBalancedOptimizationStats(instructionGroups) {
-  const stats = { sidClickCount: 0, spriteSyncCallCounts: new Map(), usesSpriteMultiplexer: false, usesLegacySpriteApi: false };
+  const stats = {
+    sidClickCount: 0,
+    spriteSyncCallCounts: new Map(),
+    usesSpriteMultiplexer: false,
+    usesLegacySpriteApi: false,
+    usesVerticalMapScroll: false
+  };
   const addSpriteSync = (instruction) => {
     const spriteRef = instruction.args[0];
     if (!spriteRef || spriteRef.type !== "spriteRef") return;
@@ -3623,6 +4983,10 @@ function collectBalancedOptimizationStats(instructionGroups) {
   const visit = (instructions) => {
     for (const instruction of instructions ?? []) {
       if (instruction.op === "sidClick") stats.sidClickCount += 1;
+      if (instruction.op === "mapVerticalScrollerMove") stats.usesVerticalMapScroll = true;
+      if (instruction.op === "mapScrollerFollow" && ["y", "both"].includes(instruction.args[2]?.axis)) {
+        stats.usesVerticalMapScroll = true;
+      }
       if (MULTIPLEX_CONFLICTING_LEGACY_OPS.has(instruction.op)) stats.usesLegacySpriteApi = true;
       if (["spriteCreateRuntime", "spriteRuntimeSync", "spriteRuntimeUpdate"].includes(instruction.op)) addSpriteSync(instruction);
       if (instruction.op === "spriteCreateRuntime" && instruction.args[0]?.index >= 8) stats.usesSpriteMultiplexer = true;
@@ -3646,9 +5010,7 @@ function emitSpriteMultiplexerStateInit(asm, state) {
   asm.label(loopLabel);
   asm.lda(imm(0));
   asm.sta(absx(SPRITE_LOGICAL_STATE_BASE + 5));
-  asm.sta(absx(SPRITE_RUNTIME_BASE + 4));
-  asm.sta(absx(SPRITE_RUNTIME_BASE + 5));
-  asm.sta(absx(SPRITE_RUNTIME_BASE + 6));
+  for (let offset = 0; offset <= 6; offset += 1) asm.sta(absx(SPRITE_RUNTIME_BASE + offset));
   asm.txa(); asm.clc(); asm.adc(imm(SPRITE_LOGICAL_STATE_STRIDE)); asm.tax();
   asm.cpx(imm(SPRITE_LOGICAL_COUNT * SPRITE_LOGICAL_STATE_STRIDE));
   asm.bne(rel(loopLabel));
@@ -4158,14 +5520,14 @@ function safeRoutineLabel(name) {
 
 const GAME_FRAME_COMPILE_TIME_ONLY_OPS = new Set([
   "dataByte", "dataWord", "dataString", "dataScreenString",
-  "varByte", "varWord", "screen", "colorRam", "charsetUse", "mapRegister", "mapDraw",
+  "varByte", "varWord", "screen", "colorRam", "charsetUse", "mapRegister", "mapDraw", "mapHorizontalScrollerCreate",
   "sidPlaySong", "sidInstallPlayer", "spriteInstallAnimator",
   "spriteMoveX", "spriteMoveY", "spriteMoveToX", "spriteMoveToY",
   "spriteAnimateTo", "spriteStop", "spriteStopX", "spriteStopY",
   "irqInstall", "irqChainToKernal", "irqDisableKernalTimer", "irqEnableKernalTimer",
   "gameFrame", "gameInit", "controlRoutine",
   "spriteCreateRuntime", "spriteRuntimeData", "spriteRuntimeColor", "spriteRuntimeFlag",
-  "spriteFrames", "spriteUseFrames", "spriteSequence", "spriteRuntimeBounds"
+  "spriteFrames", "spriteUseFrames", "spriteSequence", "spriteRuntimeBounds", "mapEntityCreate", "spriteAssetRegister"
 ]);
 
 function prepareGameFrameInstructions(instructions, compileState) {
@@ -4264,16 +5626,16 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
       emitMemset(asm, resolveAddress(compileState, instruction.args[0], "address"), instruction.args[1], instruction.args[2]);
       break;
     case "writeChar":
-      emitWriteChar(asm, instruction.args[0], instruction.args[1], instruction.args[2], instruction.args[3], compileState.screenBase, compileState.colorBase);
+      emitWriteChar(asm, instruction.args[0], instruction.args[1], instruction.args[2], instruction.args[3], compileState.screenBase, compileState.colorBase, compileState);
       break;
     case "fillRect":
-      emitFillRect(asm, instruction.args[0], instruction.args[1], instruction.args[2], instruction.args[3], instruction.args[4], instruction.args[5], compileState.screenBase, compileState.colorBase, compileState.currentTextColor);
+      emitFillRect(asm, instruction.args[0], instruction.args[1], instruction.args[2], instruction.args[3], instruction.args[4], instruction.args[5], compileState.screenBase, compileState.colorBase, compileState.currentTextColor, compileState);
       break;
     case "drawFrame":
-      emitDrawFrame(asm, instruction.args[0], instruction.args[1], instruction.args[2], instruction.args[3], instruction.args[4], instruction.args[5], compileState.screenBase, compileState.colorBase, compileState.currentTextColor);
+      emitDrawFrame(asm, instruction.args[0], instruction.args[1], instruction.args[2], instruction.args[3], instruction.args[4], instruction.args[5], compileState.screenBase, compileState.colorBase, compileState.currentTextColor, compileState);
       break;
     case "clearLine":
-      emitFillRect(asm, 0, instruction.args[0], 40, 1, instruction.args[1], instruction.args[2], compileState.screenBase, compileState.colorBase, compileState.currentTextColor);
+      emitFillRect(asm, 0, instruction.args[0], 40, 1, instruction.args[1], instruction.args[2], compileState.screenBase, compileState.colorBase, compileState.currentTextColor, compileState);
       break;
     case "screen":
       compileState.screenBase = instruction.args[0];
@@ -4290,6 +5652,42 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
     case "mapDraw":
       emitMapDraw(asm, compileState, instruction.args[0], instruction.args[1]);
       break;
+    case "mapViewportDraw":
+      emitMapViewportDraw(asm, compileState, instruction.args[0], instruction.args[1]);
+      break;
+    case "mapHorizontalScrollerCreate":
+      emitMapHorizontalScrollerCreate(asm, compileState, instruction.args[0], instruction.args[1], instruction.args[2]);
+      break;
+    case "mapHorizontalScrollerDraw":
+      emitMapHorizontalScrollerDraw(asm, compileState, instruction.args[0]);
+      break;
+    case "mapHorizontalScrollerMove":
+      emitMapHorizontalScrollerMove(asm, compileState, instruction.args[0], instruction.args[1]);
+      break;
+    case "mapVerticalScrollerMove":
+      emitMapVerticalScrollerMove(asm, compileState, instruction.args[0], instruction.args[1]);
+      break;
+    case "mapScrollerFollow":
+      emitMapScrollerFollow(asm, compileState, instruction.args[0], instruction.args[1], instruction.args[2]);
+      break;
+    case "mapScrollerProjectEntity":
+      emitMapScrollerProjectEntity(asm, compileState, instruction.args[0], instruction.args[1], instruction.args[2]);
+      break;
+    case "mapScrollIrqEnter": {
+      const scroller = requireHorizontalScroller(compileState, instruction.args[0]);
+      asm.jsr(abs(`runtime_map_scroll_apply_${scroller.info.id}`));
+      break;
+    }
+    case "mapScrollIrqExit": {
+      const scroller = requireHorizontalScroller(compileState, instruction.args[0]);
+      asm.jsr(abs(`runtime_map_scroll_leave_${scroller.info.id}`));
+      break;
+    }
+    case "mapScrollIrqPreparePanel": {
+      const scroller = requireHorizontalScroller(compileState, instruction.args[0]);
+      asm.jsr(abs(`runtime_map_scroll_prepare_panel_${scroller.info.id}`));
+      break;
+    }
     case "mapRedraw":
       emitMapRedraw(asm, compileState, instruction.args[0]);
       break;
@@ -4301,6 +5699,15 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
       break;
     case "mapCoordinateConvert":
       emitMapCoordinateConvert(asm, compileState, ...instruction.args);
+      break;
+    case "mapEntityCreate":
+      emitMapEntityCreate(compileState, instruction.args[0]);
+      break;
+    case "mapEntityProject":
+      emitMapEntityProject(asm, compileState, instruction.args[0], instruction.args[1]);
+      break;
+    case "mapEntityMoveAndCollide":
+      emitMapEntityMoveAndCollide(asm, compileState, instruction.args[0]);
       break;
     case "hiresScreen":
       compileState.hires.screenBase = instruction.args[0];
@@ -4544,6 +5951,27 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
     case "spriteFrames":
       emitSpriteFrames(asm, compileState, instruction.args[0], instruction.args[1], instruction.args[2]);
       break;
+    case "spriteAssetRegister": {
+      const asset = instruction.args[0];
+      if (!asset || asset.type !== "spriteAsset") throw new Error("invalid sprite asset registration");
+      if (compileState.assets.spriteAssets.has(asset.id)) throw new Error(`Sprite asset ${asset.id} is already registered`);
+      compileState.assets.spriteAssets.set(asset.id, asset);
+      compileState.assets.report.push({
+        type: "sprite-asset",
+        id: asset.id,
+        sourcePath: asset.sourcePath,
+        mode: asset.mode,
+        frames: asset.frames.length,
+        animations: Object.keys(asset.animations),
+        color: asset.color,
+        multicolor1: asset.multicolor1,
+        multicolor2: asset.multicolor2,
+        origin: { ...asset.origin },
+        hitbox: { ...asset.hitbox },
+        bytes: asset.frames.length * 64
+      });
+      break;
+    }
     case "spriteCreateRuntime": {
       const spriteRef = instruction.args[0];
       ensureLogicalSpriteIndex(spriteRef.index);
@@ -4557,7 +5985,7 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
       const hitbox = spriteRef.hitbox;
       ensureByte(hitbox.offsetX, "hitbox offsetX"); ensureByte(hitbox.offsetY, "hitbox offsetY");
       ensurePositiveByte(hitbox.width, "hitbox width"); ensurePositiveByte(hitbox.height, "hitbox height");
-      compileState.spriteRuntime[spriteRef.index] = { ref: spriteRef, bounds, frames: null, sequences: new Map() };
+      compileState.spriteRuntime[spriteRef.index] = { ref: spriteRef, bounds, frames: null, sequences: new Map(), flags: {}, initialY: spriteRef.initialY ?? 0 };
       if (compileState.multiplexer.enabled) emitStoreImmediate(asm, spriteRuntimeInternal(spriteRef.index).color, c64.COLOR_WHITE);
       emitSpriteRuntimeSync(asm, compileState, spriteRef);
       break;
@@ -4578,7 +6006,7 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
       break;
     }
     case "spriteRuntimeFlag":
-      getSpriteRuntime(compileState, instruction.args[0]);
+      getSpriteRuntime(compileState, instruction.args[0]).flags[instruction.args[1]] = Boolean(instruction.args[2]);
       emitRuntimeSpriteFlag(asm, compileState, instruction.args[0], instruction.args[1], Boolean(instruction.args[2]));
       break;
     case "spriteRuntimeBounds": {
@@ -4603,6 +6031,11 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
       if (!runtime.frames) throw new Error("sprite sequence needs a frames asset");
       const name = instruction.args[1];
       if (runtime.sequences.has(name)) throw new Error(`Sprite sequence already defined: ${name}`);
+      if (runtime.sequences.size === 0 && !compileState.multiplexer.enabled) {
+        const internal = spriteRuntimeInternal(instruction.args[0].index);
+        asm.lda(imm(0));
+        for (let offset = 0; offset <= 3; offset += 1) asm.sta(abs(internal.sequence + offset));
+      }
       const indexes = instruction.args[2];
       if (indexes.length === 0) throw new Error("sprite sequence needs at least one frame index");
       indexes.forEach((index) => { if (!Number.isInteger(index) || index < 0 || index >= runtime.frames.count) throw new Error(`Invalid sprite frame index: ${index}`); });
@@ -4909,7 +6342,10 @@ function emitGameFrameLoop(asm, state) {
   }
   // Multiplexed games update logical state late in the visible frame. Sorting
   // follows, but VIC registers are not touched until the next raster wrap.
-  const rasterLine = state.multiplexer.enabled ? SPRITE_MUX_FRAME_RASTER : (frame.options?.rasterLine ?? 240);
+  const scrollingFrameLine = [...state.assets.scrollers.values()][0]?.recommendedFrameRasterLine;
+  const rasterLine = state.multiplexer.enabled
+    ? SPRITE_MUX_FRAME_RASTER
+    : (frame.options?.rasterLine ?? scrollingFrameLine ?? 240);
   const hz = frame.options?.hz ?? 50;
   ensureByte(rasterLine, "game frame raster line");
   if (hz !== 50 && hz !== "video") {
@@ -5135,6 +6571,9 @@ function buildDetailedMemoryReport(state, codeStart, finalBytes) {
   }
   for (const info of state.assets.mapTables.values()) add(`map ${info.id}`, info.runtimeAddress, info.runtimeAddress + info.asset.map.data.length - 1, "map", { sourcePath: info.asset.sourcePath });
   for (const entry of state.assets.report.filter(item => item.type === "charset")) add("charset", entry.address, entry.endAddress, "charset", { mode: entry.mode });
+  for (const entry of state.assets.report.filter(item => item.type === "map-scroll-blank-charset")) {
+    add("map scroll blank charset", entry.address, entry.endAddress, "charset");
+  }
   const seenSpriteRanges = new Set();
   for (const asset of state.spriteDataAssets.values()) {
     const key = `${asset.targetAddress}:${asset.length}`;
@@ -5169,6 +6608,90 @@ function buildDetailedMemoryReport(state, codeStart, finalBytes) {
     programBytes: finalBytes.length,
     assetBytes: ranges.filter(range => ["charset", "map", "sprite"].includes(range.kind)).reduce((sum, range) => sum + range.bytes, 0)
   };
+}
+
+function appendGameplayBudgetReports(state) {
+  const runtimes = state.spriteRuntime.filter(Boolean);
+  const entities = [...state.assets.entities.values()];
+  if (runtimes.length === 0 && entities.length === 0) return;
+  const spriteMemoryBytes = state.assets.report
+    .filter((entry) => entry.type === "sprite-asset")
+    .reduce((sum, entry) => sum + entry.bytes, 0);
+  const entityReport = {
+    type: "map-entity-budget",
+    entityCount: entities.length,
+    logicalSpriteCount: runtimes.length,
+    physicalSprites: runtimes.filter((runtime) => runtime.ref.index < 8).length,
+    virtualSprites: runtimes.filter((runtime) => runtime.ref.index >= 8).length,
+    maxVisibleEntities: Math.min(16, entities.length),
+    spriteMemoryBytes
+  };
+  state.assets.report.push(entityReport);
+  if (!state.multiplexer.enabled) return;
+
+  const entries = runtimes.map((runtime) => {
+    const entity = entities.find((candidate) => candidate.sprite.index === runtime.ref.index);
+    return {
+      index: runtime.ref.index,
+      y: entity?.object.worldY ?? runtime.initialY,
+      height: runtime.flags.expandY ? 42 : 21
+    };
+  }).sort((left, right) => left.y - right.y || left.index - right.index);
+  const events = entries.flatMap((entry) => [
+    { y: entry.y, delta: 1 },
+    { y: entry.y + entry.height, delta: -1 }
+  ]).sort((left, right) => left.y - right.y || left.delta - right.delta);
+  let overlap = 0;
+  let maxOverlap = 0;
+  for (const event of events) {
+    overlap += event.delta;
+    maxOverlap = Math.max(maxOverlap, overlap);
+  }
+  const slots = [];
+  let minimumGap = null;
+  let overflowCount = 0;
+  for (const entry of entries) {
+    if (slots.length < 8) {
+      slots.push(entry.y + entry.height);
+      continue;
+    }
+    const earliest = Math.min(...slots);
+    const slot = slots.indexOf(earliest);
+    const gap = entry.y - earliest;
+    if (gap < 0) {
+      overflowCount += 1;
+      continue;
+    }
+    minimumGap = minimumGap === null ? gap : Math.min(minimumGap, gap);
+    slots[slot] = entry.y + entry.height;
+  }
+  const requiredGap = 3;
+  const unsafeGap = minimumGap !== null && minimumGap < requiredGap;
+  const report = {
+    type: "sprite-multiplexer-budget",
+    logicalSprites: entries.length,
+    hardwareSlots: 8,
+    initialMaxRasterOverlap: maxOverlap,
+    maxRasterBudget: 8,
+    minimumReprogramGapLines: minimumGap,
+    requiredReprogramGapLines: requiredGap,
+    predictedOverflowSprites: overflowCount,
+    overflowPolicy: "stable-y-sort-then-skip-later-sprites-until-a-hardware-slot-is-free",
+    deterministic: true,
+    status: overflowCount > 0 || unsafeGap ? "warning" : "ok"
+  };
+  state.assets.report.push(report);
+  if (overflowCount > 0 || unsafeGap) {
+    const reason = overflowCount > 0
+      ? `${maxOverlap} sprites overlap the same raster band; ${overflowCount} later sprite(s) can be hidden for that frame`
+      : `only ${minimumGap} raster line(s) remain to reprogram a VIC-II sprite (recommended: ${requiredGap})`;
+    state.assets.report.push({
+      type: "warning",
+      code: "SPRITE_RASTER_BUDGET",
+      message: `${reason}. Move sprites farther apart vertically or reduce their expanded height.`,
+      details: report
+    });
+  }
 }
 
 function sanitizeInlineSource(source) {
@@ -5210,8 +6733,11 @@ function normalizeCompileOptions(options = {}, forInlineSource = false) {
 export function compileInstructions(instructions, options = {}) {
   // This is the main entry point for compilation once the DSL instructions
   // already exist in memory.
-  const codeStart = options.codeStart ?? DEFAULT_CODE_START;
-  const sysAddress = options.sysAddress ?? DEFAULT_SYS_ADDRESS;
+  const programConfigs = instructions.filter((instruction) => instruction.op === "programConfig");
+  if (programConfigs.length > 1) throw new Error("c64.program.start() can only be declared once");
+  const programConfig = programConfigs[0]?.args[0] ?? {};
+  const codeStart = options.codeStart ?? programConfig.codeStart ?? DEFAULT_CODE_START;
+  const sysAddress = options.sysAddress ?? programConfig.sysAddress ?? (programConfig.codeStart ?? DEFAULT_SYS_ADDRESS);
   const asm = new Assembler6502(codeStart);
   const optimization = collectBalancedOptimizationStats([
     instructions,
@@ -5242,6 +6768,9 @@ export function compileInstructions(instructions, options = {}) {
       counter: 0,
       report: [],
       mapTables: new Map(),
+      scrollers: new Map(),
+      entities: new Map(),
+      spriteAssets: new Map(),
       bytePool: new Map(),
       nextMapAddress: MAP_RUNTIME_BASE
     },
@@ -5291,17 +6820,23 @@ export function compileInstructions(instructions, options = {}) {
       }
     },
     irq: {
-      handlers: options.irqHandlers ?? [],
+      handlers: (options.irqHandlers ?? []).map((handler) => ({
+        line: handler.line,
+        instructions: [...handler.instructions]
+      })),
       disableKernalTimer: false,
-      chainToKernal: false
+      chainToKernal: false,
+      installRequested: false,
+      autoInstallRequested: false
     }
   };
 
   emitSpriteMultiplexerStateInit(asm, state);
 
   for (const instruction of instructions) {
+    if (instruction.op === "programConfig") continue;
     if (instruction.op === "irqInstall") {
-      emitIrqInstall(asm, state);
+      state.irq.installRequested = true;
       continue;
     }
 
@@ -5323,6 +6858,10 @@ export function compileInstructions(instructions, options = {}) {
     compileHighLevelInstruction(asm, instruction, state);
   }
 
+  if (state.irq.installRequested || state.irq.autoInstallRequested) {
+    emitIrqInstall(asm, state);
+  }
+
   if (state.multiplexer.enabled && !state.game.frame) {
     throw new Error("sprites 8..15 require one c64.game.frame() loop for raster-synchronized multiplexing");
   }
@@ -5334,7 +6873,9 @@ export function compileInstructions(instructions, options = {}) {
     throw new Error("sid.installPlayer()/playSong() was requested without a configured song");
   }
 
-  const useCombinedRuntimeIrq = state.sid.player.installRequested && state.spriteAnimator.installRequested;
+  const useCombinedRuntimeIrq = state.irq.handlers.length === 0
+    && state.sid.player.installRequested
+    && state.spriteAnimator.installRequested;
 
   if (useCombinedRuntimeIrq) {
     emitSpriteAnimatorInit(asm, state);
@@ -5384,6 +6925,7 @@ export function compileInstructions(instructions, options = {}) {
   emitDataPool(asm, state);
 
   const finalBytes = Uint8Array.from(Array.from(asm.toBytes()));
+  appendGameplayBudgetReports(state);
   const memoryLayout = buildDetailedMemoryReport(state, codeStart, finalBytes);
   state.assets.report.push(memoryLayout);
   if (memoryLayout.conflicts.length) {

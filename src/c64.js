@@ -1,5 +1,5 @@
-import { captureBlock, createRuntimeFacade, defineRuntimeData, getAssetBaseDirectory, getProgramState, getRuntimeDataLength, pushInstruction, resetRuntime, setColorBase, setScreenBase, setTextColor, useJoystickPort, useKeyboardKey } from "./runtime.js";
-import { loadMapAsset, normalizeMapAsset } from "./assets.js";
+import { captureBlock, claimSpriteSharedColors, createRuntimeFacade, defineRuntimeData, getAssetBaseDirectory, getProgramState, getRuntimeDataLength, getSpriteAsset, pushInstruction, registerSpriteAsset, resetRuntime, setColorBase, setScreenBase, setTextColor, useJoystickPort, useKeyboardKey } from "./runtime.js";
+import { loadMapAsset, loadSpriteAsset, normalizeMapAsset, normalizeSpriteAsset } from "./assets.js";
 
 // This file exposes the public DSL used by end users.
 // Important idea: calling c64.printAt(), c64.sprite.show(), etc. does not
@@ -117,6 +117,17 @@ export const C64_CONSTANTS = {
 };
 
 export const c64 = createRuntimeFacade(C64_CONSTANTS);
+
+// Large games can place generated code outside VIC bank 0 so screen, charset
+// and sprite data keep their contiguous video-memory windows.
+c64.program = {
+  start(address) {
+    if (!Number.isInteger(address) || address < 0x0810 || address > 0xffff) {
+      throw new Error("c64.program.start() needs an address between $0810 and $FFFF");
+    }
+    pushInstruction("programConfig", { codeStart: address, sysAddress: address });
+  }
+};
 
 // High level screen helpers. These functions append DSL instructions to the
 // runtime instruction list. The real conversion to assembly happens later in
@@ -356,12 +367,26 @@ function createDynamicMapAsset(asset) {
   return dynamicAsset;
 }
 
+function registerUsableSpriteAsset(asset, options = {}) {
+  const framesRef = c64.sprite.frames(asset.id, asset.frames.map((frame) => frame.data), { address: options.address });
+  const usable = Object.freeze({ ...asset, framesRef });
+  registerSpriteAsset(usable);
+  pushInstruction("spriteAssetRegister", usable);
+  return usable;
+}
+
 c64.assets = {
   loadMap(filePath) {
     return createDynamicMapAsset(loadMapAsset(filePath, getAssetBaseDirectory()));
   },
   defineMap(definition) {
     return createDynamicMapAsset(normalizeMapAsset(definition));
+  },
+  loadSprite(filePath, options = {}) {
+    return registerUsableSpriteAsset(loadSpriteAsset(filePath, getAssetBaseDirectory()), options);
+  },
+  defineSprite(definition, options = {}) {
+    return registerUsableSpriteAsset(normalizeSpriteAsset(definition), options);
   }
 };
 
@@ -381,10 +406,360 @@ function convertMapCoordinates(asset, from, to, source, target) {
   pushInstruction("mapCoordinateConvert", asset, from, to, source.x, source.y, target.x, target.y);
 }
 
+let horizontalScrollerCounter = 0;
+let mapEntityCounter = 0;
+
+function horizontalScrollPixels(pixels) {
+  if (!Number.isInteger(pixels) || pixels < 1 || pixels > 8) {
+    throw new Error("scroll pixels must be between 1 and 8");
+  }
+  return pixels;
+}
+
+function normalizeScrollerPanel(panel) {
+  if (panel === undefined || typeof panel === "string") return { position: panel, rows: undefined };
+  if (!panel || typeof panel !== "object" || Array.isArray(panel)) {
+    throw new Error("scroller panel must be bottom/top or { position, rows }");
+  }
+  let position = panel.position ?? panel.side;
+  let rows = panel.rows;
+  if (position === undefined && Number.isInteger(panel.bottom)) {
+    position = "bottom";
+    rows = panel.bottom;
+  }
+  if (position === undefined && Number.isInteger(panel.top)) {
+    position = "top";
+    rows = panel.top;
+  }
+  if (position !== "bottom" && position !== "top") throw new Error("panel.position must be bottom or top");
+  if (!Number.isInteger(rows) || rows < 1 || rows > 24) throw new Error("panel.rows must be between 1 and 24");
+  return { position, rows };
+}
+
+function createHorizontalScroller(asset, options = {}) {
+  if (!asset || asset.type !== "mapAsset") throw new Error("c64.map.scroller() needs a map asset");
+  const panel = normalizeScrollerPanel(options.panel);
+  let viewportY = options.y ?? 0;
+  let viewportHeight = options.height;
+  if (panel.rows !== undefined) {
+    if (panel.position === "top") {
+      viewportY = panel.rows;
+      viewportHeight = 25 - panel.rows;
+    } else {
+      viewportHeight = 25 - viewportY - panel.rows;
+    }
+    if (viewportHeight < 1) throw new Error("panel rows leave no room for the scrolling viewport");
+  }
+  const ref = Object.freeze({ type: "mapHorizontalScrollerRef", id: horizontalScrollerCounter++ });
+  pushInstruction("mapHorizontalScrollerCreate", ref, asset, {
+    sourceX: options.sourceX ?? 0,
+    sourceY: options.sourceY ?? 0,
+    width: options.width,
+    height: viewportHeight,
+    x: options.x ?? 1,
+    y: viewportY,
+    panel: panel.position,
+    panelRows: panel.rows
+  });
+  return Object.freeze({
+    ...ref,
+    draw() {
+      pushInstruction("mapHorizontalScrollerDraw", ref);
+    },
+    left(pixels = 1) {
+      pushInstruction("mapHorizontalScrollerMove", ref, -horizontalScrollPixels(pixels));
+    },
+    right(pixels = 1) {
+      pushInstruction("mapHorizontalScrollerMove", ref, horizontalScrollPixels(pixels));
+    },
+    up(pixels = 1) {
+      pushInstruction("mapVerticalScrollerMove", ref, -horizontalScrollPixels(pixels));
+    },
+    down(pixels = 1) {
+      pushInstruction("mapVerticalScrollerMove", ref, horizontalScrollPixels(pixels));
+    },
+    follow(entity, followOptions = {}) {
+      if (!entity || entity.type !== "mapEntityRef") throw new Error("camera.follow() needs an entity returned by c64.map.spawn()");
+      pushInstruction("mapScrollerFollow", ref, entity, {
+        axis: followOptions.axis ?? "both",
+        deadZone: followOptions.deadZone,
+        offsetX: followOptions.offsetX ?? followOptions.offset?.x ?? 0,
+        offsetY: followOptions.offsetY ?? followOptions.offset?.y ?? 0,
+        maxSpeed: followOptions.maxSpeed ?? 2,
+        project: followOptions.project !== false,
+        cullingMargin: followOptions.cullingMargin ?? followOptions.margin ?? 0
+      });
+    },
+    project(entity, projectionOptions = {}) {
+      if (!entity || entity.type !== "mapEntityRef") throw new Error("camera.project() needs an entity returned by c64.map.spawn()");
+      pushInstruction("mapScrollerProjectEntity", ref, entity, {
+        cullingMargin: projectionOptions.cullingMargin ?? projectionOptions.margin ?? 0
+      });
+    }
+  });
+}
+
+function requireMapAsset(asset, method) {
+  if (!asset || asset.type !== "mapAsset") throw new Error(`${method} needs a map asset`);
+}
+
+function selectMapObjects(asset, selector = undefined) {
+  requireMapAsset(asset, "c64.map.objects()");
+  const objects = asset.map.objects ?? [];
+  if (selector === undefined) return [...objects];
+  if (typeof selector === "string") {
+    const byId = objects.find((object) => object.id === selector);
+    return byId ? [byId] : objects.filter((object) => object.type === selector);
+  }
+  if (!selector || typeof selector !== "object" || Array.isArray(selector)) {
+    throw new Error("map object selector must be an id, a type, or { id/type }");
+  }
+  return objects.filter((object) => (
+    (selector.id === undefined || object.id === selector.id)
+    && (selector.type === undefined || object.type === selector.type)
+  ));
+}
+
+function selectOneMapObject(asset, selector) {
+  const matches = selectMapObjects(asset, selector);
+  if (matches.length === 0) throw new Error(`No map object matches ${JSON.stringify(selector)}`);
+  if (matches.length > 1) throw new Error(`Several map objects match ${JSON.stringify(selector)}; use c64.map.objects() or an object id`);
+  return matches[0];
+}
+
+function normalizeEntityProjection(options = {}) {
+  const rawMargin = options.cullingMargin ?? options.margin ?? 0;
+  const marginX = typeof rawMargin === "number" ? rawMargin : rawMargin?.x ?? 0;
+  const marginY = typeof rawMargin === "number" ? rawMargin : rawMargin?.y ?? 0;
+  if (!Number.isInteger(marginX) || !Number.isInteger(marginY)
+    || marginX < 0 || marginY < 0 || marginX > 64 || marginY > 64) {
+    throw new Error("entity cullingMargin must be 0..64 or { x: 0..64, y: 0..64 }");
+  }
+  return {
+    cameraX: options.cameraX ?? 0,
+    cameraY: options.cameraY ?? 0,
+    screenOffsetX: options.screenOffsetX ?? 24,
+    screenOffsetY: options.screenOffsetY ?? 50,
+    viewportWidth: options.viewportWidth ?? 320,
+    viewportHeight: options.viewportHeight ?? 200,
+    marginX,
+    marginY
+  };
+}
+
+function normalizeCollisionBehaviors(behaviors) {
+  if (behaviors === undefined) return null;
+  if (!behaviors || typeof behaviors !== "object" || Array.isArray(behaviors)) {
+    throw new Error("entity collisionBehaviors must map collision values to solid, platform, danger, ladder, exit or passable");
+  }
+  const allowed = new Set(["solid", "platform", "danger", "ladder", "exit", "passable"]);
+  const normalized = {};
+  for (const [rawValue, rawBehavior] of Object.entries(behaviors)) {
+    const value = Number(rawValue);
+    const behavior = String(rawBehavior);
+    if (!Number.isInteger(value) || value < 0 || value > 255 || !allowed.has(behavior)) {
+      throw new Error(`invalid collision behavior ${rawValue}: ${rawBehavior}`);
+    }
+    normalized[value] = behavior;
+  }
+  return Object.freeze(normalized);
+}
+
+function createMapEntity(asset, object, options = {}) {
+  const spriteAssetSelector = options.spriteAsset ?? object.sprite;
+  let spriteAsset = null;
+  if (spriteAssetSelector !== undefined) {
+    spriteAsset = typeof spriteAssetSelector === "string" ? getSpriteAsset(spriteAssetSelector) : spriteAssetSelector;
+    if (!spriteAsset || spriteAsset.type !== "spriteAsset" || !spriteAsset.framesRef) {
+      throw new Error(`${asset.sourcePath}: map.objects["${object.id}"].sprite references missing sprite asset ${String(spriteAssetSelector)}`);
+    }
+  }
+  const spriteOption = options.sprite;
+  let sprite;
+  if (Number.isInteger(spriteOption)) {
+    const spriteOptions = {
+      ...(spriteAsset ? {
+        frames: spriteAsset.framesRef,
+        color: spriteAsset.color,
+        multicolor: spriteAsset.mode === "multicolor",
+        hitbox: spriteAsset.hitbox
+      } : {}),
+      ...(options.spriteOptions ?? {}),
+      ...(options.hitbox === undefined ? {} : { hitbox: options.hitbox }),
+      active: false
+    };
+    if (options.spriteOptions?.data !== undefined && options.spriteOptions?.frames === undefined) delete spriteOptions.frames;
+    sprite = createSpriteHandle(spriteOption, spriteOptions);
+  } else if (spriteOption?.type === "spriteRef") {
+    sprite = spriteOption;
+  } else {
+    throw new Error("c64.map.spawn() needs sprite: 0..15 or a sprite returned by c64.sprite.create()");
+  }
+  if (spriteAsset) {
+    if (spriteAsset.mode === "multicolor" && claimSpriteSharedColors(spriteAsset.multicolor1, spriteAsset.multicolor2, spriteAsset.sourcePath)) {
+      c64.sprite.sharedColor1(spriteAsset.multicolor1);
+      c64.sprite.sharedColor2(spriteAsset.multicolor2);
+    }
+    for (const animation of Object.values(spriteAsset.animations)) {
+      sprite.sequence(animation.name, animation.frames, { speed: animation.speed, loop: animation.loop });
+    }
+  }
+  const initialAnimation = options.animation ?? object.properties?.animation ?? spriteAsset?.initialAnimation ?? null;
+  if (initialAnimation !== null) {
+    if (!spriteAsset || !Object.hasOwn(spriteAsset.animations, initialAnimation)) {
+      throw new Error(`${asset.sourcePath}: map.objects["${object.id}"].properties.animation references missing sprite animation ${initialAnimation}`);
+    }
+    sprite.play(initialAnimation);
+  }
+  const id = mapEntityCounter++;
+  const worldX = c64.var.word(`__map_entity_${id}_world_x`, { initial: object.worldX });
+  const worldY = c64.var.word(`__map_entity_${id}_world_y`, { initial: object.worldY });
+  const velocityX = c64.var.byte(`__map_entity_${id}_velocity_x`, { initial: options.velocityX ?? 0 });
+  const velocityY = c64.var.byte(`__map_entity_${id}_velocity_y`, { initial: options.velocityY ?? 0 });
+  const onGround = c64.var.bool(`__map_entity_${id}_on_ground`, false);
+  const hitCeiling = c64.var.bool(`__map_entity_${id}_hit_ceiling`, false);
+  const hitLeft = c64.var.bool(`__map_entity_${id}_hit_left`, false);
+  const hitRight = c64.var.bool(`__map_entity_${id}_hit_right`, false);
+  const enabled = c64.var.bool(`__map_entity_${id}_enabled`, options.active !== false);
+  const onDanger = c64.var.bool(`__map_entity_${id}_on_danger`, false);
+  const onLadder = c64.var.bool(`__map_entity_${id}_on_ladder`, false);
+  const atExit = c64.var.bool(`__map_entity_${id}_at_exit`, false);
+  const collisionBehaviors = normalizeCollisionBehaviors(options.collisionBehaviors);
+  const state = Object.freeze({
+    type: "mapEntityRef", id, asset, object, sprite, spriteAsset, initialAnimation, worldX, worldY,
+    velocityX, velocityY, onGround, hitCeiling, hitLeft, hitRight, enabled,
+    onDanger, onLadder, atExit, collisionBehaviors,
+    hitbox: sprite.hitbox,
+    maxCollisionSpeed: options.maxCollisionSpeed ?? 8
+  });
+  pushInstruction("mapEntityCreate", state);
+  return Object.freeze({
+    ...state,
+    screenX: sprite.x,
+    screenY: sprite.y,
+    setWorldPosition(x, y) {
+      worldX.set(x);
+      worldY.set(y);
+    },
+    setVelocity(x, y) {
+      velocityX.set(x);
+      velocityY.set(y);
+    },
+    moveAndCollide(x = undefined, y = undefined) {
+      if (x !== undefined) velocityX.set(x);
+      if (y !== undefined) velocityY.set(y);
+      pushInstruction("mapEntityMoveAndCollide", state);
+    },
+    jump(speed) {
+      if (!Number.isInteger(speed) || speed < 1 || speed > 127) throw new Error("entity jump speed must be between 1 and 127");
+      velocityY.set(-speed);
+      onGround.set(false);
+    },
+    isOnGround() {
+      return onGround.eq(true);
+    },
+    isActive() {
+      return enabled.eq(true);
+    },
+    isOnDanger() {
+      return onDanger.eq(true);
+    },
+    isOnLadder() {
+      return onLadder.eq(true);
+    },
+    isAtExit() {
+      return atExit.eq(true);
+    },
+    project(projection = {}) {
+      pushInstruction("mapEntityProject", state, normalizeEntityProjection(projection));
+    },
+    enable() {
+      enabled.set(true);
+      sprite.enable();
+    },
+    disable() {
+      enabled.set(false);
+      sprite.disable();
+    },
+    respawn(selector = object.id) {
+      const spawn = selectOneMapObject(asset, selector);
+      worldX.set(spawn.worldX);
+      worldY.set(spawn.worldY);
+      velocityX.set(0);
+      velocityY.set(0);
+      onGround.set(false);
+      hitCeiling.set(false);
+      hitLeft.set(false);
+      hitRight.set(false);
+      onDanger.set(false);
+      onLadder.set(false);
+      atExit.set(false);
+      enabled.set(true);
+      sprite.enable();
+    },
+    collides(other) {
+      if (!other || other.type !== "mapEntityRef") throw new Error("entity.collides() needs another map entity");
+      return sprite.collides(other.sprite);
+    },
+    play(name, direction = undefined) {
+      if (!spriteAsset) throw new Error(`Map entity ${object.id} has no sprite asset with named animations`);
+      const animationName = direction === undefined ? String(name) : `${name}-${direction}`;
+      if (!Object.hasOwn(spriteAsset.animations, animationName)) {
+        throw new Error(`${spriteAsset.sourcePath}: animations.${animationName} is missing for map object ${object.id}`);
+      }
+      sprite.play(animationName);
+    },
+    pauseAnimation() {
+      sprite.pauseAnimation();
+    },
+    resumeAnimation() {
+      sprite.resumeAnimation();
+    }
+  });
+}
+
 c64.map = {
   draw(asset, options = {}) {
     if (!asset || asset.type !== "mapAsset") throw new Error("c64.map.draw() needs a map asset");
     pushInstruction("mapDraw", asset, { x: options.x ?? 0, y: options.y ?? 0 });
+  },
+  drawViewport(asset, options = {}) {
+    if (!asset || asset.type !== "mapAsset") throw new Error("c64.map.drawViewport() needs a map asset");
+    pushInstruction("mapViewportDraw", asset, {
+      sourceX: options.sourceX ?? 0,
+      sourceY: options.sourceY ?? 0,
+      width: options.width,
+      height: options.height,
+      x: options.x ?? 0,
+      y: options.y ?? 0
+    });
+  },
+  horizontalScroller(asset, options = {}) {
+    return createHorizontalScroller(asset, options);
+  },
+  scroller(asset, options = {}) {
+    return createHorizontalScroller(asset, options);
+  },
+  object(asset, selector) {
+    return selectOneMapObject(asset, selector);
+  },
+  objects(asset, selector = undefined) {
+    return Object.freeze(selectMapObjects(asset, selector));
+  },
+  spawn(asset, selector, options = {}) {
+    return createMapEntity(asset, selectOneMapObject(asset, selector), options);
+  },
+  spawnAll(asset, selector, options = {}) {
+    const matches = selectMapObjects(asset, selector);
+    if (matches.length === 0) throw new Error(`No map objects match ${JSON.stringify(selector)}`);
+    const firstSprite = options.firstSprite ?? 0;
+    if (!Number.isInteger(firstSprite) || firstSprite < 0 || firstSprite + matches.length > 16) {
+      throw new Error("c64.map.spawnAll() needs enough consecutive sprite indexes between 0 and 15");
+    }
+    return Object.freeze(matches.map((object, index) => createMapEntity(asset, object, {
+      ...options,
+      sprite: firstSprite + index
+    })));
   },
   tileAt(asset, x, y) {
     if (!asset || asset.type !== "mapAsset") throw new Error("c64.map.tileAt() needs a map asset");
@@ -579,7 +954,10 @@ c64.game = {
     if (typeof handler !== "function") {
       throw new Error("c64.game.frame() needs a callback");
     }
-    pushInstruction("gameFrame", captureBlock(handler), { rasterLine: options.rasterLine ?? 240, hz: options.hz ?? 50 });
+    // Leave rasterLine undefined so the compiler can place scrolling games
+    // immediately after their raster band. Non-scrolling programs still use
+    // line 240, and an explicit user value always wins.
+    pushInstruction("gameFrame", captureBlock(handler), { rasterLine: options.rasterLine, hz: options.hz ?? 50 });
   }
 };
 
@@ -627,6 +1005,8 @@ function createSpriteHandle(index, options = {}) {
   const state = {
     type: "spriteRef",
     index,
+    initialX: options.x ?? 0,
+    initialY: options.y ?? 0,
     x: c64.var.word(`__sprite${index}_x`, { address: stateAddress, initial: options.x ?? 0 }),
     y: c64.var.byte(`__sprite${index}_y`, { address: stateAddress + 2, initial: options.y ?? 0 }),
     vx: c64.var.byte(`__sprite${index}_vx`, { address: stateAddress + 3, initial: options.vx ?? 0 }),
