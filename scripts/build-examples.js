@@ -1,7 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { compileFile } from "../src/compiler.js";
-import { createBasicDataProgram, createPrg } from "../src/prgWriter.js";
 
 const EXAMPLES = (await fs.readdir(path.resolve("examples")))
   .filter((fileName) => fileName.endsWith(".js") && fileName !== "c64.js")
@@ -16,10 +15,10 @@ async function writeOutput(filePath, content, encoding) {
 async function buildExample(name) {
   const input = path.resolve("examples", `${name}.js`);
   const result = await compileFile(input);
-  await writeOutput(path.resolve("dist", `${name}.prg`), Buffer.from(createPrg(result.bytes)));
+  await writeOutput(path.resolve("dist", `${name}.prg`), Buffer.from(result.prgBytes));
   await writeOutput(path.resolve("dist", `${name}.asm`), `${result.asm}\n`, "utf8");
   await writeOutput(path.resolve("dist", `${name}.lst`), `${result.listing}\n`, "utf8");
-  await writeOutput(path.resolve("dist", `${name}.bas`), createBasicDataProgram(result.bytes), "utf8");
+  await writeOutput(path.resolve("dist", `${name}.bas`), result.basicText, "utf8");
   await writeOutput(path.resolve("dist", `${name}.symbols.json`), `${JSON.stringify(result.symbols, null, 2)}\n`, "utf8");
 }
 

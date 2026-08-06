@@ -124,6 +124,7 @@
   let mapClipboard = null;
   let mapSelection = null;
   let selectedObject = -1;
+  let objectDragTarget = null;
   let pointerStart = null;
   let drawing = false;
   let drawValue = 1;
@@ -158,6 +159,15 @@
     result.tileWidth ??= 1;
     result.tileHeight ??= 1;
     result.map.objects ??= [];
+    const objectIds = new Set();
+    result.map.objects.forEach((object, index) => {
+      const base = String(object.id || `${object.type || "object"}-${index + 1}`).slice(0, 64);
+      let id = base;
+      let suffix = 2;
+      while (objectIds.has(id)) id = `${base.slice(0, 60)}-${suffix++}`;
+      object.id = id;
+      objectIds.add(id);
+    });
     result.tiles.forEach(tile => {
       tile.colors ??= Array(tile.chars.length).fill(1);
       tile.collision ??= 0;
@@ -226,6 +236,7 @@
     selectedTile = Math.min(selectedTile, project.tiles.length - 1);
     tilePaintChar = Math.min(tilePaintChar, project.charset.characters.length - 1);
     mapSelection = null;
+    objectDragTarget = null;
   }
 
   function updateHistoryButtons() {
@@ -255,6 +266,7 @@
       ? `Code écran ${selectedChar} protégé pour conserver l’affichage des textes et des scores.`
       : "Dessinez dans la grille 8 × 8. Clic gauche : dessiner. Clic droit : effacer.";
     const content = {
+      sprites: ["Sprite 24 x 21", "Dessinez les frames, configurez la hitbox et assemblez des animations nommees."],
       charset: [`${characterLabel(selectedChar)} · code ${selectedChar}`, charsetHelp],
       tiles: [`Métatuile ${selectedTile}`, "Assemblez caractères et couleurs, puis associez collision et propriétés de gameplay."],
       map: [`Tuile ${selectedTile}`, "Dessinez la carte. Les collisions proviennent de chaque métatuile."]
@@ -600,6 +612,74 @@
     project.map.data = project.map.data.map(value => value === deleted ? 0 : value > deleted ? value - 1 : value);
   }
 
+  function studioSpriteAssets() {
+    return globalThis.JsC64SpriteStudio?.getAssets?.() || [];
+  }
+
+  function spriteFrameForObject(sprite, object) {
+    const animationName = object.properties?.animation || sprite.initialAnimation;
+    const animation = sprite.animations?.[animationName];
+    const reference = animation?.frames?.[0];
+    if (typeof reference === "number") return sprite.frames[reference] || sprite.frames[0];
+    return sprite.frames.find(frame => frame.id === reference) || sprite.frames[0];
+  }
+
+  function drawMapObjectSprite(ctx, object, sprite, selected, cellWidth, cellHeight) {
+    const Core = globalThis.JsC64SpriteAsset;
+    const sourceFrame = spriteFrameForObject(sprite, object);
+    if (!Core || !sourceFrame) return false;
+    const originX = object.x * cellWidth;
+    const originY = object.y * cellHeight;
+    const scale = mapZoom;
+    const logicalWidth = sprite.mode === "multicolor" ? 12 : 24;
+    const physicalWidth = sprite.mode === "multicolor" ? 2 : 1;
+    const pixelColors = [0, sprite.multicolor1 ?? 5, sprite.multicolor2 ?? 10, sprite.color ?? 1];
+    let rendered = false;
+
+    if ($("#showMapSprites").checked) {
+      rendered = true;
+      ctx.save();
+      ctx.globalAlpha = selected ? 1 : .82;
+      for (let y = 0; y < 21; y++) {
+        for (let x = 0; x < logicalWidth; x++) {
+          const value = Core.pixelValue(sourceFrame, x, y, sprite.mode);
+          if (!value) continue;
+          ctx.fillStyle = COLORS[sprite.mode === "multicolor" ? pixelColors[value] : sprite.color];
+          ctx.fillRect(originX + x * physicalWidth * scale, originY + y * scale, physicalWidth * scale, scale);
+        }
+      }
+      ctx.restore();
+    }
+
+    if ($("#showMapHitboxes").checked) {
+      rendered = true;
+      const hitbox = sprite.hitbox;
+      ctx.save();
+      ctx.strokeStyle = selected ? COLORS[7] : "#ff6d7a";
+      ctx.lineWidth = selected ? 2 : 1;
+      ctx.setLineDash([Math.max(2, scale * 2), Math.max(2, scale)]);
+      ctx.strokeRect(
+        originX + hitbox.offsetX * scale + .5,
+        originY + hitbox.offsetY * scale + .5,
+        hitbox.width * scale - 1,
+        hitbox.height * scale - 1
+      );
+      ctx.setLineDash([]);
+      ctx.strokeStyle = COLORS[13];
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(originX - 4, originY + .5); ctx.lineTo(originX + 5, originY + .5);
+      ctx.moveTo(originX + .5, originY - 4); ctx.lineTo(originX + .5, originY + 5);
+      ctx.stroke();
+      const markerX = originX + sprite.origin.x * scale;
+      const markerY = originY + sprite.origin.y * scale;
+      ctx.fillStyle = COLORS[13];
+      ctx.fillRect(markerX - 1, markerY - 1, 3, 3);
+      ctx.restore();
+    }
+    return rendered;
+  }
+
   function renderMap() {
     const canvas = $("#mapCanvas");
     const cellWidth = project.tileWidth * 8 * mapZoom;
@@ -639,10 +719,23 @@
       ctx.strokeRect(rect.x * cellWidth + 1, rect.y * cellHeight + 1, rect.width * cellWidth - 2, rect.height * cellHeight - 2);
       ctx.setLineDash([]);
     }
+    const spriteAssets = studioSpriteAssets();
     for (let index = 0; index < (project.map.objects || []).length; index++) {
       const object = project.map.objects[index];
-      const cx = object.x * cellWidth + cellWidth / 2;
-      const cy = object.y * cellHeight + cellHeight / 2;
+      const displayedObject = index === selectedObject && objectDragTarget
+        ? { ...object, x: objectDragTarget.x, y: objectDragTarget.y }
+        : object;
+      const cx = displayedObject.x * cellWidth + cellWidth / 2;
+      const cy = displayedObject.y * cellHeight + cellHeight / 2;
+      const sprite = object.sprite ? spriteAssets.find(asset => asset.id === object.sprite) : null;
+      const drewSprite = sprite ? drawMapObjectSprite(ctx, displayedObject, sprite, index === selectedObject, cellWidth, cellHeight) : false;
+      if (drewSprite) {
+        ctx.fillStyle = index === selectedObject ? COLORS[7] : "rgba(255,255,255,.8)";
+        ctx.font = `${Math.max(8, Math.min(12, cellHeight / 2))}px sans-serif`;
+        ctx.textAlign = "start"; ctx.textBaseline = "bottom";
+        ctx.fillText(object.id || object.type, displayedObject.x * cellWidth + 2, displayedObject.y * cellHeight - 2);
+        continue;
+      }
       ctx.fillStyle = index === selectedObject ? COLORS[7] : COLORS[2];
       ctx.beginPath(); ctx.arc(cx, cy, Math.max(4, Math.min(cellWidth, cellHeight) * .28), 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = "white"; ctx.font = `${Math.max(8, Math.min(12, cellHeight / 2))}px sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
@@ -669,13 +762,21 @@
     (project.map.objects || []).forEach((object, index) => {
       const button = document.createElement("button");
       button.className = index === selectedObject ? "selected" : "";
-      button.textContent = `${object.type} · ${object.x},${object.y}`;
+      button.textContent = `${object.id} · ${object.type} · ${object.x},${object.y}`;
       button.addEventListener("click", () => { selectedObject = index; renderMap(); });
       list.append(button);
     });
     const object = project.map.objects?.[selectedObject];
     $("#deleteObject").disabled = !object;
+    $("#objectX").disabled = !object;
+    $("#objectY").disabled = !object;
+    $("#objectX").max = Math.max(0, project.map.width - 1);
+    $("#objectY").max = Math.max(0, project.map.height - 1);
+    if (object && document.activeElement !== $("#objectId")) $("#objectId").value = object.id || "";
     if (object && document.activeElement !== $("#objectType")) $("#objectType").value = object.type;
+    if (object && document.activeElement !== $("#objectX")) $("#objectX").value = object.x;
+    if (object && document.activeElement !== $("#objectY")) $("#objectY").value = object.y;
+    if (object && document.activeElement !== $("#objectSprite")) $("#objectSprite").value = object.sprite || "";
     if (object && document.activeElement !== $("#objectProperties")) $("#objectProperties").value = JSON.stringify(object.properties || {}, null, 2);
   }
 
@@ -683,12 +784,44 @@
     let properties = {};
     try { properties = JSON.parse($("#objectProperties").value || "{}"); } catch (_) { return showToast("Les propriétés de l’objet ne sont pas un JSON valide."); }
     const type = $("#objectType").value.trim();
+    const sprite = $("#objectSprite").value.trim();
     if (!type) return showToast("Le type de l’objet est obligatoire.");
+    const id = globalThis.JsC64StudioProject.nextObjectId(
+      $("#objectId").value.trim(),
+      project.map.objects || [],
+      type
+    );
+    const positionError = globalThis.JsC64StudioProject.objectPositionError(
+      project.map.objects || [], -1, x, y, project.map.width, project.map.height
+    );
+    if (positionError) return showToast(positionError);
     mutate(() => {
       project.map.objects ??= [];
-      project.map.objects.push({ type, x, y, properties });
+      project.map.objects.push({ id, type, x, y, ...(sprite ? { sprite } : {}), properties });
       selectedObject = project.map.objects.length - 1;
     });
+  }
+
+  function moveMapObject(index, x, y) {
+    const object = project.map.objects?.[index];
+    objectDragTarget = null;
+    if (!object) return false;
+    const error = globalThis.JsC64StudioProject.objectPositionError(
+      project.map.objects, index, x, y, project.map.width, project.map.height
+    );
+    if (error) {
+      showToast(error);
+      $("#objectX").value = object.x;
+      $("#objectY").value = object.y;
+      renderMap();
+      return false;
+    }
+    if (object.x === x && object.y === y) {
+      renderMap();
+      return true;
+    }
+    mutate(() => { object.x = x; object.y = y; });
+    return true;
   }
 
   function mapCellFromEvent(event) {
@@ -798,9 +931,13 @@
     else if (!Array.isArray(asset.map.data) || asset.map.data.length !== asset.map.width * asset.map.height) errors.push(`map.data doit contenir ${asset.map.width * asset.map.height} cases.`);
     else if (asset.map.data.some(value => !Number.isInteger(value) || value < 0 || value >= (asset.tiles?.length || 0))) errors.push("map.data contient une référence de métatuile invalide.");
     if (asset.map?.objects !== undefined && !Array.isArray(asset.map.objects)) errors.push("map.objects doit être un tableau.");
-    else (asset.map?.objects || []).forEach((object, index) => {
-      if (!object || typeof object.type !== "string" || !object.type || !Number.isInteger(object.x) || !Number.isInteger(object.y) || object.x < 0 || object.y < 0 || object.x >= asset.map.width || object.y >= asset.map.height || !object.properties || typeof object.properties !== "object" || Array.isArray(object.properties)) errors.push(`Objet ${index} invalide.`);
-    });
+    else {
+      const objectIds = new Set();
+      (asset.map?.objects || []).forEach((object, index) => {
+        if (!object || (object.id !== undefined && (typeof object.id !== "string" || !object.id || object.id.length > 64 || objectIds.has(object.id))) || typeof object.type !== "string" || !object.type || (object.sprite !== undefined && (typeof object.sprite !== "string" || !object.sprite || object.sprite.length > 64)) || !Number.isInteger(object.x) || !Number.isInteger(object.y) || object.x < 0 || object.y < 0 || object.x >= asset.map.width || object.y >= asset.map.height || !object.properties || typeof object.properties !== "object" || Array.isArray(object.properties)) errors.push(`Objet ${index} invalide (identifiant éventuellement dupliqué).`);
+        if (object?.id) objectIds.add(object.id);
+      });
+    }
     if (asset.map && asset.map.width * asset.map.height > 8192) errors.push("La map dépasse les 8192 cases disponibles dans la RAM dynamique actuelle.");
     if (asset.map && (asset.map.width * tw > 40 || asset.map.height * th > 25)) warnings.push("La map dépasse l’écran C64 de 40 × 25 caractères et nécessitera scrolling ou découpage.");
     if (Array.isArray(characters) && !hasSystemCharset(asset)) warnings.push("Le charset ne contient pas encore la zone système A–Z / 0–9 ; utilisez le bouton d’installation avant d’écrire du texte.");
@@ -1107,6 +1244,8 @@
     }));
     $("#showGrid").addEventListener("change", renderMap);
     $("#showCollision").addEventListener("change", renderMap);
+    $("#showMapSprites").addEventListener("change", renderMap);
+    $("#showMapHitboxes").addEventListener("change", renderMap);
     $("#mapZoom").addEventListener("input", event => { mapZoom = Number(event.target.value); renderMap(); });
     $("#resizeMap").addEventListener("click", () => {
       const width = Number($("#mapWidth").value);
@@ -1124,6 +1263,30 @@
     $("#objectType").addEventListener("change", event => {
       if (selectedObject < 0 || !event.target.value.trim()) return;
       mutate(() => { project.map.objects[selectedObject].type = event.target.value.trim(); });
+    });
+    $("#objectId").addEventListener("change", event => {
+      if (selectedObject < 0) return;
+      const id = event.target.value.trim();
+      if (!id || id.length > 64 || project.map.objects.some((object, index) => index !== selectedObject && object.id === id)) {
+        showToast("L’identifiant doit être unique et contenir au plus 64 caractères.");
+        return renderObjectList();
+      }
+      mutate(() => { project.map.objects[selectedObject].id = id; });
+    });
+    const moveObjectFromFields = () => {
+      if (selectedObject < 0) return;
+      moveMapObject(selectedObject, Number($("#objectX").value), Number($("#objectY").value));
+    };
+    $("#objectX").addEventListener("change", moveObjectFromFields);
+    $("#objectY").addEventListener("change", moveObjectFromFields);
+    $("#objectSprite").addEventListener("change", event => {
+      if (selectedObject < 0) return;
+      const sprite = event.target.value.trim();
+      if (sprite.length > 64) return showToast("La référence de sprite est limitée à 64 caractères.");
+      mutate(() => {
+        if (sprite) project.map.objects[selectedObject].sprite = sprite;
+        else delete project.map.objects[selectedObject].sprite;
+      });
     });
     $("#objectProperties").addEventListener("change", event => {
       if (selectedObject < 0) return;
@@ -1161,7 +1324,11 @@
         renderMap();
       } else if (mapTool === "object") {
         const existing = (project.map.objects || []).findIndex(object => object.x === cell.x && object.y === cell.y);
-        if (existing >= 0) { selectedObject = existing; drawing = false; renderMap(); }
+        if (existing >= 0) {
+          selectedObject = existing;
+          objectDragTarget = { x: cell.x, y: cell.y };
+          renderMap();
+        }
         else { drawing = false; addMapObject(cell.x, cell.y); }
       }
     });
@@ -1175,6 +1342,9 @@
       } else if (mapTool === "select") {
         mapSelection.end = cell;
         renderMap();
+      } else if (mapTool === "object" && selectedObject >= 0) {
+        objectDragTarget = { x: cell.x, y: cell.y };
+        renderMap();
       }
     });
     mapCanvas.addEventListener("pointerleave", () => { $("#cursorPosition").textContent = "x: — · y: —"; });
@@ -1184,10 +1354,17 @@
       if (mapTool === "rect") mutate(() => fillRectangle(pointerStart, cell, drawValue));
       else if (["pencil", "eraser"].includes(mapTool)) endLiveEdit();
       else if (mapTool === "select") { mapSelection.end = cell; renderMap(); }
+      else if (mapTool === "object" && selectedObject >= 0) moveMapObject(selectedObject, cell.x, cell.y);
       drawing = false;
       pointerStart = null;
     });
-    mapCanvas.addEventListener("pointercancel", () => { drawing = false; pointerStart = null; endLiveEdit(); });
+    mapCanvas.addEventListener("pointercancel", () => {
+      drawing = false;
+      pointerStart = null;
+      objectDragTarget = null;
+      endLiveEdit();
+      if (currentView === "map") renderMap();
+    });
 
     document.addEventListener("keydown", event => {
       const editingText = ["INPUT", "TEXTAREA"].includes(document.activeElement.tagName);
@@ -1195,13 +1372,39 @@
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "y") { event.preventDefault(); redo(); }
       if (!editingText && currentView === "map" && event.key === "Escape") { mapSelection = null; renderMap(); }
     });
+    document.addEventListener("assetstudio:sprites-changed", () => { if (currentView === "map") renderMap(); });
   }
+
+  globalThis.JsC64MapStudio = Object.freeze({
+    getProject: () => clone(project),
+    validateProject: value => [...validateAsset(value).errors],
+    replaceProject(value, name) {
+      const validation = validateAsset(value);
+      if (validation.errors.length) throw new Error(validation.errors.join(" "));
+      project = normalizeAsset(clone(value));
+      selectedChar = Math.min(SYSTEM_CHAR_COUNT, project.charset.characters.length - 1);
+      selectedTile = 0;
+      tilePaintChar = selectedChar;
+      selectedObject = -1;
+      mapSelection = null;
+      past.length = 0;
+      future.length = 0;
+      if (name) {
+        $("#projectName").value = String(name).slice(0, 64);
+        localStorage.setItem(`${STORAGE_KEY}-name`, $("#projectName").value);
+      }
+      persist();
+      renderAll();
+    },
+    getName: () => $("#projectName").value || "projet-c64",
+    renderMap: () => { if (currentView === "map") renderMap(); }
+  });
 
   function init() {
     bindEvents();
     $("#projectName").value = localStorage.getItem(`${STORAGE_KEY}-name`) || "ma-map-c64";
     const requestedView = location.hash.slice(1);
-    setView(["charset", "tiles", "map"].includes(requestedView) ? requestedView : "charset");
+    setView(["charset", "tiles", "sprites", "map"].includes(requestedView) ? requestedView : "charset");
     persist();
     renderAll();
   }

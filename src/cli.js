@@ -2,7 +2,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { compileFile } from "./compiler.js";
-import { createBasicDataProgram, createPrg, createRawBinary } from "./prgWriter.js";
+import { createRawBinary } from "./prgWriter.js";
 
 function usage() {
   return [
@@ -80,18 +80,17 @@ async function handleBuild(args) {
   const compileOptions = {};
 
   if (args.sys !== null) {
-    if (format === "prg" && args.sys !== 2064) {
-      throw new Error("Custom --sys is currently supported for data/bin/asm/lst outputs, but not for .prg. Use --format data for addresses like 8192 or 49152.");
-    }
-
     compileOptions.codeStart = args.sys;
     compileOptions.sysAddress = args.sys;
   }
 
   const result = await compileFile(args.input, compileOptions);
+  for (const warning of result.assetReport?.filter((entry) => entry.type === "warning") ?? []) {
+    console.warn(`warning ${warning.code}: ${warning.message}`);
+  }
 
   if (format === "prg") {
-    await writeFileEnsured(args.output, Buffer.from(createPrg(result.bytes, args.sys ?? 2064, 0x0801, args.sys ?? 0x0810)), undefined);
+    await writeFileEnsured(args.output, Buffer.from(result.prgBytes), undefined);
   } else if (format === "bin") {
     await writeFileEnsured(args.output, Buffer.from(createRawBinary(result.bytes)), undefined);
   } else if (format === "asm") {
@@ -99,7 +98,7 @@ async function handleBuild(args) {
   } else if (format === "lst") {
     await writeFileEnsured(args.output, `${result.listing}\n`, "utf8");
   } else if (format === "data") {
-    await writeFileEnsured(args.output, createBasicDataProgram(result.bytes, args.sys ?? 2064), "utf8");
+    await writeFileEnsured(args.output, result.basicText, "utf8");
   } else {
     throw new Error(`Unsupported format: ${format}`);
   }

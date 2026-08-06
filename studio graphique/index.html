@@ -11,11 +11,12 @@
   <header class="topbar">
     <a class="brand" href="#charset" aria-label="JS-C64 Asset Studio">
       <span class="brand-mark">64</span>
-      <span><strong>JS-C64</strong><small>Asset Studio · v0.9</small></span>
+      <span><strong>JS-C64</strong><small>Asset Studio · v0.10.1</small></span>
     </a>
     <nav class="workspace-tabs" aria-label="Éditeurs">
       <button class="tab active" data-view="charset">Caractères</button>
       <button class="tab" data-view="tiles">Métatuiles</button>
+      <button class="tab" data-view="sprites">Sprites</button>
       <button class="tab" data-view="map">Map</button>
     </nav>
     <div class="top-actions">
@@ -26,6 +27,9 @@
       <details class="export-menu">
         <summary class="button ghost">Autres exports</summary>
         <div class="menu-card">
+          <button id="importStudioProject">Importer projet complet</button>
+          <button id="exportStudioProject">Projet complet .json</button>
+          <input id="studioProjectFileInput" type="file" accept="application/json,.json" hidden>
           <button data-export="bin">Charset .bin</button>
           <button data-export="map-bin">Map .bin</button>
           <button data-export="map-rle">Map RLE .bin</button>
@@ -193,6 +197,90 @@
         </div>
       </section>
 
+      <section id="spritesView" class="view" aria-labelledby="spritesHeading">
+        <div class="view-heading">
+          <div>
+            <span class="eyebrow">Sprite asset v1 &middot; 24 &times; 21</span>
+            <h1 id="spritesHeading">Editeur de sprites</h1>
+          </div>
+          <div class="button-row">
+            <button id="newSpriteAsset" class="button">+ Sprite</button>
+            <button id="duplicateSpriteAsset" class="button ghost">Dupliquer</button>
+            <button id="deleteSpriteAsset" class="button danger">Supprimer</button>
+            <button id="importSpriteAsset" class="button ghost">Importer sprite JSON</button>
+            <input id="spriteFileInput" type="file" accept="application/json,.json" hidden>
+            <button id="exportSpriteAsset" class="button primary">Exporter sprite JSON</button>
+          </div>
+        </div>
+
+        <div class="sprite-asset-bar panel">
+          <label>Asset <select id="spriteAssetSelect"></select></label>
+          <label>Identifiant <input id="spriteId" maxlength="64" value="hero"></label>
+          <label>Mode <select id="spriteMode"><option value="hires">Hires 1 bit</option><option value="multicolor">Multicolore 2 bits</option></select></label>
+          <span id="spriteValidationBadge" class="badge success">Valide</span>
+          <span id="spriteValidationText" class="hint">Compatible avec c64.assets.loadSprite().</span>
+        </div>
+
+        <div class="sprite-layout">
+          <article class="panel sprite-pixel-panel">
+            <div class="panel-heading"><h2 id="spriteFrameHeading">Frame idle</h2><code>63 octets VIC-II</code></div>
+            <div class="sprite-pixel-stage"><div id="spritePixelGrid" class="sprite-pixel-grid" role="grid" aria-label="Pixels du sprite"></div></div>
+            <div id="spritePixelValues" class="button-row compact"></div>
+            <div class="button-row compact">
+              <button id="clearSpriteFrame" class="button ghost">Effacer la frame</button>
+              <button id="mirrorSpriteFrame" class="button ghost">Miroir horizontal</button>
+            </div>
+          </article>
+
+          <article class="panel sprite-preview-panel">
+            <div class="panel-heading"><h2>Apercu et collision</h2><label><input id="spriteFlipPreview" type="checkbox"> Retourne</label></div>
+            <canvas id="spritePreview" width="240" height="210" aria-label="Apercu anime du sprite"></canvas>
+            <label>Couleur du sprite</label><div id="spriteColorPalette" class="palette"></div>
+            <div id="spriteMulticolorControls" hidden>
+              <label>Multicolore partagee 1</label><div id="spriteMulticolor1Palette" class="palette"></div>
+              <label>Multicolore partagee 2</label><div id="spriteMulticolor2Palette" class="palette"></div>
+            </div>
+            <div class="sprite-bounds-grid">
+              <strong>Origine</strong><span></span>
+              <label>X <input id="spriteOriginX" type="number" min="0" max="23"></label>
+              <label>Y <input id="spriteOriginY" type="number" min="0" max="20"></label>
+              <strong>Hitbox</strong><span></span>
+              <label>X <input id="spriteHitboxX" type="number" min="0" max="23"></label>
+              <label>Y <input id="spriteHitboxY" type="number" min="0" max="20"></label>
+              <label>Largeur <input id="spriteHitboxWidth" type="number" min="1" max="24"></label>
+              <label>Hauteur <input id="spriteHitboxHeight" type="number" min="1" max="21"></label>
+            </div>
+          </article>
+
+          <article class="panel sprite-library-panel">
+            <div class="panel-heading"><h2>Frames</h2><span id="spriteFrameCount">1 / 128</span></div>
+            <div id="spriteFrameLibrary" class="sprite-frame-library"></div>
+            <label>Nom de la frame <input id="spriteFrameId" maxlength="64"></label>
+            <div class="button-row compact">
+              <button id="addSpriteFrame" class="button">+ Vide</button>
+              <button id="duplicateSpriteFrame" class="button ghost">Dupliquer</button>
+              <button id="deleteSpriteFrame" class="button danger">Supprimer</button>
+              <button id="moveSpriteFrameBack" class="button ghost">&larr;</button>
+              <button id="moveSpriteFrameNext" class="button ghost">&rarr;</button>
+            </div>
+            <hr>
+            <div class="panel-heading"><h2>Animations</h2><button id="newSpriteAnimation" class="button ghost">+ Animation</button></div>
+            <label>Animation <select id="spriteAnimationSelect"></select></label>
+            <label>Nom <input id="spriteAnimationName" maxlength="64"></label>
+            <label>Frames (noms separes par des virgules) <input id="spriteAnimationFrames"></label>
+            <div class="inline-fields">
+              <label>Vitesse <input id="spriteAnimationSpeed" type="number" min="1" max="255"></label>
+              <label class="checkbox-label"><input id="spriteAnimationLoop" type="checkbox"> Boucle</label>
+              <label class="checkbox-label"><input id="spriteAnimationInitial" type="checkbox"> Initiale</label>
+            </div>
+            <div class="button-row compact">
+              <button id="saveSpriteAnimation" class="button">Enregistrer</button>
+              <button id="deleteSpriteAnimation" class="button danger">Supprimer</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
       <section id="mapView" class="view" aria-labelledby="mapHeading">
         <div class="view-heading">
           <div>
@@ -215,6 +303,8 @@
           <div class="toolbar-options">
             <label><input id="showGrid" type="checkbox" checked> Grille</label>
             <label><input id="showCollision" type="checkbox"> Collisions</label>
+            <label><input id="showMapSprites" type="checkbox" checked> Sprites</label>
+            <label><input id="showMapHitboxes" type="checkbox" checked> Hitboxes</label>
             <label>Zoom <input id="mapZoom" type="range" min="1" max="5" value="3"></label>
           </div>
         </div>
@@ -239,7 +329,16 @@
             </div>
             <hr>
             <h3>Objets / spawns</h3>
+            <label>Identifiant <input id="objectId" value="spawn-1" placeholder="player"></label>
             <label>Type <input id="objectType" value="spawn"></label>
+            <div class="inline-fields object-position-fields">
+              <label>Position X <input id="objectX" type="number" min="0" value="0" disabled></label>
+              <label>Position Y <input id="objectY" type="number" min="0" value="0" disabled></label>
+            </div>
+            <p class="hint">Modifiez X/Y ou faites glisser l'objet sur la map avec l'outil Objet.</p>
+            <label>Sprite <input id="objectSprite" placeholder="hero (optionnel)"></label>
+            <label>Asset du studio <select id="objectSpriteAsset"><option value="">Aucun / saisie libre</option></select></label>
+            <label>Animation initiale <select id="objectSpriteAnimation"><option value="">Selon l'asset</option></select></label>
             <label>Propriétés JSON <textarea id="objectProperties" rows="3">{}</textarea></label>
             <div class="button-row compact">
               <button id="addObject" class="button ghost">Ajouter au centre</button>
@@ -259,6 +358,9 @@
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="sprite-asset-core.js"></script>
+  <script src="project-bundle-core.js"></script>
   <script src="main.js"></script>
+  <script src="sprite-editor.js"></script>
 </body>
 </html>

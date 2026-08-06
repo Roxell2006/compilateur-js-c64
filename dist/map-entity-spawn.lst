@@ -1,0 +1,3461 @@
+0810  A2 00       LDX #$00
+0812        copydata_2e00_sprite_frames_hero_0_63_0:
+0812  BD 6C 26    LDA sprite_frames_hero_0,X
+0815  9D 00 2E    STA $2E00,X
+0818  E8          INX
+0819  E0 3F       CPX #$3F
+081B  D0 F5       BNE copydata_2e00_sprite_frames_hero_0_63_0
+081D  A9 00       LDA #$00
+081F  8D 3F 2E    STA $2E3F
+0822  A2 00       LDX #$00
+0824        copydata_2e40_sprite_frames_hero_1_63_1:
+0824  BD AB 26    LDA sprite_frames_hero_1,X
+0827  9D 40 2E    STA $2E40,X
+082A  E8          INX
+082B  E0 3F       CPX #$3F
+082D  D0 F5       BNE copydata_2e40_sprite_frames_hero_1_63_1
+082F  A9 00       LDA #$00
+0831  8D 7F 2E    STA $2E7F
+0834  A2 00       LDX #$00
+0836        asset_map_initial_copy_2:
+0836  BD F6 26    LDA asset_bytes_1,X
+0839  9D 00 80    STA $8000,X
+083C  E8          INX
+083D  D0 F7       BNE asset_map_initial_copy_2
+083F  A2 00       LDX #$00
+0841        asset_map_initial_copy_3:
+0841  BD F6 26    LDA asset_bytes_1,X
+0844  9D 00 81    STA $8100,X
+0847  E8          INX
+0848  D0 F7       BNE asset_map_initial_copy_3
+084A  A2 00       LDX #$00
+084C        asset_map_initial_copy_4:
+084C  BD F6 26    LDA asset_bytes_1,X
+084F  9D 00 82    STA $8200,X
+0852  E8          INX
+0853  D0 F7       BNE asset_map_initial_copy_4
+0855  A2 00       LDX #$00
+0857        asset_map_initial_copy_5:
+0857  BD F6 26    LDA asset_bytes_1,X
+085A  9D 00 83    STA $8300,X
+085D  E8          INX
+085E  D0 F7       BNE asset_map_initial_copy_5
+0860  A2 00       LDX #$00
+0862        asset_map_initial_copy_7:
+0862  BD F6 27    LDA asset_bytes_6,X
+0865  9D 00 84    STA $8400,X
+0868  E8          INX
+0869  D0 F7       BNE asset_map_initial_copy_7
+086B  A2 00       LDX #$00
+086D        asset_map_initial_copy_9:
+086D  BD F6 28    LDA asset_bytes_8,X
+0870  9D 00 85    STA $8500,X
+0873  E8          INX
+0874  D0 F7       BNE asset_map_initial_copy_9
+0876  A2 00       LDX #$00
+0878        asset_map_initial_copy_11:
+0878  BD F6 29    LDA asset_bytes_10,X
+087B  9D 00 86    STA $8600,X
+087E  E8          INX
+087F  E0 40       CPX #$40
+0881  D0 F5       BNE asset_map_initial_copy_11
+0883  A9 00       LDA #$00
+0885  8D 00 C5    STA $C500
+0888  A9 00       LDA #$00
+088A  8D 01 C5    STA $C501
+088D  A9 00       LDA #$00
+088F  8D 02 C5    STA $C502
+0892  A9 00       LDA #$00
+0894  8D 03 C5    STA $C503
+0897  A9 00       LDA #$00
+0899  8D 04 C5    STA $C504
+089C  A9 00       LDA #$00
+089E  8D 05 C5    STA $C505
+08A1  AD 05 C5    LDA $C505
+08A4  D0 0B       BNE sprite_runtime_active_0_2
+08A6  AD 15 D0    LDA $D015
+08A9  29 FE       AND #$FE
+08AB  8D 15 D0    STA $D015
+08AE  4C DF 08    JMP sprite_runtime_sync_done_0_5
+08B1        sprite_runtime_active_0_2:
+08B1  AD 15 D0    LDA $D015
+08B4  09 01       ORA #$01
+08B6  8D 15 D0    STA $D015
+08B9  AD 00 C5    LDA $C500
+08BC  8D 00 D0    STA $D000
+08BF  AD 01 C5    LDA $C501
+08C2  29 01       AND #$01
+08C4  D0 0B       BNE sprite_runtime_xhigh_0_3
+08C6  AD 10 D0    LDA $D010
+08C9  29 FE       AND #$FE
+08CB  8D 10 D0    STA $D010
+08CE  4C D9 08    JMP sprite_runtime_xdone_0_4
+08D1        sprite_runtime_xhigh_0_3:
+08D1  AD 10 D0    LDA $D010
+08D4  09 01       ORA #$01
+08D6  8D 10 D0    STA $D010
+08D9        sprite_runtime_xdone_0_4:
+08D9  AD 02 C5    LDA $C502
+08DC  8D 01 D0    STA $D001
+08DF        sprite_runtime_sync_done_0_5:
+08DF  A9 B8       LDA #$B8
+08E1  8D 04 C4    STA $C404
+08E4  AD 04 C4    LDA $C404
+08E7  8D F8 07    STA $07F8
+08EA  A9 07       LDA #$07
+08EC  8D 05 C4    STA $C405
+08EF  A9 07       LDA #$07
+08F1  8D 27 D0    STA $D027
+08F4  AD 06 C4    LDA $C406
+08F7  29 FE       AND #$FE
+08F9  8D 06 C4    STA $C406
+08FC  AD 1C D0    LDA $D01C
+08FF  29 FE       AND #$FE
+0901  8D 1C D0    STA $D01C
+0904  A9 00       LDA #$00
+0906  8D 00 C4    STA $C400
+0909  8D 01 C4    STA $C401
+090C  8D 02 C4    STA $C402
+090F  8D 03 C4    STA $C403
+0912  AD 00 C4    LDA $C400
+0915  C9 00       CMP #$00
+0917  D0 05       BNE sprite_play_start_0_0_6
+0919  AD 03 C4    LDA $C403
+091C  D0 20       BNE sprite_play_done_0_0_7
+091E        sprite_play_start_0_0_6:
+091E  A9 00       LDA #$00
+0920  8D 00 C4    STA $C400
+0923  A9 00       LDA #$00
+0925  8D 01 C4    STA $C401
+0928  A9 00       LDA #$00
+092A  8D 02 C4    STA $C402
+092D  A9 01       LDA #$01
+092F  8D 03 C4    STA $C403
+0932  AD 36 2A    LDA sprite_sequence_0_idle-right
+0935  8D 04 C4    STA $C404
+0938  AD 04 C4    LDA $C404
+093B  8D F8 07    STA $07F8
+093E        sprite_play_done_0_0_7:
+093E  A9 18       LDA #$18
+0940  8D 00 C1    STA $C100
+0943  A9 00       LDA #$00
+0945  8D 01 C1    STA $C101
+0948  A9 80       LDA #$80
+094A  8D 02 C1    STA $C102
+094D  A9 00       LDA #$00
+094F  8D 03 C1    STA $C103
+0952  A9 00       LDA #$00
+0954  8D 04 C1    STA $C104
+0957  A9 00       LDA #$00
+0959  8D 05 C1    STA $C105
+095C  A9 00       LDA #$00
+095E  8D 06 C1    STA $C106
+0961  A9 00       LDA #$00
+0963  8D 07 C1    STA $C107
+0966  A9 00       LDA #$00
+0968  8D 08 C1    STA $C108
+096B  A9 00       LDA #$00
+096D  8D 09 C1    STA $C109
+0970  A9 00       LDA #$00
+0972  8D 0A C1    STA $C10A
+0975  A9 07       LDA #$07
+0977  8D 0B C1    STA $C10B
+097A  A9 00       LDA #$00
+097C  8D 0C C1    STA $C10C
+097F  A9 07       LDA #$07
+0981  8D 0D C1    STA $C10D
+0984  A9 00       LDA #$00
+0986  8D 10 C1    STA $C110
+0989  A9 00       LDA #$00
+098B  8D 11 C1    STA $C111
+098E  A9 00       LDA #$00
+0990  8D 12 C1    STA $C112
+0993  A9 00       LDA #$00
+0995  8D 13 C1    STA $C113
+0998  AD 11 D0    LDA $D011
+099B  29 7F       AND #$7F
+099D  8D 0E C1    STA $C10E
+09A0  AD 16 D0    LDA $D016
+09A3  8D 0F C1    STA $C10F
+09A6  A2 00       LDX #$00
+09A8        asset_charset_copy_13:
+09A8  BD 39 2A    LDA asset_bytes_12,X
+09AB  9D 00 30    STA $3000,X
+09AE  E8          INX
+09AF  D0 F7       BNE asset_charset_copy_13
+09B1  A2 00       LDX #$00
+09B3        asset_charset_copy_14:
+09B3  BD F6 26    LDA asset_bytes_1,X
+09B6  9D 00 31    STA $3100,X
+09B9  E8          INX
+09BA  D0 F7       BNE asset_charset_copy_14
+09BC  A2 00       LDX #$00
+09BE        asset_charset_copy_15:
+09BE  BD F6 26    LDA asset_bytes_1,X
+09C1  9D 00 32    STA $3200,X
+09C4  E8          INX
+09C5  D0 F7       BNE asset_charset_copy_15
+09C7  A2 00       LDX #$00
+09C9        asset_charset_copy_16:
+09C9  BD F6 26    LDA asset_bytes_1,X
+09CC  9D 00 33    STA $3300,X
+09CF  E8          INX
+09D0  D0 F7       BNE asset_charset_copy_16
+09D2  A2 00       LDX #$00
+09D4        asset_charset_copy_17:
+09D4  BD F6 26    LDA asset_bytes_1,X
+09D7  9D 00 34    STA $3400,X
+09DA  E8          INX
+09DB  D0 F7       BNE asset_charset_copy_17
+09DD  A2 00       LDX #$00
+09DF        asset_charset_copy_18:
+09DF  BD F6 26    LDA asset_bytes_1,X
+09E2  9D 00 35    STA $3500,X
+09E5  E8          INX
+09E6  D0 F7       BNE asset_charset_copy_18
+09E8  A2 00       LDX #$00
+09EA        asset_charset_copy_19:
+09EA  BD F6 26    LDA asset_bytes_1,X
+09ED  9D 00 36    STA $3600,X
+09F0  E8          INX
+09F1  D0 F7       BNE asset_charset_copy_19
+09F3  A2 00       LDX #$00
+09F5        asset_charset_copy_20:
+09F5  BD F6 26    LDA asset_bytes_1,X
+09F8  9D 00 37    STA $3700,X
+09FB  E8          INX
+09FC  D0 F7       BNE asset_charset_copy_20
+09FE  AD 00 DD    LDA $DD00
+0A01  29 FC       AND #$FC
+0A03  09 03       ORA #$03
+0A05  8D 00 DD    STA $DD00
+0A08  AD 18 D0    LDA $D018
+0A0B  29 F1       AND #$F1
+0A0D  09 0C       ORA #$0C
+0A0F  8D 18 D0    STA $D018
+0A12  AD 16 D0    LDA $D016
+0A15  29 EF       AND #$EF
+0A17  8D 16 D0    STA $D016
+0A1A  A9 00       LDA #$00
+0A1C  8D 20 D0    STA $D020
+0A1F  A9 00       LDA #$00
+0A21  8D 21 D0    STA $D021
+0A24  AD 0A C1    LDA $C10A
+0A27  8D C0 C7    STA $C7C0
+0A2A  AD 0C C1    LDA $C10C
+0A2D  8D C1 C7    STA $C7C1
+0A30  AD 11 D0    LDA $D011
+0A33  29 7F       AND #$7F
+0A35  8D 0E C1    STA $C10E
+0A38  AD 16 D0    LDA $D016
+0A3B  8D 0F C1    STA $C10F
+0A3E  20 10 14    JSR runtime_map_viewport_0
+0A41  20 5A 14    JSR runtime_map_scroll_restore_0
+0A44  78          SEI
+0A45  A9 7F       LDA #$7F
+0A47  8D 0D DC    STA $DC0D
+0A4A  8D 0D DD    STA $DD0D
+0A4D  AD 0D DC    LDA $DC0D
+0A50  AD 0D DD    LDA $DD0D
+0A53  A9 00       LDA #$00
+0A55  8D FE C0    STA $C0FE
+0A58  78          SEI
+0A59  A9 01       LDA #$01
+0A5B  8D 1A D0    STA $D01A
+0A5E  A9 01       LDA #$01
+0A60  8D 19 D0    STA $D019
+0A63  A9 1E       LDA #$1E
+0A65  8D 12 D0    STA $D012
+0A68  AD 11 D0    LDA $D011
+0A6B  29 7F       AND #$7F
+0A6D  8D 11 D0    STA $D011
+0A70  A9 7E       LDA #<irq_dispatch
+0A72  8D 14 03    STA $0314
+0A75  A9 0A       LDA #>irq_dispatch
+0A77  8D 15 03    STA $0315
+0A7A  58          CLI
+0A7B  4C F1 0A    JMP program_end
+            ; Raster IRQ dispatcher
+0A7E        irq_dispatch:
+0A7E  48          PHA
+0A7F  8A          TXA
+0A80  48          PHA
+0A81  98          TYA
+0A82  48          PHA
+0A83  AD 19 D0    LDA $D019
+0A86  29 01       AND #$01
+0A88  D0 0E       BNE irq_dispatch_vic_raster
+0A8A  AD 0D DC    LDA $DC0D
+0A8D  AD 0D DD    LDA $DD0D
+0A90  68          PLA
+0A91  A8          TAY
+0A92  68          PLA
+0A93  AA          TAX
+0A94  68          PLA
+0A95  4C 81 EA    JMP $EA81
+0A98        irq_dispatch_vic_raster:
+0A98  A9 01       LDA #$01
+0A9A  8D 19 D0    STA $D019
+0A9D  AD FE C0    LDA $C0FE
+0AA0  C9 00       CMP #$00
+0AA2  F0 03       BEQ irq_dispatch_match_0
+0AA4  4C AA 0A    JMP irq_dispatch_next_0
+0AA7        irq_dispatch_match_0:
+0AA7  4C B7 0A    JMP irq_handler_0
+0AAA        irq_dispatch_next_0:
+0AAA  C9 01       CMP #$01
+0AAC  F0 03       BEQ irq_dispatch_match_1
+0AAE  4C B4 0A    JMP irq_dispatch_next_1
+0AB1        irq_dispatch_match_1:
+0AB1  4C D4 0A    JMP irq_handler_1
+0AB4        irq_dispatch_next_1:
+0AB4  4C B7 0A    JMP irq_handler_0
+0AB7        irq_handler_0:
+0AB7  20 46 14    JSR runtime_map_scroll_apply_0
+0ABA  A9 01       LDA #$01
+0ABC  8D FE C0    STA $C0FE
+0ABF  A9 D2       LDA #$D2
+0AC1  8D 12 D0    STA $D012
+0AC4  AD 11 D0    LDA $D011
+0AC7  29 7F       AND #$7F
+0AC9  8D 11 D0    STA $D011
+0ACC  68          PLA
+0ACD  A8          TAY
+0ACE  68          PLA
+0ACF  AA          TAX
+0AD0  68          PLA
+0AD1  4C 81 EA    JMP $EA81
+0AD4        irq_handler_1:
+0AD4  20 53 14    JSR runtime_map_scroll_leave_0
+0AD7  A9 00       LDA #$00
+0AD9  8D FE C0    STA $C0FE
+0ADC  A9 1E       LDA #$1E
+0ADE  8D 12 D0    STA $D012
+0AE1  AD 11 D0    LDA $D011
+0AE4  29 7F       AND #$7F
+0AE6  8D 11 D0    STA $D011
+0AE9  68          PLA
+0AEA  A8          TAY
+0AEB  68          PLA
+0AEC  AA          TAX
+0AED  68          PLA
+0AEE  4C 81 EA    JMP $EA81
+0AF1        program_end:
+            ; Deterministic game frame loop
+0AF1  A9 00       LDA #$00
+0AF3  8D 6A C7    STA $C76A
+0AF6  A9 00       LDA #$00
+0AF8  8D 6B C7    STA $C76B
+0AFB  A9 00       LDA #$00
+0AFD  8D 70 C7    STA $C770
+0B00  A9 3C       LDA #$3C
+0B02  8D 6F C7    STA $C76F
+0B05  A9 FF       LDA #$FF
+0B07  8D 67 C7    STA $C767
+0B0A  A9 FF       LDA #$FF
+0B0C  8D 69 C7    STA $C769
+0B0F        game_video_detect_low:
+0B0F  AD 11 D0    LDA $D011
+0B12  30 FB       BMI game_video_detect_low
+0B14        game_video_detect_high:
+0B14  AD 11 D0    LDA $D011
+0B17  10 FB       BPL game_video_detect_high
+0B19        game_video_detect_scan:
+0B19  AD 11 D0    LDA $D011
+0B1C  10 0F       BPL game_video_detect_done
+0B1E  AD 12 D0    LDA $D012
+0B21  C9 20       CMP #$20
+0B23  B0 03       BCS game_video_detect_pal
+0B25  4C 19 0B    JMP game_video_detect_scan
+0B28        game_video_detect_pal:
+0B28  A9 32       LDA #$32
+0B2A  8D 6F C7    STA $C76F
+0B2D        game_video_detect_done:
+0B2D        game_frame_loop:
+0B2D        game_frame_wait_leave:
+0B2D  AD 12 D0    LDA $D012
+0B30  C9 D6       CMP #$D6
+0B32  F0 F9       BEQ game_frame_wait_leave
+0B34        game_frame_wait_target:
+0B34  AD 12 D0    LDA $D012
+0B37  C9 D6       CMP #$D6
+0B39  D0 F9       BNE game_frame_wait_target
+0B3B  18          CLC
+0B3C  AD 70 C7    LDA $C770
+0B3F  69 32       ADC #$32
+0B41  8D 70 C7    STA $C770
+0B44  CD 6F C7    CMP $C76F
+0B47  B0 03       BCS game_frame_logical_tick
+0B49  4C 2D 0B    JMP game_frame_loop
+0B4C        game_frame_logical_tick:
+0B4C  38          SEC
+0B4D  AD 70 C7    LDA $C770
+0B50  ED 6F C7    SBC $C76F
+0B53  8D 70 C7    STA $C770
+0B56  AD 67 C7    LDA $C767
+0B59  8D 69 C7    STA $C769
+0B5C  AD 00 DC    LDA $DC00
+0B5F  8D 67 C7    STA $C767
+0B62  EE 6A C7    INC $C76A
+0B65  D0 03       BNE game_frame_counter_done_8
+0B67  EE 6B C7    INC $C76B
+0B6A        game_frame_counter_done_8:
+0B6A  A9 00       LDA #$00
+0B6C  8D 04 C1    STA $C104
+0B6F  AD 67 C7    LDA $C767
+0B72  29 04       AND #$04
+0B74  F0 03       BEQ condition_pass_10
+0B76  4C 81 0B    JMP control_if_else_9
+0B79        condition_pass_10:
+0B79  A9 FE       LDA #$FE
+0B7B  8D 04 C1    STA $C104
+0B7E  4C 81 0B    JMP control_if_end_9
+0B81        control_if_else_9:
+0B81        control_if_end_9:
+0B81  AD 67 C7    LDA $C767
+0B84  29 08       AND #$08
+0B86  F0 03       BEQ condition_pass_12
+0B88  4C 93 0B    JMP control_if_else_11
+0B8B        condition_pass_12:
+0B8B  A9 02       LDA #$02
+0B8D  8D 04 C1    STA $C104
+0B90  4C 93 0B    JMP control_if_end_11
+0B93        control_if_else_11:
+0B93        control_if_end_11:
+0B93  AD 04 C1    LDA $C104
+0B96  C9 00       CMP #$00
+0B98  F0 03       BEQ condition_pass_14
+0B9A  4C CC 0B    JMP control_if_else_13
+0B9D        condition_pass_14:
+0B9D  AD 00 C4    LDA $C400
+0BA0  C9 00       CMP #$00
+0BA2  D0 05       BNE sprite_play_start_0_0_15
+0BA4  AD 03 C4    LDA $C403
+0BA7  D0 20       BNE sprite_play_done_0_0_16
+0BA9        sprite_play_start_0_0_15:
+0BA9  A9 00       LDA #$00
+0BAB  8D 00 C4    STA $C400
+0BAE  A9 00       LDA #$00
+0BB0  8D 01 C4    STA $C401
+0BB3  A9 00       LDA #$00
+0BB5  8D 02 C4    STA $C402
+0BB8  A9 01       LDA #$01
+0BBA  8D 03 C4    STA $C403
+0BBD  AD 36 2A    LDA sprite_sequence_0_idle-right
+0BC0  8D 04 C4    STA $C404
+0BC3  AD 04 C4    LDA $C404
+0BC6  8D F8 07    STA $07F8
+0BC9        sprite_play_done_0_0_16:
+0BC9  4C F8 0B    JMP control_if_end_13
+0BCC        control_if_else_13:
+0BCC  AD 00 C4    LDA $C400
+0BCF  C9 01       CMP #$01
+0BD1  D0 05       BNE sprite_play_start_0_1_17
+0BD3  AD 03 C4    LDA $C403
+0BD6  D0 20       BNE sprite_play_done_0_1_18
+0BD8        sprite_play_start_0_1_17:
+0BD8  A9 01       LDA #$01
+0BDA  8D 00 C4    STA $C400
+0BDD  A9 00       LDA #$00
+0BDF  8D 01 C4    STA $C401
+0BE2  A9 00       LDA #$00
+0BE4  8D 02 C4    STA $C402
+0BE7  A9 01       LDA #$01
+0BE9  8D 03 C4    STA $C403
+0BEC  AD 37 2A    LDA sprite_sequence_0_run-right
+0BEF  8D 04 C4    STA $C404
+0BF2  AD 04 C4    LDA $C404
+0BF5  8D F8 07    STA $07F8
+0BF8        sprite_play_done_0_1_18:
+0BF8        control_if_end_13:
+0BF8  AD 06 C1    LDA $C106
+0BFB  C9 01       CMP #$01
+0BFD  F0 03       BEQ condition_pass_20
+0BFF  4C 26 0C    JMP control_if_else_19
+0C02        condition_pass_20:
+0C02  AD 67 C7    LDA $C767
+0C05  29 10       AND #$10
+0C07  F0 03       BEQ joystick_current_pressed_22
+0C09  4C 23 0C    JMP control_if_else_21
+0C0C        joystick_current_pressed_22:
+0C0C  AD 69 C7    LDA $C769
+0C0F  29 10       AND #$10
+0C11  D0 03       BNE condition_pass_22
+0C13  4C 23 0C    JMP control_if_else_21
+0C16        condition_pass_22:
+0C16  A9 FA       LDA #$FA
+0C18  8D 05 C1    STA $C105
+0C1B  A9 00       LDA #$00
+0C1D  8D 06 C1    STA $C106
+0C20  4C 23 0C    JMP control_if_end_21
+0C23        control_if_else_21:
+0C23        control_if_end_21:
+0C23  4C 26 0C    JMP control_if_end_19
+0C26        control_if_else_19:
+0C26        control_if_end_19:
+0C26  AD 05 C1    LDA $C105
+0C29  18          CLC
+0C2A  69 01       ADC #$01
+0C2C  8D 05 C1    STA $C105
+0C2F  20 F4 0E    JSR runtime_map_entity_move_0
+0C32  AD 03 C4    LDA $C403
+0C35  D0 03       BNE sprite_anim_active_0_24
+0C37  4C AE 0C    JMP sprite_anim_done_0_23
+0C3A        sprite_anim_active_0_24:
+0C3A  AD 00 C4    LDA $C400
+0C3D  C9 00       CMP #$00
+0C3F  D0 33       BNE sprite_anim_next_seq_0_0_25
+0C41  EE 02 C4    INC $C402
+0C44  AD 02 C4    LDA $C402
+0C47  C9 08       CMP #$08
+0C49  B0 03       BCS sprite_anim_advance_0_0_26
+0C4B  4C AE 0C    JMP sprite_anim_done_0_23
+0C4E        sprite_anim_advance_0_0_26:
+0C4E  A9 00       LDA #$00
+0C50  8D 02 C4    STA $C402
+0C53  EE 01 C4    INC $C401
+0C56  AD 01 C4    LDA $C401
+0C59  C9 01       CMP #$01
+0C5B  90 05       BCC sprite_anim_pos_ok_0_0_27
+0C5D  A9 00       LDA #$00
+0C5F  8D 01 C4    STA $C401
+0C62        sprite_anim_pos_ok_0_0_27:
+0C62  AE 01 C4    LDX $C401
+0C65  BD 36 2A    LDA sprite_sequence_0_idle-right,X
+0C68  8D 04 C4    STA $C404
+0C6B  AD 04 C4    LDA $C404
+0C6E  8D F8 07    STA $07F8
+0C71  4C AE 0C    JMP sprite_anim_done_0_23
+0C74        sprite_anim_next_seq_0_0_25:
+0C74  AD 00 C4    LDA $C400
+0C77  C9 01       CMP #$01
+0C79  D0 33       BNE sprite_anim_next_seq_0_1_28
+0C7B  EE 02 C4    INC $C402
+0C7E  AD 02 C4    LDA $C402
+0C81  C9 05       CMP #$05
+0C83  B0 03       BCS sprite_anim_advance_0_1_29
+0C85  4C AE 0C    JMP sprite_anim_done_0_23
+0C88        sprite_anim_advance_0_1_29:
+0C88  A9 00       LDA #$00
+0C8A  8D 02 C4    STA $C402
+0C8D  EE 01 C4    INC $C401
+0C90  AD 01 C4    LDA $C401
+0C93  C9 02       CMP #$02
+0C95  90 05       BCC sprite_anim_pos_ok_0_1_30
+0C97  A9 00       LDA #$00
+0C99  8D 01 C4    STA $C401
+0C9C        sprite_anim_pos_ok_0_1_30:
+0C9C  AE 01 C4    LDX $C401
+0C9F  BD 37 2A    LDA sprite_sequence_0_run-right,X
+0CA2  8D 04 C4    STA $C404
+0CA5  AD 04 C4    LDA $C404
+0CA8  8D F8 07    STA $07F8
+0CAB  4C AE 0C    JMP sprite_anim_done_0_23
+0CAE        sprite_anim_next_seq_0_1_28:
+0CAE        sprite_anim_done_0_23:
+0CAE  18          CLC
+0CAF  AD 00 C1    LDA $C100
+0CB2  69 0C       ADC #$0C
+0CB4  8D C4 C7    STA $C7C4
+0CB7  AD 01 C1    LDA $C101
+0CBA  69 00       ADC #$00
+0CBC  8D C5 C7    STA $C7C5
+0CBF  18          CLC
+0CC0  AD 10 C1    LDA $C110
+0CC3  69 C7       ADC #$C7
+0CC5  8D BD C7    STA $C7BD
+0CC8  AD 11 C1    LDA $C111
+0CCB  69 00       ADC #$00
+0CCD  8D BE C7    STA $C7BE
+0CD0  AD C5 C7    LDA $C7C5
+0CD3  CD BE C7    CMP $C7BE
+0CD6  F0 05       BEQ map_camera_follow_x_0_0_31_0_positive_compare_high_equal
+0CD8  90 10       BCC map_camera_follow_x_0_0_31_0_positive_compare_false
+0CDA  4C 1B 0D    JMP map_camera_follow_x_0_0_31_0_move_positive
+0CDD        map_camera_follow_x_0_0_31_0_positive_compare_high_equal:
+0CDD  AD C4 C7    LDA $C7C4
+0CE0  CD BD C7    CMP $C7BD
+0CE3  F0 05       BEQ map_camera_follow_x_0_0_31_0_positive_compare_false
+0CE5  90 03       BCC map_camera_follow_x_0_0_31_0_positive_compare_false
+0CE7  4C 1B 0D    JMP map_camera_follow_x_0_0_31_0_move_positive
+0CEA        map_camera_follow_x_0_0_31_0_positive_compare_false:
+0CEA  4C ED 0C    JMP map_camera_follow_x_0_0_31_0_check_negative
+0CED        map_camera_follow_x_0_0_31_0_check_negative:
+0CED  18          CLC
+0CEE  AD 10 C1    LDA $C110
+0CF1  69 68       ADC #$68
+0CF3  8D BD C7    STA $C7BD
+0CF6  AD 11 C1    LDA $C111
+0CF9  69 00       ADC #$00
+0CFB  8D BE C7    STA $C7BE
+0CFE  AD BE C7    LDA $C7BE
+0D01  CD C5 C7    CMP $C7C5
+0D04  F0 05       BEQ map_camera_follow_x_0_0_31_0_negative_compare_high_equal
+0D06  90 10       BCC map_camera_follow_x_0_0_31_0_negative_compare_false
+0D08  4C 43 0D    JMP map_camera_follow_x_0_0_31_0_move_negative
+0D0B        map_camera_follow_x_0_0_31_0_negative_compare_high_equal:
+0D0B  AD BD C7    LDA $C7BD
+0D0E  CD C4 C7    CMP $C7C4
+0D11  F0 05       BEQ map_camera_follow_x_0_0_31_0_negative_compare_false
+0D13  90 03       BCC map_camera_follow_x_0_0_31_0_negative_compare_false
+0D15  4C 43 0D    JMP map_camera_follow_x_0_0_31_0_move_negative
+0D18        map_camera_follow_x_0_0_31_0_negative_compare_false:
+0D18  4C 72 0D    JMP map_camera_follow_x_0_0_31_0_done
+0D1B        map_camera_follow_x_0_0_31_0_move_positive:
+0D1B  AD 0A C1    LDA $C10A
+0D1E  C9 2A       CMP #$2A
+0D20  F0 1E       BEQ map_scroll_done_32
+0D22        map_scroll_can_move_32:
+0D22  AD 0B C1    LDA $C10B
+0D25  F0 06       BEQ map_scroll_wrap_32
+0D27  CE 0B C1    DEC $C10B
+0D2A  4C 38 0D    JMP map_scroll_moved_32
+0D2D        map_scroll_wrap_32:
+0D2D  EE 0A C1    INC $C10A
+0D30  20 61 14    JSR runtime_map_scroll_shift_left_0
+0D33  A9 07       LDA #$07
+0D35  8D 0B C1    STA $C10B
+0D38        map_scroll_moved_32:
+0D38  EE 10 C1    INC $C110
+0D3B  D0 03       BNE map_scroll_pixel_x_inc_32_done
+0D3D  EE 11 C1    INC $C111
+0D40        map_scroll_pixel_x_inc_32_done:
+0D40        map_scroll_done_32:
+0D40  4C 72 0D    JMP map_camera_follow_x_0_0_31_0_done
+0D43        map_camera_follow_x_0_0_31_0_move_negative:
+0D43  AD 0A C1    LDA $C10A
+0D46  D0 07       BNE map_scroll_can_move_33
+0D48  AD 0B C1    LDA $C10B
+0D4B  C9 07       CMP #$07
+0D4D  F0 23       BEQ map_scroll_done_33
+0D4F        map_scroll_can_move_33:
+0D4F  AD 0B C1    LDA $C10B
+0D52  C9 07       CMP #$07
+0D54  F0 06       BEQ map_scroll_wrap_33
+0D56  EE 0B C1    INC $C10B
+0D59  4C 67 0D    JMP map_scroll_moved_33
+0D5C        map_scroll_wrap_33:
+0D5C  CE 0A C1    DEC $C10A
+0D5F  20 86 1A    JSR runtime_map_scroll_shift_right_0
+0D62  A9 00       LDA #$00
+0D64  8D 0B C1    STA $C10B
+0D67        map_scroll_moved_33:
+0D67  AD 10 C1    LDA $C110
+0D6A  D0 03       BNE map_scroll_pixel_x_dec_33_low
+0D6C  CE 11 C1    DEC $C111
+0D6F        map_scroll_pixel_x_dec_33_low:
+0D6F  CE 10 C1    DEC $C110
+0D72        map_scroll_done_33:
+0D72        map_camera_follow_x_0_0_31_0_done:
+0D72  18          CLC
+0D73  AD 00 C1    LDA $C100
+0D76  69 0C       ADC #$0C
+0D78  8D C4 C7    STA $C7C4
+0D7B  AD 01 C1    LDA $C101
+0D7E  69 00       ADC #$00
+0D80  8D C5 C7    STA $C7C5
+0D83  18          CLC
+0D84  AD 10 C1    LDA $C110
+0D87  69 C7       ADC #$C7
+0D89  8D BD C7    STA $C7BD
+0D8C  AD 11 C1    LDA $C111
+0D8F  69 00       ADC #$00
+0D91  8D BE C7    STA $C7BE
+0D94  AD C5 C7    LDA $C7C5
+0D97  CD BE C7    CMP $C7BE
+0D9A  F0 05       BEQ map_camera_follow_x_0_0_34_1_positive_compare_high_equal
+0D9C  90 10       BCC map_camera_follow_x_0_0_34_1_positive_compare_false
+0D9E  4C DF 0D    JMP map_camera_follow_x_0_0_34_1_move_positive
+0DA1        map_camera_follow_x_0_0_34_1_positive_compare_high_equal:
+0DA1  AD C4 C7    LDA $C7C4
+0DA4  CD BD C7    CMP $C7BD
+0DA7  F0 05       BEQ map_camera_follow_x_0_0_34_1_positive_compare_false
+0DA9  90 03       BCC map_camera_follow_x_0_0_34_1_positive_compare_false
+0DAB  4C DF 0D    JMP map_camera_follow_x_0_0_34_1_move_positive
+0DAE        map_camera_follow_x_0_0_34_1_positive_compare_false:
+0DAE  4C B1 0D    JMP map_camera_follow_x_0_0_34_1_check_negative
+0DB1        map_camera_follow_x_0_0_34_1_check_negative:
+0DB1  18          CLC
+0DB2  AD 10 C1    LDA $C110
+0DB5  69 68       ADC #$68
+0DB7  8D BD C7    STA $C7BD
+0DBA  AD 11 C1    LDA $C111
+0DBD  69 00       ADC #$00
+0DBF  8D BE C7    STA $C7BE
+0DC2  AD BE C7    LDA $C7BE
+0DC5  CD C5 C7    CMP $C7C5
+0DC8  F0 05       BEQ map_camera_follow_x_0_0_34_1_negative_compare_high_equal
+0DCA  90 10       BCC map_camera_follow_x_0_0_34_1_negative_compare_false
+0DCC  4C 07 0E    JMP map_camera_follow_x_0_0_34_1_move_negative
+0DCF        map_camera_follow_x_0_0_34_1_negative_compare_high_equal:
+0DCF  AD BD C7    LDA $C7BD
+0DD2  CD C4 C7    CMP $C7C4
+0DD5  F0 05       BEQ map_camera_follow_x_0_0_34_1_negative_compare_false
+0DD7  90 03       BCC map_camera_follow_x_0_0_34_1_negative_compare_false
+0DD9  4C 07 0E    JMP map_camera_follow_x_0_0_34_1_move_negative
+0DDC        map_camera_follow_x_0_0_34_1_negative_compare_false:
+0DDC  4C 36 0E    JMP map_camera_follow_x_0_0_34_1_done
+0DDF        map_camera_follow_x_0_0_34_1_move_positive:
+0DDF  AD 0A C1    LDA $C10A
+0DE2  C9 2A       CMP #$2A
+0DE4  F0 1E       BEQ map_scroll_done_35
+0DE6        map_scroll_can_move_35:
+0DE6  AD 0B C1    LDA $C10B
+0DE9  F0 06       BEQ map_scroll_wrap_35
+0DEB  CE 0B C1    DEC $C10B
+0DEE  4C FC 0D    JMP map_scroll_moved_35
+0DF1        map_scroll_wrap_35:
+0DF1  EE 0A C1    INC $C10A
+0DF4  20 61 14    JSR runtime_map_scroll_shift_left_0
+0DF7  A9 07       LDA #$07
+0DF9  8D 0B C1    STA $C10B
+0DFC        map_scroll_moved_35:
+0DFC  EE 10 C1    INC $C110
+0DFF  D0 03       BNE map_scroll_pixel_x_inc_35_done
+0E01  EE 11 C1    INC $C111
+0E04        map_scroll_pixel_x_inc_35_done:
+0E04        map_scroll_done_35:
+0E04  4C 36 0E    JMP map_camera_follow_x_0_0_34_1_done
+0E07        map_camera_follow_x_0_0_34_1_move_negative:
+0E07  AD 0A C1    LDA $C10A
+0E0A  D0 07       BNE map_scroll_can_move_36
+0E0C  AD 0B C1    LDA $C10B
+0E0F  C9 07       CMP #$07
+0E11  F0 23       BEQ map_scroll_done_36
+0E13        map_scroll_can_move_36:
+0E13  AD 0B C1    LDA $C10B
+0E16  C9 07       CMP #$07
+0E18  F0 06       BEQ map_scroll_wrap_36
+0E1A  EE 0B C1    INC $C10B
+0E1D  4C 2B 0E    JMP map_scroll_moved_36
+0E20        map_scroll_wrap_36:
+0E20  CE 0A C1    DEC $C10A
+0E23  20 86 1A    JSR runtime_map_scroll_shift_right_0
+0E26  A9 00       LDA #$00
+0E28  8D 0B C1    STA $C10B
+0E2B        map_scroll_moved_36:
+0E2B  AD 10 C1    LDA $C110
+0E2E  D0 03       BNE map_scroll_pixel_x_dec_36_low
+0E30  CE 11 C1    DEC $C111
+0E33        map_scroll_pixel_x_dec_36_low:
+0E33  CE 10 C1    DEC $C110
+0E36        map_scroll_done_36:
+0E36        map_camera_follow_x_0_0_34_1_done:
+0E36  38          SEC
+0E37  AD 00 C1    LDA $C100
+0E3A  ED 10 C1    SBC $C110
+0E3D  8D BD C7    STA $C7BD
+0E40  AD 01 C1    LDA $C101
+0E43  ED 11 C1    SBC $C111
+0E46  8D BE C7    STA $C7BE
+0E49  B0 03       BCS map_entity_x_37_not_before_38
+0E4B  4C AE 0E    JMP map_entity_hidden_0_37
+0E4E        map_entity_x_37_not_before_38:
+0E4E  AD BE C7    LDA $C7BE
+0E51  C9 01       CMP #$01
+0E53  90 0C       BCC map_entity_x_visible_37
+0E55  D0 07       BNE map_entity_x_visible_37_hidden
+0E57  AD BD C7    LDA $C7BD
+0E5A  C9 30       CMP #$30
+0E5C  90 03       BCC map_entity_x_visible_37
+0E5E        map_entity_x_visible_37_hidden:
+0E5E  4C AE 0E    JMP map_entity_hidden_0_37
+0E61        map_entity_x_visible_37:
+0E61  38          SEC
+0E62  AD 02 C1    LDA $C102
+0E65  ED 12 C1    SBC $C112
+0E68  8D BB C7    STA $C7BB
+0E6B  AD 03 C1    LDA $C103
+0E6E  ED 13 C1    SBC $C113
+0E71  8D BC C7    STA $C7BC
+0E74  B0 03       BCS map_entity_y_37_not_before_39
+0E76  4C AE 0E    JMP map_entity_hidden_0_37
+0E79        map_entity_y_37_not_before_39:
+0E79  AD BC C7    LDA $C7BC
+0E7C  C9 00       CMP #$00
+0E7E  90 0C       BCC map_entity_y_visible_37
+0E80  D0 07       BNE map_entity_y_visible_37_hidden
+0E82  AD BB C7    LDA $C7BB
+0E85  C9 A0       CMP #$A0
+0E87  90 03       BCC map_entity_y_visible_37
+0E89        map_entity_y_visible_37_hidden:
+0E89  4C AE 0E    JMP map_entity_hidden_0_37
+0E8C        map_entity_y_visible_37:
+0E8C  18          CLC
+0E8D  AD BD C7    LDA $C7BD
+0E90  69 27       ADC #$27
+0E92  8D 00 C5    STA $C500
+0E95  AD BE C7    LDA $C7BE
+0E98  69 00       ADC #$00
+0E9A  8D 01 C5    STA $C501
+0E9D  18          CLC
+0E9E  AD BB C7    LDA $C7BB
+0EA1  69 32       ADC #$32
+0EA3  8D 02 C5    STA $C502
+0EA6  A9 01       LDA #$01
+0EA8  8D 05 C5    STA $C505
+0EAB  4C B3 0E    JMP map_entity_shown_0_37
+0EAE        map_entity_hidden_0_37:
+0EAE  A9 00       LDA #$00
+0EB0  8D 05 C5    STA $C505
+0EB3        map_entity_shown_0_37:
+0EB3  AD 05 C5    LDA $C505
+0EB6  D0 0B       BNE sprite_runtime_active_0_40
+0EB8  AD 15 D0    LDA $D015
+0EBB  29 FE       AND #$FE
+0EBD  8D 15 D0    STA $D015
+0EC0  4C F1 0E    JMP sprite_runtime_sync_done_0_43
+0EC3        sprite_runtime_active_0_40:
+0EC3  AD 15 D0    LDA $D015
+0EC6  09 01       ORA #$01
+0EC8  8D 15 D0    STA $D015
+0ECB  AD 00 C5    LDA $C500
+0ECE  8D 00 D0    STA $D000
+0ED1  AD 01 C5    LDA $C501
+0ED4  29 01       AND #$01
+0ED6  D0 0B       BNE sprite_runtime_xhigh_0_41
+0ED8  AD 10 D0    LDA $D010
+0EDB  29 FE       AND #$FE
+0EDD  8D 10 D0    STA $D010
+0EE0  4C EB 0E    JMP sprite_runtime_xdone_0_42
+0EE3        sprite_runtime_xhigh_0_41:
+0EE3  AD 10 D0    LDA $D010
+0EE6  09 01       ORA #$01
+0EE8  8D 10 D0    STA $D010
+0EEB        sprite_runtime_xdone_0_42:
+0EEB  AD 02 C5    LDA $C502
+0EEE  8D 01 D0    STA $D001
+0EF1        sprite_runtime_sync_done_0_43:
+0EF1        map_entity_project_done_0_37:
+0EF1  4C 2D 0B    JMP game_frame_loop
+            ; Map entity 0: pixel-stepped X/Y tile collision
+0EF4        runtime_map_entity_move_0:
+0EF4  A9 00       LDA #$00
+0EF6  8D 06 C1    STA $C106
+0EF9  A9 00       LDA #$00
+0EFB  8D 07 C1    STA $C107
+0EFE  A9 00       LDA #$00
+0F00  8D 08 C1    STA $C108
+0F03  A9 00       LDA #$00
+0F05  8D 09 C1    STA $C109
+0F08  AD 04 C1    LDA $C104
+0F0B  D0 03       BNE runtime_map_entity_0_x_has_velocity
+0F0D  4C 75 10    JMP runtime_map_entity_0_x_done
+0F10        runtime_map_entity_0_x_has_velocity:
+0F10  10 03       BPL runtime_map_entity_0_x_positive
+0F12  4C C4 0F    JMP runtime_map_entity_0_x_negative
+0F15        runtime_map_entity_0_x_positive:
+0F15  AD 04 C1    LDA $C104
+0F18  C9 09       CMP #$09
+0F1A  90 02       BCC runtime_map_entity_0_x_positive_count_store
+0F1C  A9 08       LDA #$08
+0F1E        runtime_map_entity_0_x_positive_count_store:
+0F1E  8D C8 C7    STA $C7C8
+0F21        runtime_map_entity_0_x_positive_loop:
+0F21  EE 00 C1    INC $C100
+0F24  D0 03       BNE runtime_map_entity_0_x_positive_step_done
+0F26  EE 01 C1    INC $C101
+0F29        runtime_map_entity_0_x_positive_step_done:
+0F29  18          CLC
+0F2A  AD 00 C1    LDA $C100
+0F2D  69 13       ADC #$13
+0F2F  8D C4 C7    STA $C7C4
+0F32  AD 01 C1    LDA $C101
+0F35  69 00       ADC #$00
+0F37  8D C5 C7    STA $C7C5
+0F3A  18          CLC
+0F3B  AD 02 C1    LDA $C102
+0F3E  69 01       ADC #$01
+0F40  8D C6 C7    STA $C7C6
+0F43  AD 03 C1    LDA $C103
+0F46  69 00       ADC #$00
+0F48  8D C7 C7    STA $C7C7
+0F4B  20 15 12    JSR runtime_map_entity_point_solid_0
+0F4E  F0 03       BEQ runtime_map_entity_0_x_positive_sample_0_clear
+0F50  4C AC 0F    JMP runtime_map_entity_0_x_positive_hit
+0F53        runtime_map_entity_0_x_positive_sample_0_clear:
+0F53  18          CLC
+0F54  AD 02 C1    LDA $C102
+0F57  69 09       ADC #$09
+0F59  8D C6 C7    STA $C7C6
+0F5C  AD 03 C1    LDA $C103
+0F5F  69 00       ADC #$00
+0F61  8D C7 C7    STA $C7C7
+0F64  20 15 12    JSR runtime_map_entity_point_solid_0
+0F67  F0 03       BEQ runtime_map_entity_0_x_positive_sample_1_clear
+0F69  4C AC 0F    JMP runtime_map_entity_0_x_positive_hit
+0F6C        runtime_map_entity_0_x_positive_sample_1_clear:
+0F6C  18          CLC
+0F6D  AD 02 C1    LDA $C102
+0F70  69 11       ADC #$11
+0F72  8D C6 C7    STA $C7C6
+0F75  AD 03 C1    LDA $C103
+0F78  69 00       ADC #$00
+0F7A  8D C7 C7    STA $C7C7
+0F7D  20 15 12    JSR runtime_map_entity_point_solid_0
+0F80  F0 03       BEQ runtime_map_entity_0_x_positive_sample_2_clear
+0F82  4C AC 0F    JMP runtime_map_entity_0_x_positive_hit
+0F85        runtime_map_entity_0_x_positive_sample_2_clear:
+0F85  18          CLC
+0F86  AD 02 C1    LDA $C102
+0F89  69 14       ADC #$14
+0F8B  8D C6 C7    STA $C7C6
+0F8E  AD 03 C1    LDA $C103
+0F91  69 00       ADC #$00
+0F93  8D C7 C7    STA $C7C7
+0F96  20 15 12    JSR runtime_map_entity_point_solid_0
+0F99  F0 03       BEQ runtime_map_entity_0_x_positive_sample_3_clear
+0F9B  4C AC 0F    JMP runtime_map_entity_0_x_positive_hit
+0F9E        runtime_map_entity_0_x_positive_sample_3_clear:
+0F9E  CE C8 C7    DEC $C7C8
+0FA1  AD C8 C7    LDA $C7C8
+0FA4  F0 03       BEQ runtime_map_entity_0_x_positive_done
+0FA6  4C 21 0F    JMP runtime_map_entity_0_x_positive_loop
+0FA9        runtime_map_entity_0_x_positive_done:
+0FA9  4C 75 10    JMP runtime_map_entity_0_x_done
+0FAC        runtime_map_entity_0_x_positive_hit:
+0FAC  AD 00 C1    LDA $C100
+0FAF  D0 03       BNE runtime_map_entity_0_x_positive_undo_low
+0FB1  CE 01 C1    DEC $C101
+0FB4        runtime_map_entity_0_x_positive_undo_low:
+0FB4  CE 00 C1    DEC $C100
+0FB7  A9 01       LDA #$01
+0FB9  8D 09 C1    STA $C109
+0FBC  A9 00       LDA #$00
+0FBE  8D 04 C1    STA $C104
+0FC1  4C 75 10    JMP runtime_map_entity_0_x_done
+0FC4        runtime_map_entity_0_x_negative:
+0FC4  AD 04 C1    LDA $C104
+0FC7  49 FF       EOR #$FF
+0FC9  18          CLC
+0FCA  69 01       ADC #$01
+0FCC  C9 09       CMP #$09
+0FCE  90 02       BCC runtime_map_entity_0_x_negative_count_store
+0FD0  A9 08       LDA #$08
+0FD2        runtime_map_entity_0_x_negative_count_store:
+0FD2  8D C8 C7    STA $C7C8
+0FD5        runtime_map_entity_0_x_negative_loop:
+0FD5  AD 00 C1    LDA $C100
+0FD8  D0 03       BNE runtime_map_entity_0_x_negative_step_low
+0FDA  CE 01 C1    DEC $C101
+0FDD        runtime_map_entity_0_x_negative_step_low:
+0FDD  CE 00 C1    DEC $C100
+0FE0  18          CLC
+0FE1  AD 00 C1    LDA $C100
+0FE4  69 04       ADC #$04
+0FE6  8D C4 C7    STA $C7C4
+0FE9  AD 01 C1    LDA $C101
+0FEC  69 00       ADC #$00
+0FEE  8D C5 C7    STA $C7C5
+0FF1  18          CLC
+0FF2  AD 02 C1    LDA $C102
+0FF5  69 01       ADC #$01
+0FF7  8D C6 C7    STA $C7C6
+0FFA  AD 03 C1    LDA $C103
+0FFD  69 00       ADC #$00
+0FFF  8D C7 C7    STA $C7C7
+1002  20 15 12    JSR runtime_map_entity_point_solid_0
+1005  F0 03       BEQ runtime_map_entity_0_x_negative_sample_0_clear
+1007  4C 63 10    JMP runtime_map_entity_0_x_negative_hit
+100A        runtime_map_entity_0_x_negative_sample_0_clear:
+100A  18          CLC
+100B  AD 02 C1    LDA $C102
+100E  69 09       ADC #$09
+1010  8D C6 C7    STA $C7C6
+1013  AD 03 C1    LDA $C103
+1016  69 00       ADC #$00
+1018  8D C7 C7    STA $C7C7
+101B  20 15 12    JSR runtime_map_entity_point_solid_0
+101E  F0 03       BEQ runtime_map_entity_0_x_negative_sample_1_clear
+1020  4C 63 10    JMP runtime_map_entity_0_x_negative_hit
+1023        runtime_map_entity_0_x_negative_sample_1_clear:
+1023  18          CLC
+1024  AD 02 C1    LDA $C102
+1027  69 11       ADC #$11
+1029  8D C6 C7    STA $C7C6
+102C  AD 03 C1    LDA $C103
+102F  69 00       ADC #$00
+1031  8D C7 C7    STA $C7C7
+1034  20 15 12    JSR runtime_map_entity_point_solid_0
+1037  F0 03       BEQ runtime_map_entity_0_x_negative_sample_2_clear
+1039  4C 63 10    JMP runtime_map_entity_0_x_negative_hit
+103C        runtime_map_entity_0_x_negative_sample_2_clear:
+103C  18          CLC
+103D  AD 02 C1    LDA $C102
+1040  69 14       ADC #$14
+1042  8D C6 C7    STA $C7C6
+1045  AD 03 C1    LDA $C103
+1048  69 00       ADC #$00
+104A  8D C7 C7    STA $C7C7
+104D  20 15 12    JSR runtime_map_entity_point_solid_0
+1050  F0 03       BEQ runtime_map_entity_0_x_negative_sample_3_clear
+1052  4C 63 10    JMP runtime_map_entity_0_x_negative_hit
+1055        runtime_map_entity_0_x_negative_sample_3_clear:
+1055  CE C8 C7    DEC $C7C8
+1058  AD C8 C7    LDA $C7C8
+105B  F0 03       BEQ runtime_map_entity_0_x_negative_done
+105D  4C D5 0F    JMP runtime_map_entity_0_x_negative_loop
+1060        runtime_map_entity_0_x_negative_done:
+1060  4C 75 10    JMP runtime_map_entity_0_x_done
+1063        runtime_map_entity_0_x_negative_hit:
+1063  EE 00 C1    INC $C100
+1066  D0 03       BNE runtime_map_entity_0_x_negative_undo_done
+1068  EE 01 C1    INC $C101
+106B        runtime_map_entity_0_x_negative_undo_done:
+106B  A9 01       LDA #$01
+106D  8D 08 C1    STA $C108
+1070  A9 00       LDA #$00
+1072  8D 04 C1    STA $C104
+1075        runtime_map_entity_0_x_done:
+1075  AD 05 C1    LDA $C105
+1078  D0 03       BNE runtime_map_entity_0_y_has_velocity
+107A  4C B0 11    JMP runtime_map_entity_0_y_done
+107D        runtime_map_entity_0_y_has_velocity:
+107D  10 03       BPL runtime_map_entity_0_y_positive
+107F  4C 18 11    JMP runtime_map_entity_0_y_negative
+1082        runtime_map_entity_0_y_positive:
+1082  AD 05 C1    LDA $C105
+1085  C9 09       CMP #$09
+1087  90 02       BCC runtime_map_entity_0_y_positive_count_store
+1089  A9 08       LDA #$08
+108B        runtime_map_entity_0_y_positive_count_store:
+108B  8D C8 C7    STA $C7C8
+108E        runtime_map_entity_0_y_positive_loop:
+108E  EE 02 C1    INC $C102
+1091  D0 03       BNE runtime_map_entity_0_y_positive_step_done
+1093  EE 03 C1    INC $C103
+1096        runtime_map_entity_0_y_positive_step_done:
+1096  18          CLC
+1097  AD 02 C1    LDA $C102
+109A  69 14       ADC #$14
+109C  8D C6 C7    STA $C7C6
+109F  AD 03 C1    LDA $C103
+10A2  69 00       ADC #$00
+10A4  8D C7 C7    STA $C7C7
+10A7  18          CLC
+10A8  AD 00 C1    LDA $C100
+10AB  69 04       ADC #$04
+10AD  8D C4 C7    STA $C7C4
+10B0  AD 01 C1    LDA $C101
+10B3  69 00       ADC #$00
+10B5  8D C5 C7    STA $C7C5
+10B8  20 15 12    JSR runtime_map_entity_point_solid_0
+10BB  F0 03       BEQ runtime_map_entity_0_y_positive_sample_0_clear
+10BD  4C 00 11    JMP runtime_map_entity_0_y_positive_hit
+10C0        runtime_map_entity_0_y_positive_sample_0_clear:
+10C0  18          CLC
+10C1  AD 00 C1    LDA $C100
+10C4  69 0C       ADC #$0C
+10C6  8D C4 C7    STA $C7C4
+10C9  AD 01 C1    LDA $C101
+10CC  69 00       ADC #$00
+10CE  8D C5 C7    STA $C7C5
+10D1  20 15 12    JSR runtime_map_entity_point_solid_0
+10D4  F0 03       BEQ runtime_map_entity_0_y_positive_sample_1_clear
+10D6  4C 00 11    JMP runtime_map_entity_0_y_positive_hit
+10D9        runtime_map_entity_0_y_positive_sample_1_clear:
+10D9  18          CLC
+10DA  AD 00 C1    LDA $C100
+10DD  69 13       ADC #$13
+10DF  8D C4 C7    STA $C7C4
+10E2  AD 01 C1    LDA $C101
+10E5  69 00       ADC #$00
+10E7  8D C5 C7    STA $C7C5
+10EA  20 15 12    JSR runtime_map_entity_point_solid_0
+10ED  F0 03       BEQ runtime_map_entity_0_y_positive_sample_2_clear
+10EF  4C 00 11    JMP runtime_map_entity_0_y_positive_hit
+10F2        runtime_map_entity_0_y_positive_sample_2_clear:
+10F2  CE C8 C7    DEC $C7C8
+10F5  AD C8 C7    LDA $C7C8
+10F8  F0 03       BEQ runtime_map_entity_0_y_positive_done
+10FA  4C 8E 10    JMP runtime_map_entity_0_y_positive_loop
+10FD        runtime_map_entity_0_y_positive_done:
+10FD  4C B0 11    JMP runtime_map_entity_0_y_done
+1100        runtime_map_entity_0_y_positive_hit:
+1100  AD 02 C1    LDA $C102
+1103  D0 03       BNE runtime_map_entity_0_y_positive_undo_low
+1105  CE 03 C1    DEC $C103
+1108        runtime_map_entity_0_y_positive_undo_low:
+1108  CE 02 C1    DEC $C102
+110B  A9 01       LDA #$01
+110D  8D 06 C1    STA $C106
+1110  A9 00       LDA #$00
+1112  8D 05 C1    STA $C105
+1115  4C B0 11    JMP runtime_map_entity_0_y_done
+1118        runtime_map_entity_0_y_negative:
+1118  AD 05 C1    LDA $C105
+111B  49 FF       EOR #$FF
+111D  18          CLC
+111E  69 01       ADC #$01
+1120  C9 09       CMP #$09
+1122  90 02       BCC runtime_map_entity_0_y_negative_count_store
+1124  A9 08       LDA #$08
+1126        runtime_map_entity_0_y_negative_count_store:
+1126  8D C8 C7    STA $C7C8
+1129        runtime_map_entity_0_y_negative_loop:
+1129  AD 02 C1    LDA $C102
+112C  D0 03       BNE runtime_map_entity_0_y_negative_step_low
+112E  CE 03 C1    DEC $C103
+1131        runtime_map_entity_0_y_negative_step_low:
+1131  CE 02 C1    DEC $C102
+1134  18          CLC
+1135  AD 02 C1    LDA $C102
+1138  69 01       ADC #$01
+113A  8D C6 C7    STA $C7C6
+113D  AD 03 C1    LDA $C103
+1140  69 00       ADC #$00
+1142  8D C7 C7    STA $C7C7
+1145  18          CLC
+1146  AD 00 C1    LDA $C100
+1149  69 04       ADC #$04
+114B  8D C4 C7    STA $C7C4
+114E  AD 01 C1    LDA $C101
+1151  69 00       ADC #$00
+1153  8D C5 C7    STA $C7C5
+1156  20 15 12    JSR runtime_map_entity_point_solid_0
+1159  F0 03       BEQ runtime_map_entity_0_y_negative_sample_0_clear
+115B  4C 9E 11    JMP runtime_map_entity_0_y_negative_hit
+115E        runtime_map_entity_0_y_negative_sample_0_clear:
+115E  18          CLC
+115F  AD 00 C1    LDA $C100
+1162  69 0C       ADC #$0C
+1164  8D C4 C7    STA $C7C4
+1167  AD 01 C1    LDA $C101
+116A  69 00       ADC #$00
+116C  8D C5 C7    STA $C7C5
+116F  20 15 12    JSR runtime_map_entity_point_solid_0
+1172  F0 03       BEQ runtime_map_entity_0_y_negative_sample_1_clear
+1174  4C 9E 11    JMP runtime_map_entity_0_y_negative_hit
+1177        runtime_map_entity_0_y_negative_sample_1_clear:
+1177  18          CLC
+1178  AD 00 C1    LDA $C100
+117B  69 13       ADC #$13
+117D  8D C4 C7    STA $C7C4
+1180  AD 01 C1    LDA $C101
+1183  69 00       ADC #$00
+1185  8D C5 C7    STA $C7C5
+1188  20 15 12    JSR runtime_map_entity_point_solid_0
+118B  F0 03       BEQ runtime_map_entity_0_y_negative_sample_2_clear
+118D  4C 9E 11    JMP runtime_map_entity_0_y_negative_hit
+1190        runtime_map_entity_0_y_negative_sample_2_clear:
+1190  CE C8 C7    DEC $C7C8
+1193  AD C8 C7    LDA $C7C8
+1196  F0 03       BEQ runtime_map_entity_0_y_negative_done
+1198  4C 29 11    JMP runtime_map_entity_0_y_negative_loop
+119B        runtime_map_entity_0_y_negative_done:
+119B  4C B0 11    JMP runtime_map_entity_0_y_done
+119E        runtime_map_entity_0_y_negative_hit:
+119E  EE 02 C1    INC $C102
+11A1  D0 03       BNE runtime_map_entity_0_y_negative_undo_done
+11A3  EE 03 C1    INC $C103
+11A6        runtime_map_entity_0_y_negative_undo_done:
+11A6  A9 01       LDA #$01
+11A8  8D 07 C1    STA $C107
+11AB  A9 00       LDA #$00
+11AD  8D 05 C1    STA $C105
+11B0        runtime_map_entity_0_y_done:
+11B0  18          CLC
+11B1  AD 02 C1    LDA $C102
+11B4  69 15       ADC #$15
+11B6  8D C6 C7    STA $C7C6
+11B9  AD 03 C1    LDA $C103
+11BC  69 00       ADC #$00
+11BE  8D C7 C7    STA $C7C7
+11C1  18          CLC
+11C2  AD 00 C1    LDA $C100
+11C5  69 04       ADC #$04
+11C7  8D C4 C7    STA $C7C4
+11CA  AD 01 C1    LDA $C101
+11CD  69 00       ADC #$00
+11CF  8D C5 C7    STA $C7C5
+11D2  20 15 12    JSR runtime_map_entity_point_solid_0
+11D5  F0 03       BEQ runtime_map_entity_0_ground_probe_sample_0_clear
+11D7  4C 0F 12    JMP runtime_map_entity_0_grounded
+11DA        runtime_map_entity_0_ground_probe_sample_0_clear:
+11DA  18          CLC
+11DB  AD 00 C1    LDA $C100
+11DE  69 0C       ADC #$0C
+11E0  8D C4 C7    STA $C7C4
+11E3  AD 01 C1    LDA $C101
+11E6  69 00       ADC #$00
+11E8  8D C5 C7    STA $C7C5
+11EB  20 15 12    JSR runtime_map_entity_point_solid_0
+11EE  F0 03       BEQ runtime_map_entity_0_ground_probe_sample_1_clear
+11F0  4C 0F 12    JMP runtime_map_entity_0_grounded
+11F3        runtime_map_entity_0_ground_probe_sample_1_clear:
+11F3  18          CLC
+11F4  AD 00 C1    LDA $C100
+11F7  69 13       ADC #$13
+11F9  8D C4 C7    STA $C7C4
+11FC  AD 01 C1    LDA $C101
+11FF  69 00       ADC #$00
+1201  8D C5 C7    STA $C7C5
+1204  20 15 12    JSR runtime_map_entity_point_solid_0
+1207  F0 03       BEQ runtime_map_entity_0_ground_probe_sample_2_clear
+1209  4C 0F 12    JMP runtime_map_entity_0_grounded
+120C        runtime_map_entity_0_ground_probe_sample_2_clear:
+120C  4C 14 12    JMP runtime_map_entity_0_done
+120F        runtime_map_entity_0_grounded:
+120F  A9 01       LDA #$01
+1211  8D 06 C1    STA $C106
+1214        runtime_map_entity_0_done:
+1214  60          RTS
+            ; Map 0: logical collision lookup from 16-bit world pixels
+1215        runtime_map_entity_point_solid_0:
+1215  AD C5 C7    LDA $C7C5
+1218  C9 02       CMP #$02
+121A  90 0C       BCC runtime_map_entity_point_0_x_inside
+121C  D0 07       BNE runtime_map_entity_point_0_x_outside
+121E  AD C4 C7    LDA $C7C4
+1221  C9 80       CMP #$80
+1223  90 03       BCC runtime_map_entity_point_0_x_inside
+1225        runtime_map_entity_point_0_x_outside:
+1225  4C 0D 13    JMP runtime_map_entity_point_0_solid
+1228        runtime_map_entity_point_0_x_inside:
+1228  AD C7 C7    LDA $C7C7
+122B  C9 00       CMP #$00
+122D  90 0C       BCC runtime_map_entity_point_0_y_inside
+122F  D0 07       BNE runtime_map_entity_point_0_y_outside
+1231  AD C6 C7    LDA $C7C6
+1234  C9 A0       CMP #$A0
+1236  90 03       BCC runtime_map_entity_point_0_y_inside
+1238        runtime_map_entity_point_0_y_outside:
+1238  4C 0D 13    JMP runtime_map_entity_point_0_solid
+123B        runtime_map_entity_point_0_y_inside:
+123B  AD C4 C7    LDA $C7C4
+123E  8D BB C7    STA $C7BB
+1241  AD C5 C7    LDA $C7C5
+1244  8D BC C7    STA $C7BC
+1247  4E BC C7    LSR $C7BC
+124A  6E BB C7    ROR $C7BB
+124D  4E BC C7    LSR $C7BC
+1250  6E BB C7    ROR $C7BB
+1253  4E BC C7    LSR $C7BC
+1256  6E BB C7    ROR $C7BB
+1259  AD BB C7    LDA $C7BB
+125C  8D B2 C7    STA $C7B2
+125F  AD C6 C7    LDA $C7C6
+1262  8D BB C7    STA $C7BB
+1265  AD C7 C7    LDA $C7C7
+1268  8D BC C7    STA $C7BC
+126B  4E BC C7    LSR $C7BC
+126E  6E BB C7    ROR $C7BB
+1271  4E BC C7    LSR $C7BC
+1274  6E BB C7    ROR $C7BB
+1277  4E BC C7    LSR $C7BC
+127A  6E BB C7    ROR $C7BB
+127D  AD BB C7    LDA $C7BB
+1280  8D B3 C7    STA $C7B3
+1283  A9 00       LDA #$00
+1285  8D B6 C7    STA $C7B6
+1288  A9 00       LDA #$00
+128A  8D BA C7    STA $C7BA
+128D  AD B3 C7    LDA $C7B3
+1290  8D B7 C7    STA $C7B7
+1293  A9 00       LDA #$00
+1295  8D BF C7    STA $C7BF
+1298  0E B7 C7    ASL $C7B7
+129B  2E BF C7    ROL $C7BF
+129E  0E B7 C7    ASL $C7B7
+12A1  2E BF C7    ROL $C7BF
+12A4  0E B7 C7    ASL $C7B7
+12A7  2E BF C7    ROL $C7BF
+12AA  0E B7 C7    ASL $C7B7
+12AD  2E BF C7    ROL $C7BF
+12B0  18          CLC
+12B1  AD B6 C7    LDA $C7B6
+12B4  6D B7 C7    ADC $C7B7
+12B7  8D B6 C7    STA $C7B6
+12BA  AD BA C7    LDA $C7BA
+12BD  6D BF C7    ADC $C7BF
+12C0  8D BA C7    STA $C7BA
+12C3  0E B7 C7    ASL $C7B7
+12C6  2E BF C7    ROL $C7BF
+12C9  0E B7 C7    ASL $C7B7
+12CC  2E BF C7    ROL $C7BF
+12CF  18          CLC
+12D0  AD B6 C7    LDA $C7B6
+12D3  6D B7 C7    ADC $C7B7
+12D6  8D B6 C7    STA $C7B6
+12D9  AD BA C7    LDA $C7BA
+12DC  6D BF C7    ADC $C7BF
+12DF  8D BA C7    STA $C7BA
+12E2  18          CLC
+12E3  AD B6 C7    LDA $C7B6
+12E6  6D B2 C7    ADC $C7B2
+12E9  8D B6 C7    STA $C7B6
+12EC  AD BA C7    LDA $C7BA
+12EF  69 00       ADC #$00
+12F1  8D BA C7    STA $C7BA
+12F4  18          CLC
+12F5  AD B6 C7    LDA $C7B6
+12F8  69 00       ADC #$00
+12FA  85 FB       STA $FB
+12FC  AD BA C7    LDA $C7BA
+12FF  69 80       ADC #$80
+1301  85 FC       STA $FC
+1303  A0 00       LDY #$00
+1305  B1 FB       LDA ($FB),Y
+1307  AA          TAX
+1308  BD EA 26    LDA asset_map_collisions_0,X
+130B  F0 03       BEQ runtime_map_entity_point_0_clear
+130D        runtime_map_entity_point_0_solid:
+130D  A9 01       LDA #$01
+130F  60          RTS
+1310        runtime_map_entity_point_0_clear:
+1310  A9 00       LDA #$00
+1312  60          RTS
+            ; Dynamic map 0: draw one changed metatile
+1313        runtime_map_draw_tile_0:
+1313  AD B2 C7    LDA $C7B2
+1316  8D C2 C7    STA $C7C2
+1319  AD B3 C7    LDA $C7B3
+131C  8D C3 C7    STA $C7C3
+131F        runtime_map_draw_tile_body_0:
+131F  A9 00       LDA #$00
+1321  8D B6 C7    STA $C7B6
+1324  A9 00       LDA #$00
+1326  8D BA C7    STA $C7BA
+1329  AD B3 C7    LDA $C7B3
+132C  8D B7 C7    STA $C7B7
+132F  A9 00       LDA #$00
+1331  8D BF C7    STA $C7BF
+1334  0E B7 C7    ASL $C7B7
+1337  2E BF C7    ROL $C7BF
+133A  0E B7 C7    ASL $C7B7
+133D  2E BF C7    ROL $C7BF
+1340  0E B7 C7    ASL $C7B7
+1343  2E BF C7    ROL $C7BF
+1346  0E B7 C7    ASL $C7B7
+1349  2E BF C7    ROL $C7BF
+134C  18          CLC
+134D  AD B6 C7    LDA $C7B6
+1350  6D B7 C7    ADC $C7B7
+1353  8D B6 C7    STA $C7B6
+1356  AD BA C7    LDA $C7BA
+1359  6D BF C7    ADC $C7BF
+135C  8D BA C7    STA $C7BA
+135F  0E B7 C7    ASL $C7B7
+1362  2E BF C7    ROL $C7BF
+1365  0E B7 C7    ASL $C7B7
+1368  2E BF C7    ROL $C7BF
+136B  18          CLC
+136C  AD B6 C7    LDA $C7B6
+136F  6D B7 C7    ADC $C7B7
+1372  8D B6 C7    STA $C7B6
+1375  AD BA C7    LDA $C7BA
+1378  6D BF C7    ADC $C7BF
+137B  8D BA C7    STA $C7BA
+137E  18          CLC
+137F  AD B6 C7    LDA $C7B6
+1382  6D B2 C7    ADC $C7B2
+1385  8D B6 C7    STA $C7B6
+1388  AD BA C7    LDA $C7BA
+138B  69 00       ADC #$00
+138D  8D BA C7    STA $C7BA
+1390  18          CLC
+1391  AD B6 C7    LDA $C7B6
+1394  69 00       ADC #$00
+1396  85 FB       STA $FB
+1398  AD BA C7    LDA $C7BA
+139B  69 80       ADC #$80
+139D  85 FC       STA $FC
+139F  A0 00       LDY #$00
+13A1  B1 FB       LDA ($FB),Y
+13A3  8D B4 C7    STA $C7B4
+13A6  AD B4 C7    LDA $C7B4
+13A9  8D B5 C7    STA $C7B5
+13AC  A9 01       LDA #$01
+13AE  85 FB       STA $FB
+13B0  A9 04       LDA #$04
+13B2  85 FC       STA $FC
+13B4  AD C3 C7    LDA $C7C3
+13B7  8D B7 C7    STA $C7B7
+13BA        runtime_map_screen_y_loop_0:
+13BA  AD B7 C7    LDA $C7B7
+13BD  F0 13       BEQ runtime_map_screen_y_done_0
+13BF  18          CLC
+13C0  A5 FB       LDA $FB
+13C2  69 28       ADC #$28
+13C4  85 FB       STA $FB
+13C6  A5 FC       LDA $FC
+13C8  69 00       ADC #$00
+13CA  85 FC       STA $FC
+13CC  CE B7 C7    DEC $C7B7
+13CF  4C BA 13    JMP runtime_map_screen_y_loop_0
+13D2        runtime_map_screen_y_done_0:
+13D2  AD C2 C7    LDA $C7C2
+13D5  8D B9 C7    STA $C7B9
+13D8  18          CLC
+13D9  A5 FB       LDA $FB
+13DB  6D B9 C7    ADC $C7B9
+13DE  85 FB       STA $FB
+13E0  A5 FC       LDA $FC
+13E2  69 00       ADC #$00
+13E4  85 FC       STA $FC
+13E6  18          CLC
+13E7  A5 FB       LDA $FB
+13E9  69 00       ADC #$00
+13EB  85 FD       STA $FD
+13ED  A5 FC       LDA $FC
+13EF  69 D4       ADC #$D4
+13F1  85 FE       STA $FE
+13F3  18          CLC
+13F4  AD B5 C7    LDA $C7B5
+13F7  69 00       ADC #$00
+13F9  A8          TAY
+13FA  B9 EE 26    LDA asset_map_chars_0,Y
+13FD  A0 00       LDY #$00
+13FF  91 FB       STA ($FB),Y
+1401  18          CLC
+1402  AD B5 C7    LDA $C7B5
+1405  69 00       ADC #$00
+1407  A8          TAY
+1408  B9 F2 26    LDA asset_map_colors_0,Y
+140B  A0 00       LDY #$00
+140D  91 FD       STA ($FD),Y
+140F  60          RTS
+            ; Map 0: bounded coarse viewport 38x20
+1410        runtime_map_viewport_0:
+1410  A9 00       LDA #$00
+1412  8D C3 C7    STA $C7C3
+1415        runtime_map_viewport_row_0:
+1415  18          CLC
+1416  AD C1 C7    LDA $C7C1
+1419  6D C3 C7    ADC $C7C3
+141C  8D B3 C7    STA $C7B3
+141F  A9 00       LDA #$00
+1421  8D C2 C7    STA $C7C2
+1424        runtime_map_viewport_column_0:
+1424  18          CLC
+1425  AD C0 C7    LDA $C7C0
+1428  6D C2 C7    ADC $C7C2
+142B  8D B2 C7    STA $C7B2
+142E  20 1F 13    JSR runtime_map_draw_tile_body_0
+1431  EE C2 C7    INC $C7C2
+1434  AD C2 C7    LDA $C7C2
+1437  C9 26       CMP #$26
+1439  D0 E9       BNE runtime_map_viewport_column_0
+143B  EE C3 C7    INC $C7C3
+143E  AD C3 C7    LDA $C7C3
+1441  C9 14       CMP #$14
+1443  D0 D0       BNE runtime_map_viewport_row_0
+1445  60          RTS
+            ; Map 0: enter raster-banded fine X/Y viewport
+1446        runtime_map_scroll_apply_0:
+1446  AD 16 D0    LDA $D016
+1449  29 F0       AND #$F0
+144B  0D 0B C1    ORA $C10B
+144E  8D 16 D0    STA $D016
+1451  60          RTS
+            ; Map 0: cycle-stable VCBASE transition into the fixed panel
+1452        runtime_map_scroll_prepare_panel_0:
+1452  60          RTS
+            ; Map 0: leave the scroll area with the fixed horizontal phase
+1453        runtime_map_scroll_leave_0:
+1453  AD 0F C1    LDA $C10F
+1456  8D 16 D0    STA $D016
+1459  60          RTS
+            ; Map 0: restore both fixed-panel VIC-II phases after a full redraw
+145A        runtime_map_scroll_restore_0:
+145A  AD 0F C1    LDA $C10F
+145D  8D 16 D0    STA $D016
+1460  60          RTS
+            ; Map 0: shift Screen RAM and Color RAM one character left
+1461        runtime_map_scroll_shift_left_0:
+1461  AD 0A C1    LDA $C10A
+1464  18          CLC
+1465  69 25       ADC #$25
+1467  8D B2 C7    STA $C7B2
+146A  AD 0C C1    LDA $C10C
+146D  8D B3 C7    STA $C7B3
+1470  A9 00       LDA #$00
+1472  8D B6 C7    STA $C7B6
+1475  A9 00       LDA #$00
+1477  8D BA C7    STA $C7BA
+147A  AD B3 C7    LDA $C7B3
+147D  8D B7 C7    STA $C7B7
+1480  A9 00       LDA #$00
+1482  8D BF C7    STA $C7BF
+1485  0E B7 C7    ASL $C7B7
+1488  2E BF C7    ROL $C7BF
+148B  0E B7 C7    ASL $C7B7
+148E  2E BF C7    ROL $C7BF
+1491  0E B7 C7    ASL $C7B7
+1494  2E BF C7    ROL $C7BF
+1497  0E B7 C7    ASL $C7B7
+149A  2E BF C7    ROL $C7BF
+149D  18          CLC
+149E  AD B6 C7    LDA $C7B6
+14A1  6D B7 C7    ADC $C7B7
+14A4  8D B6 C7    STA $C7B6
+14A7  AD BA C7    LDA $C7BA
+14AA  6D BF C7    ADC $C7BF
+14AD  8D BA C7    STA $C7BA
+14B0  0E B7 C7    ASL $C7B7
+14B3  2E BF C7    ROL $C7BF
+14B6  0E B7 C7    ASL $C7B7
+14B9  2E BF C7    ROL $C7BF
+14BC  18          CLC
+14BD  AD B6 C7    LDA $C7B6
+14C0  6D B7 C7    ADC $C7B7
+14C3  8D B6 C7    STA $C7B6
+14C6  AD BA C7    LDA $C7BA
+14C9  6D BF C7    ADC $C7BF
+14CC  8D BA C7    STA $C7BA
+14CF  18          CLC
+14D0  AD B6 C7    LDA $C7B6
+14D3  6D B2 C7    ADC $C7B2
+14D6  8D B6 C7    STA $C7B6
+14D9  AD BA C7    LDA $C7BA
+14DC  69 00       ADC #$00
+14DE  8D BA C7    STA $C7BA
+14E1  18          CLC
+14E2  AD B6 C7    LDA $C7B6
+14E5  69 00       ADC #$00
+14E7  85 FB       STA $FB
+14E9  AD BA C7    LDA $C7BA
+14EC  69 80       ADC #$80
+14EE  85 FC       STA $FC
+14F0  A0 00       LDY #$00
+14F2  AD 02 04    LDA $0402
+14F5  8D 01 04    STA $0401
+14F8  AD 02 D8    LDA $D802
+14FB  8D 01 D8    STA $D801
+14FE  A2 DC       LDX #$DC
+1500        runtime_map_scroll_left_row_0_0:
+1500  BD 27 03    LDA $0327,X
+1503  9D 26 03    STA $0326,X
+1506  BD 27 D7    LDA $D727,X
+1509  9D 26 D7    STA $D726,X
+150C  E8          INX
+150D  BD 27 03    LDA $0327,X
+1510  9D 26 03    STA $0326,X
+1513  BD 27 D7    LDA $D727,X
+1516  9D 26 D7    STA $D726,X
+1519  E8          INX
+151A  D0 E4       BNE runtime_map_scroll_left_row_0_0
+151C  A0 00       LDY #$00
+151E  B1 FB       LDA ($FB),Y
+1520  AA          TAX
+1521  BD EE 26    LDA asset_map_chars_0,X
+1524  8D 26 04    STA $0426
+1527  BD F2 26    LDA asset_map_colors_0,X
+152A  8D 26 D8    STA $D826
+152D  18          CLC
+152E  A5 FB       LDA $FB
+1530  69 50       ADC #$50
+1532  85 FB       STA $FB
+1534  A5 FC       LDA $FC
+1536  69 00       ADC #$00
+1538  85 FC       STA $FC
+153A  AD 2A 04    LDA $042A
+153D  8D 29 04    STA $0429
+1540  AD 2A D8    LDA $D82A
+1543  8D 29 D8    STA $D829
+1546  A2 DC       LDX #$DC
+1548        runtime_map_scroll_left_row_0_1:
+1548  BD 4F 03    LDA $034F,X
+154B  9D 4E 03    STA $034E,X
+154E  BD 4F D7    LDA $D74F,X
+1551  9D 4E D7    STA $D74E,X
+1554  E8          INX
+1555  BD 4F 03    LDA $034F,X
+1558  9D 4E 03    STA $034E,X
+155B  BD 4F D7    LDA $D74F,X
+155E  9D 4E D7    STA $D74E,X
+1561  E8          INX
+1562  D0 E4       BNE runtime_map_scroll_left_row_0_1
+1564  A0 00       LDY #$00
+1566  B1 FB       LDA ($FB),Y
+1568  AA          TAX
+1569  BD EE 26    LDA asset_map_chars_0,X
+156C  8D 4E 04    STA $044E
+156F  BD F2 26    LDA asset_map_colors_0,X
+1572  8D 4E D8    STA $D84E
+1575  18          CLC
+1576  A5 FB       LDA $FB
+1578  69 50       ADC #$50
+157A  85 FB       STA $FB
+157C  A5 FC       LDA $FC
+157E  69 00       ADC #$00
+1580  85 FC       STA $FC
+1582  AD 52 04    LDA $0452
+1585  8D 51 04    STA $0451
+1588  AD 52 D8    LDA $D852
+158B  8D 51 D8    STA $D851
+158E  A2 DC       LDX #$DC
+1590        runtime_map_scroll_left_row_0_2:
+1590  BD 77 03    LDA $0377,X
+1593  9D 76 03    STA $0376,X
+1596  BD 77 D7    LDA $D777,X
+1599  9D 76 D7    STA $D776,X
+159C  E8          INX
+159D  BD 77 03    LDA $0377,X
+15A0  9D 76 03    STA $0376,X
+15A3  BD 77 D7    LDA $D777,X
+15A6  9D 76 D7    STA $D776,X
+15A9  E8          INX
+15AA  D0 E4       BNE runtime_map_scroll_left_row_0_2
+15AC  A0 00       LDY #$00
+15AE  B1 FB       LDA ($FB),Y
+15B0  AA          TAX
+15B1  BD EE 26    LDA asset_map_chars_0,X
+15B4  8D 76 04    STA $0476
+15B7  BD F2 26    LDA asset_map_colors_0,X
+15BA  8D 76 D8    STA $D876
+15BD  18          CLC
+15BE  A5 FB       LDA $FB
+15C0  69 50       ADC #$50
+15C2  85 FB       STA $FB
+15C4  A5 FC       LDA $FC
+15C6  69 00       ADC #$00
+15C8  85 FC       STA $FC
+15CA  AD 7A 04    LDA $047A
+15CD  8D 79 04    STA $0479
+15D0  AD 7A D8    LDA $D87A
+15D3  8D 79 D8    STA $D879
+15D6  A2 DC       LDX #$DC
+15D8        runtime_map_scroll_left_row_0_3:
+15D8  BD 9F 03    LDA $039F,X
+15DB  9D 9E 03    STA $039E,X
+15DE  BD 9F D7    LDA $D79F,X
+15E1  9D 9E D7    STA $D79E,X
+15E4  E8          INX
+15E5  BD 9F 03    LDA $039F,X
+15E8  9D 9E 03    STA $039E,X
+15EB  BD 9F D7    LDA $D79F,X
+15EE  9D 9E D7    STA $D79E,X
+15F1  E8          INX
+15F2  D0 E4       BNE runtime_map_scroll_left_row_0_3
+15F4  A0 00       LDY #$00
+15F6  B1 FB       LDA ($FB),Y
+15F8  AA          TAX
+15F9  BD EE 26    LDA asset_map_chars_0,X
+15FC  8D 9E 04    STA $049E
+15FF  BD F2 26    LDA asset_map_colors_0,X
+1602  8D 9E D8    STA $D89E
+1605  18          CLC
+1606  A5 FB       LDA $FB
+1608  69 50       ADC #$50
+160A  85 FB       STA $FB
+160C  A5 FC       LDA $FC
+160E  69 00       ADC #$00
+1610  85 FC       STA $FC
+1612  AD A2 04    LDA $04A2
+1615  8D A1 04    STA $04A1
+1618  AD A2 D8    LDA $D8A2
+161B  8D A1 D8    STA $D8A1
+161E  A2 DC       LDX #$DC
+1620        runtime_map_scroll_left_row_0_4:
+1620  BD C7 03    LDA $03C7,X
+1623  9D C6 03    STA $03C6,X
+1626  BD C7 D7    LDA $D7C7,X
+1629  9D C6 D7    STA $D7C6,X
+162C  E8          INX
+162D  BD C7 03    LDA $03C7,X
+1630  9D C6 03    STA $03C6,X
+1633  BD C7 D7    LDA $D7C7,X
+1636  9D C6 D7    STA $D7C6,X
+1639  E8          INX
+163A  D0 E4       BNE runtime_map_scroll_left_row_0_4
+163C  A0 00       LDY #$00
+163E  B1 FB       LDA ($FB),Y
+1640  AA          TAX
+1641  BD EE 26    LDA asset_map_chars_0,X
+1644  8D C6 04    STA $04C6
+1647  BD F2 26    LDA asset_map_colors_0,X
+164A  8D C6 D8    STA $D8C6
+164D  18          CLC
+164E  A5 FB       LDA $FB
+1650  69 50       ADC #$50
+1652  85 FB       STA $FB
+1654  A5 FC       LDA $FC
+1656  69 00       ADC #$00
+1658  85 FC       STA $FC
+165A  AD CA 04    LDA $04CA
+165D  8D C9 04    STA $04C9
+1660  AD CA D8    LDA $D8CA
+1663  8D C9 D8    STA $D8C9
+1666  A2 DC       LDX #$DC
+1668        runtime_map_scroll_left_row_0_5:
+1668  BD EF 03    LDA $03EF,X
+166B  9D EE 03    STA $03EE,X
+166E  BD EF D7    LDA $D7EF,X
+1671  9D EE D7    STA $D7EE,X
+1674  E8          INX
+1675  BD EF 03    LDA $03EF,X
+1678  9D EE 03    STA $03EE,X
+167B  BD EF D7    LDA $D7EF,X
+167E  9D EE D7    STA $D7EE,X
+1681  E8          INX
+1682  D0 E4       BNE runtime_map_scroll_left_row_0_5
+1684  A0 00       LDY #$00
+1686  B1 FB       LDA ($FB),Y
+1688  AA          TAX
+1689  BD EE 26    LDA asset_map_chars_0,X
+168C  8D EE 04    STA $04EE
+168F  BD F2 26    LDA asset_map_colors_0,X
+1692  8D EE D8    STA $D8EE
+1695  18          CLC
+1696  A5 FB       LDA $FB
+1698  69 50       ADC #$50
+169A  85 FB       STA $FB
+169C  A5 FC       LDA $FC
+169E  69 00       ADC #$00
+16A0  85 FC       STA $FC
+16A2  AD F2 04    LDA $04F2
+16A5  8D F1 04    STA $04F1
+16A8  AD F2 D8    LDA $D8F2
+16AB  8D F1 D8    STA $D8F1
+16AE  A2 DC       LDX #$DC
+16B0        runtime_map_scroll_left_row_0_6:
+16B0  BD 17 04    LDA $0417,X
+16B3  9D 16 04    STA $0416,X
+16B6  BD 17 D8    LDA $D817,X
+16B9  9D 16 D8    STA $D816,X
+16BC  E8          INX
+16BD  BD 17 04    LDA $0417,X
+16C0  9D 16 04    STA $0416,X
+16C3  BD 17 D8    LDA $D817,X
+16C6  9D 16 D8    STA $D816,X
+16C9  E8          INX
+16CA  D0 E4       BNE runtime_map_scroll_left_row_0_6
+16CC  A0 00       LDY #$00
+16CE  B1 FB       LDA ($FB),Y
+16D0  AA          TAX
+16D1  BD EE 26    LDA asset_map_chars_0,X
+16D4  8D 16 05    STA $0516
+16D7  BD F2 26    LDA asset_map_colors_0,X
+16DA  8D 16 D9    STA $D916
+16DD  18          CLC
+16DE  A5 FB       LDA $FB
+16E0  69 50       ADC #$50
+16E2  85 FB       STA $FB
+16E4  A5 FC       LDA $FC
+16E6  69 00       ADC #$00
+16E8  85 FC       STA $FC
+16EA  AD 1A 05    LDA $051A
+16ED  8D 19 05    STA $0519
+16F0  AD 1A D9    LDA $D91A
+16F3  8D 19 D9    STA $D919
+16F6  A2 DC       LDX #$DC
+16F8        runtime_map_scroll_left_row_0_7:
+16F8  BD 3F 04    LDA $043F,X
+16FB  9D 3E 04    STA $043E,X
+16FE  BD 3F D8    LDA $D83F,X
+1701  9D 3E D8    STA $D83E,X
+1704  E8          INX
+1705  BD 3F 04    LDA $043F,X
+1708  9D 3E 04    STA $043E,X
+170B  BD 3F D8    LDA $D83F,X
+170E  9D 3E D8    STA $D83E,X
+1711  E8          INX
+1712  D0 E4       BNE runtime_map_scroll_left_row_0_7
+1714  A0 00       LDY #$00
+1716  B1 FB       LDA ($FB),Y
+1718  AA          TAX
+1719  BD EE 26    LDA asset_map_chars_0,X
+171C  8D 3E 05    STA $053E
+171F  BD F2 26    LDA asset_map_colors_0,X
+1722  8D 3E D9    STA $D93E
+1725  18          CLC
+1726  A5 FB       LDA $FB
+1728  69 50       ADC #$50
+172A  85 FB       STA $FB
+172C  A5 FC       LDA $FC
+172E  69 00       ADC #$00
+1730  85 FC       STA $FC
+1732  AD 42 05    LDA $0542
+1735  8D 41 05    STA $0541
+1738  AD 42 D9    LDA $D942
+173B  8D 41 D9    STA $D941
+173E  A2 DC       LDX #$DC
+1740        runtime_map_scroll_left_row_0_8:
+1740  BD 67 04    LDA $0467,X
+1743  9D 66 04    STA $0466,X
+1746  BD 67 D8    LDA $D867,X
+1749  9D 66 D8    STA $D866,X
+174C  E8          INX
+174D  BD 67 04    LDA $0467,X
+1750  9D 66 04    STA $0466,X
+1753  BD 67 D8    LDA $D867,X
+1756  9D 66 D8    STA $D866,X
+1759  E8          INX
+175A  D0 E4       BNE runtime_map_scroll_left_row_0_8
+175C  A0 00       LDY #$00
+175E  B1 FB       LDA ($FB),Y
+1760  AA          TAX
+1761  BD EE 26    LDA asset_map_chars_0,X
+1764  8D 66 05    STA $0566
+1767  BD F2 26    LDA asset_map_colors_0,X
+176A  8D 66 D9    STA $D966
+176D  18          CLC
+176E  A5 FB       LDA $FB
+1770  69 50       ADC #$50
+1772  85 FB       STA $FB
+1774  A5 FC       LDA $FC
+1776  69 00       ADC #$00
+1778  85 FC       STA $FC
+177A  AD 6A 05    LDA $056A
+177D  8D 69 05    STA $0569
+1780  AD 6A D9    LDA $D96A
+1783  8D 69 D9    STA $D969
+1786  A2 DC       LDX #$DC
+1788        runtime_map_scroll_left_row_0_9:
+1788  BD 8F 04    LDA $048F,X
+178B  9D 8E 04    STA $048E,X
+178E  BD 8F D8    LDA $D88F,X
+1791  9D 8E D8    STA $D88E,X
+1794  E8          INX
+1795  BD 8F 04    LDA $048F,X
+1798  9D 8E 04    STA $048E,X
+179B  BD 8F D8    LDA $D88F,X
+179E  9D 8E D8    STA $D88E,X
+17A1  E8          INX
+17A2  D0 E4       BNE runtime_map_scroll_left_row_0_9
+17A4  A0 00       LDY #$00
+17A6  B1 FB       LDA ($FB),Y
+17A8  AA          TAX
+17A9  BD EE 26    LDA asset_map_chars_0,X
+17AC  8D 8E 05    STA $058E
+17AF  BD F2 26    LDA asset_map_colors_0,X
+17B2  8D 8E D9    STA $D98E
+17B5  18          CLC
+17B6  A5 FB       LDA $FB
+17B8  69 50       ADC #$50
+17BA  85 FB       STA $FB
+17BC  A5 FC       LDA $FC
+17BE  69 00       ADC #$00
+17C0  85 FC       STA $FC
+17C2  AD 92 05    LDA $0592
+17C5  8D 91 05    STA $0591
+17C8  AD 92 D9    LDA $D992
+17CB  8D 91 D9    STA $D991
+17CE  A2 DC       LDX #$DC
+17D0        runtime_map_scroll_left_row_0_10:
+17D0  BD B7 04    LDA $04B7,X
+17D3  9D B6 04    STA $04B6,X
+17D6  BD B7 D8    LDA $D8B7,X
+17D9  9D B6 D8    STA $D8B6,X
+17DC  E8          INX
+17DD  BD B7 04    LDA $04B7,X
+17E0  9D B6 04    STA $04B6,X
+17E3  BD B7 D8    LDA $D8B7,X
+17E6  9D B6 D8    STA $D8B6,X
+17E9  E8          INX
+17EA  D0 E4       BNE runtime_map_scroll_left_row_0_10
+17EC  A0 00       LDY #$00
+17EE  B1 FB       LDA ($FB),Y
+17F0  AA          TAX
+17F1  BD EE 26    LDA asset_map_chars_0,X
+17F4  8D B6 05    STA $05B6
+17F7  BD F2 26    LDA asset_map_colors_0,X
+17FA  8D B6 D9    STA $D9B6
+17FD  18          CLC
+17FE  A5 FB       LDA $FB
+1800  69 50       ADC #$50
+1802  85 FB       STA $FB
+1804  A5 FC       LDA $FC
+1806  69 00       ADC #$00
+1808  85 FC       STA $FC
+180A  AD BA 05    LDA $05BA
+180D  8D B9 05    STA $05B9
+1810  AD BA D9    LDA $D9BA
+1813  8D B9 D9    STA $D9B9
+1816  A2 DC       LDX #$DC
+1818        runtime_map_scroll_left_row_0_11:
+1818  BD DF 04    LDA $04DF,X
+181B  9D DE 04    STA $04DE,X
+181E  BD DF D8    LDA $D8DF,X
+1821  9D DE D8    STA $D8DE,X
+1824  E8          INX
+1825  BD DF 04    LDA $04DF,X
+1828  9D DE 04    STA $04DE,X
+182B  BD DF D8    LDA $D8DF,X
+182E  9D DE D8    STA $D8DE,X
+1831  E8          INX
+1832  D0 E4       BNE runtime_map_scroll_left_row_0_11
+1834  A0 00       LDY #$00
+1836  B1 FB       LDA ($FB),Y
+1838  AA          TAX
+1839  BD EE 26    LDA asset_map_chars_0,X
+183C  8D DE 05    STA $05DE
+183F  BD F2 26    LDA asset_map_colors_0,X
+1842  8D DE D9    STA $D9DE
+1845  18          CLC
+1846  A5 FB       LDA $FB
+1848  69 50       ADC #$50
+184A  85 FB       STA $FB
+184C  A5 FC       LDA $FC
+184E  69 00       ADC #$00
+1850  85 FC       STA $FC
+1852  AD E2 05    LDA $05E2
+1855  8D E1 05    STA $05E1
+1858  AD E2 D9    LDA $D9E2
+185B  8D E1 D9    STA $D9E1
+185E  A2 DC       LDX #$DC
+1860        runtime_map_scroll_left_row_0_12:
+1860  BD 07 05    LDA $0507,X
+1863  9D 06 05    STA $0506,X
+1866  BD 07 D9    LDA $D907,X
+1869  9D 06 D9    STA $D906,X
+186C  E8          INX
+186D  BD 07 05    LDA $0507,X
+1870  9D 06 05    STA $0506,X
+1873  BD 07 D9    LDA $D907,X
+1876  9D 06 D9    STA $D906,X
+1879  E8          INX
+187A  D0 E4       BNE runtime_map_scroll_left_row_0_12
+187C  A0 00       LDY #$00
+187E  B1 FB       LDA ($FB),Y
+1880  AA          TAX
+1881  BD EE 26    LDA asset_map_chars_0,X
+1884  8D 06 06    STA $0606
+1887  BD F2 26    LDA asset_map_colors_0,X
+188A  8D 06 DA    STA $DA06
+188D  18          CLC
+188E  A5 FB       LDA $FB
+1890  69 50       ADC #$50
+1892  85 FB       STA $FB
+1894  A5 FC       LDA $FC
+1896  69 00       ADC #$00
+1898  85 FC       STA $FC
+189A  AD 0A 06    LDA $060A
+189D  8D 09 06    STA $0609
+18A0  AD 0A DA    LDA $DA0A
+18A3  8D 09 DA    STA $DA09
+18A6  A2 DC       LDX #$DC
+18A8        runtime_map_scroll_left_row_0_13:
+18A8  BD 2F 05    LDA $052F,X
+18AB  9D 2E 05    STA $052E,X
+18AE  BD 2F D9    LDA $D92F,X
+18B1  9D 2E D9    STA $D92E,X
+18B4  E8          INX
+18B5  BD 2F 05    LDA $052F,X
+18B8  9D 2E 05    STA $052E,X
+18BB  BD 2F D9    LDA $D92F,X
+18BE  9D 2E D9    STA $D92E,X
+18C1  E8          INX
+18C2  D0 E4       BNE runtime_map_scroll_left_row_0_13
+18C4  A0 00       LDY #$00
+18C6  B1 FB       LDA ($FB),Y
+18C8  AA          TAX
+18C9  BD EE 26    LDA asset_map_chars_0,X
+18CC  8D 2E 06    STA $062E
+18CF  BD F2 26    LDA asset_map_colors_0,X
+18D2  8D 2E DA    STA $DA2E
+18D5  18          CLC
+18D6  A5 FB       LDA $FB
+18D8  69 50       ADC #$50
+18DA  85 FB       STA $FB
+18DC  A5 FC       LDA $FC
+18DE  69 00       ADC #$00
+18E0  85 FC       STA $FC
+18E2  AD 32 06    LDA $0632
+18E5  8D 31 06    STA $0631
+18E8  AD 32 DA    LDA $DA32
+18EB  8D 31 DA    STA $DA31
+18EE  A2 DC       LDX #$DC
+18F0        runtime_map_scroll_left_row_0_14:
+18F0  BD 57 05    LDA $0557,X
+18F3  9D 56 05    STA $0556,X
+18F6  BD 57 D9    LDA $D957,X
+18F9  9D 56 D9    STA $D956,X
+18FC  E8          INX
+18FD  BD 57 05    LDA $0557,X
+1900  9D 56 05    STA $0556,X
+1903  BD 57 D9    LDA $D957,X
+1906  9D 56 D9    STA $D956,X
+1909  E8          INX
+190A  D0 E4       BNE runtime_map_scroll_left_row_0_14
+190C  A0 00       LDY #$00
+190E  B1 FB       LDA ($FB),Y
+1910  AA          TAX
+1911  BD EE 26    LDA asset_map_chars_0,X
+1914  8D 56 06    STA $0656
+1917  BD F2 26    LDA asset_map_colors_0,X
+191A  8D 56 DA    STA $DA56
+191D  18          CLC
+191E  A5 FB       LDA $FB
+1920  69 50       ADC #$50
+1922  85 FB       STA $FB
+1924  A5 FC       LDA $FC
+1926  69 00       ADC #$00
+1928  85 FC       STA $FC
+192A  AD 5A 06    LDA $065A
+192D  8D 59 06    STA $0659
+1930  AD 5A DA    LDA $DA5A
+1933  8D 59 DA    STA $DA59
+1936  A2 DC       LDX #$DC
+1938        runtime_map_scroll_left_row_0_15:
+1938  BD 7F 05    LDA $057F,X
+193B  9D 7E 05    STA $057E,X
+193E  BD 7F D9    LDA $D97F,X
+1941  9D 7E D9    STA $D97E,X
+1944  E8          INX
+1945  BD 7F 05    LDA $057F,X
+1948  9D 7E 05    STA $057E,X
+194B  BD 7F D9    LDA $D97F,X
+194E  9D 7E D9    STA $D97E,X
+1951  E8          INX
+1952  D0 E4       BNE runtime_map_scroll_left_row_0_15
+1954  A0 00       LDY #$00
+1956  B1 FB       LDA ($FB),Y
+1958  AA          TAX
+1959  BD EE 26    LDA asset_map_chars_0,X
+195C  8D 7E 06    STA $067E
+195F  BD F2 26    LDA asset_map_colors_0,X
+1962  8D 7E DA    STA $DA7E
+1965  18          CLC
+1966  A5 FB       LDA $FB
+1968  69 50       ADC #$50
+196A  85 FB       STA $FB
+196C  A5 FC       LDA $FC
+196E  69 00       ADC #$00
+1970  85 FC       STA $FC
+1972  AD 82 06    LDA $0682
+1975  8D 81 06    STA $0681
+1978  AD 82 DA    LDA $DA82
+197B  8D 81 DA    STA $DA81
+197E  A2 DC       LDX #$DC
+1980        runtime_map_scroll_left_row_0_16:
+1980  BD A7 05    LDA $05A7,X
+1983  9D A6 05    STA $05A6,X
+1986  BD A7 D9    LDA $D9A7,X
+1989  9D A6 D9    STA $D9A6,X
+198C  E8          INX
+198D  BD A7 05    LDA $05A7,X
+1990  9D A6 05    STA $05A6,X
+1993  BD A7 D9    LDA $D9A7,X
+1996  9D A6 D9    STA $D9A6,X
+1999  E8          INX
+199A  D0 E4       BNE runtime_map_scroll_left_row_0_16
+199C  A0 00       LDY #$00
+199E  B1 FB       LDA ($FB),Y
+19A0  AA          TAX
+19A1  BD EE 26    LDA asset_map_chars_0,X
+19A4  8D A6 06    STA $06A6
+19A7  BD F2 26    LDA asset_map_colors_0,X
+19AA  8D A6 DA    STA $DAA6
+19AD  18          CLC
+19AE  A5 FB       LDA $FB
+19B0  69 50       ADC #$50
+19B2  85 FB       STA $FB
+19B4  A5 FC       LDA $FC
+19B6  69 00       ADC #$00
+19B8  85 FC       STA $FC
+19BA  AD AA 06    LDA $06AA
+19BD  8D A9 06    STA $06A9
+19C0  AD AA DA    LDA $DAAA
+19C3  8D A9 DA    STA $DAA9
+19C6  A2 DC       LDX #$DC
+19C8        runtime_map_scroll_left_row_0_17:
+19C8  BD CF 05    LDA $05CF,X
+19CB  9D CE 05    STA $05CE,X
+19CE  BD CF D9    LDA $D9CF,X
+19D1  9D CE D9    STA $D9CE,X
+19D4  E8          INX
+19D5  BD CF 05    LDA $05CF,X
+19D8  9D CE 05    STA $05CE,X
+19DB  BD CF D9    LDA $D9CF,X
+19DE  9D CE D9    STA $D9CE,X
+19E1  E8          INX
+19E2  D0 E4       BNE runtime_map_scroll_left_row_0_17
+19E4  A0 00       LDY #$00
+19E6  B1 FB       LDA ($FB),Y
+19E8  AA          TAX
+19E9  BD EE 26    LDA asset_map_chars_0,X
+19EC  8D CE 06    STA $06CE
+19EF  BD F2 26    LDA asset_map_colors_0,X
+19F2  8D CE DA    STA $DACE
+19F5  18          CLC
+19F6  A5 FB       LDA $FB
+19F8  69 50       ADC #$50
+19FA  85 FB       STA $FB
+19FC  A5 FC       LDA $FC
+19FE  69 00       ADC #$00
+1A00  85 FC       STA $FC
+1A02  AD D2 06    LDA $06D2
+1A05  8D D1 06    STA $06D1
+1A08  AD D2 DA    LDA $DAD2
+1A0B  8D D1 DA    STA $DAD1
+1A0E  A2 DC       LDX #$DC
+1A10        runtime_map_scroll_left_row_0_18:
+1A10  BD F7 05    LDA $05F7,X
+1A13  9D F6 05    STA $05F6,X
+1A16  BD F7 D9    LDA $D9F7,X
+1A19  9D F6 D9    STA $D9F6,X
+1A1C  E8          INX
+1A1D  BD F7 05    LDA $05F7,X
+1A20  9D F6 05    STA $05F6,X
+1A23  BD F7 D9    LDA $D9F7,X
+1A26  9D F6 D9    STA $D9F6,X
+1A29  E8          INX
+1A2A  D0 E4       BNE runtime_map_scroll_left_row_0_18
+1A2C  A0 00       LDY #$00
+1A2E  B1 FB       LDA ($FB),Y
+1A30  AA          TAX
+1A31  BD EE 26    LDA asset_map_chars_0,X
+1A34  8D F6 06    STA $06F6
+1A37  BD F2 26    LDA asset_map_colors_0,X
+1A3A  8D F6 DA    STA $DAF6
+1A3D  18          CLC
+1A3E  A5 FB       LDA $FB
+1A40  69 50       ADC #$50
+1A42  85 FB       STA $FB
+1A44  A5 FC       LDA $FC
+1A46  69 00       ADC #$00
+1A48  85 FC       STA $FC
+1A4A  AD FA 06    LDA $06FA
+1A4D  8D F9 06    STA $06F9
+1A50  AD FA DA    LDA $DAFA
+1A53  8D F9 DA    STA $DAF9
+1A56  A2 DC       LDX #$DC
+1A58        runtime_map_scroll_left_row_0_19:
+1A58  BD 1F 06    LDA $061F,X
+1A5B  9D 1E 06    STA $061E,X
+1A5E  BD 1F DA    LDA $DA1F,X
+1A61  9D 1E DA    STA $DA1E,X
+1A64  E8          INX
+1A65  BD 1F 06    LDA $061F,X
+1A68  9D 1E 06    STA $061E,X
+1A6B  BD 1F DA    LDA $DA1F,X
+1A6E  9D 1E DA    STA $DA1E,X
+1A71  E8          INX
+1A72  D0 E4       BNE runtime_map_scroll_left_row_0_19
+1A74  A0 00       LDY #$00
+1A76  B1 FB       LDA ($FB),Y
+1A78  AA          TAX
+1A79  BD EE 26    LDA asset_map_chars_0,X
+1A7C  8D 1E 07    STA $071E
+1A7F  BD F2 26    LDA asset_map_colors_0,X
+1A82  8D 1E DB    STA $DB1E
+1A85  60          RTS
+            ; Map 0: shift Screen RAM and Color RAM one character right
+1A86        runtime_map_scroll_shift_right_0:
+1A86  AD 0A C1    LDA $C10A
+1A89  8D B2 C7    STA $C7B2
+1A8C  AD 0C C1    LDA $C10C
+1A8F  8D B3 C7    STA $C7B3
+1A92  A9 00       LDA #$00
+1A94  8D B6 C7    STA $C7B6
+1A97  A9 00       LDA #$00
+1A99  8D BA C7    STA $C7BA
+1A9C  AD B3 C7    LDA $C7B3
+1A9F  8D B7 C7    STA $C7B7
+1AA2  A9 00       LDA #$00
+1AA4  8D BF C7    STA $C7BF
+1AA7  0E B7 C7    ASL $C7B7
+1AAA  2E BF C7    ROL $C7BF
+1AAD  0E B7 C7    ASL $C7B7
+1AB0  2E BF C7    ROL $C7BF
+1AB3  0E B7 C7    ASL $C7B7
+1AB6  2E BF C7    ROL $C7BF
+1AB9  0E B7 C7    ASL $C7B7
+1ABC  2E BF C7    ROL $C7BF
+1ABF  18          CLC
+1AC0  AD B6 C7    LDA $C7B6
+1AC3  6D B7 C7    ADC $C7B7
+1AC6  8D B6 C7    STA $C7B6
+1AC9  AD BA C7    LDA $C7BA
+1ACC  6D BF C7    ADC $C7BF
+1ACF  8D BA C7    STA $C7BA
+1AD2  0E B7 C7    ASL $C7B7
+1AD5  2E BF C7    ROL $C7BF
+1AD8  0E B7 C7    ASL $C7B7
+1ADB  2E BF C7    ROL $C7BF
+1ADE  18          CLC
+1ADF  AD B6 C7    LDA $C7B6
+1AE2  6D B7 C7    ADC $C7B7
+1AE5  8D B6 C7    STA $C7B6
+1AE8  AD BA C7    LDA $C7BA
+1AEB  6D BF C7    ADC $C7BF
+1AEE  8D BA C7    STA $C7BA
+1AF1  18          CLC
+1AF2  AD B6 C7    LDA $C7B6
+1AF5  6D B2 C7    ADC $C7B2
+1AF8  8D B6 C7    STA $C7B6
+1AFB  AD BA C7    LDA $C7BA
+1AFE  69 00       ADC #$00
+1B00  8D BA C7    STA $C7BA
+1B03  18          CLC
+1B04  AD B6 C7    LDA $C7B6
+1B07  69 00       ADC #$00
+1B09  85 FB       STA $FB
+1B0B  AD BA C7    LDA $C7BA
+1B0E  69 80       ADC #$80
+1B10  85 FC       STA $FC
+1B12  A0 00       LDY #$00
+1B14  AD 25 04    LDA $0425
+1B17  8D 26 04    STA $0426
+1B1A  AD 25 D8    LDA $D825
+1B1D  8D 26 D8    STA $D826
+1B20  A2 23       LDX #$23
+1B22        runtime_map_scroll_right_row_0_0:
+1B22  BD 01 04    LDA $0401,X
+1B25  9D 02 04    STA $0402,X
+1B28  BD 01 D8    LDA $D801,X
+1B2B  9D 02 D8    STA $D802,X
+1B2E  CA          DEX
+1B2F  BD 01 04    LDA $0401,X
+1B32  9D 02 04    STA $0402,X
+1B35  BD 01 D8    LDA $D801,X
+1B38  9D 02 D8    STA $D802,X
+1B3B  CA          DEX
+1B3C  10 E4       BPL runtime_map_scroll_right_row_0_0
+1B3E  A0 00       LDY #$00
+1B40  B1 FB       LDA ($FB),Y
+1B42  AA          TAX
+1B43  BD EE 26    LDA asset_map_chars_0,X
+1B46  8D 01 04    STA $0401
+1B49  BD F2 26    LDA asset_map_colors_0,X
+1B4C  8D 01 D8    STA $D801
+1B4F  18          CLC
+1B50  A5 FB       LDA $FB
+1B52  69 50       ADC #$50
+1B54  85 FB       STA $FB
+1B56  A5 FC       LDA $FC
+1B58  69 00       ADC #$00
+1B5A  85 FC       STA $FC
+1B5C  AD 4D 04    LDA $044D
+1B5F  8D 4E 04    STA $044E
+1B62  AD 4D D8    LDA $D84D
+1B65  8D 4E D8    STA $D84E
+1B68  A2 23       LDX #$23
+1B6A        runtime_map_scroll_right_row_0_1:
+1B6A  BD 29 04    LDA $0429,X
+1B6D  9D 2A 04    STA $042A,X
+1B70  BD 29 D8    LDA $D829,X
+1B73  9D 2A D8    STA $D82A,X
+1B76  CA          DEX
+1B77  BD 29 04    LDA $0429,X
+1B7A  9D 2A 04    STA $042A,X
+1B7D  BD 29 D8    LDA $D829,X
+1B80  9D 2A D8    STA $D82A,X
+1B83  CA          DEX
+1B84  10 E4       BPL runtime_map_scroll_right_row_0_1
+1B86  A0 00       LDY #$00
+1B88  B1 FB       LDA ($FB),Y
+1B8A  AA          TAX
+1B8B  BD EE 26    LDA asset_map_chars_0,X
+1B8E  8D 29 04    STA $0429
+1B91  BD F2 26    LDA asset_map_colors_0,X
+1B94  8D 29 D8    STA $D829
+1B97  18          CLC
+1B98  A5 FB       LDA $FB
+1B9A  69 50       ADC #$50
+1B9C  85 FB       STA $FB
+1B9E  A5 FC       LDA $FC
+1BA0  69 00       ADC #$00
+1BA2  85 FC       STA $FC
+1BA4  AD 75 04    LDA $0475
+1BA7  8D 76 04    STA $0476
+1BAA  AD 75 D8    LDA $D875
+1BAD  8D 76 D8    STA $D876
+1BB0  A2 23       LDX #$23
+1BB2        runtime_map_scroll_right_row_0_2:
+1BB2  BD 51 04    LDA $0451,X
+1BB5  9D 52 04    STA $0452,X
+1BB8  BD 51 D8    LDA $D851,X
+1BBB  9D 52 D8    STA $D852,X
+1BBE  CA          DEX
+1BBF  BD 51 04    LDA $0451,X
+1BC2  9D 52 04    STA $0452,X
+1BC5  BD 51 D8    LDA $D851,X
+1BC8  9D 52 D8    STA $D852,X
+1BCB  CA          DEX
+1BCC  10 E4       BPL runtime_map_scroll_right_row_0_2
+1BCE  A0 00       LDY #$00
+1BD0  B1 FB       LDA ($FB),Y
+1BD2  AA          TAX
+1BD3  BD EE 26    LDA asset_map_chars_0,X
+1BD6  8D 51 04    STA $0451
+1BD9  BD F2 26    LDA asset_map_colors_0,X
+1BDC  8D 51 D8    STA $D851
+1BDF  18          CLC
+1BE0  A5 FB       LDA $FB
+1BE2  69 50       ADC #$50
+1BE4  85 FB       STA $FB
+1BE6  A5 FC       LDA $FC
+1BE8  69 00       ADC #$00
+1BEA  85 FC       STA $FC
+1BEC  AD 9D 04    LDA $049D
+1BEF  8D 9E 04    STA $049E
+1BF2  AD 9D D8    LDA $D89D
+1BF5  8D 9E D8    STA $D89E
+1BF8  A2 23       LDX #$23
+1BFA        runtime_map_scroll_right_row_0_3:
+1BFA  BD 79 04    LDA $0479,X
+1BFD  9D 7A 04    STA $047A,X
+1C00  BD 79 D8    LDA $D879,X
+1C03  9D 7A D8    STA $D87A,X
+1C06  CA          DEX
+1C07  BD 79 04    LDA $0479,X
+1C0A  9D 7A 04    STA $047A,X
+1C0D  BD 79 D8    LDA $D879,X
+1C10  9D 7A D8    STA $D87A,X
+1C13  CA          DEX
+1C14  10 E4       BPL runtime_map_scroll_right_row_0_3
+1C16  A0 00       LDY #$00
+1C18  B1 FB       LDA ($FB),Y
+1C1A  AA          TAX
+1C1B  BD EE 26    LDA asset_map_chars_0,X
+1C1E  8D 79 04    STA $0479
+1C21  BD F2 26    LDA asset_map_colors_0,X
+1C24  8D 79 D8    STA $D879
+1C27  18          CLC
+1C28  A5 FB       LDA $FB
+1C2A  69 50       ADC #$50
+1C2C  85 FB       STA $FB
+1C2E  A5 FC       LDA $FC
+1C30  69 00       ADC #$00
+1C32  85 FC       STA $FC
+1C34  AD C5 04    LDA $04C5
+1C37  8D C6 04    STA $04C6
+1C3A  AD C5 D8    LDA $D8C5
+1C3D  8D C6 D8    STA $D8C6
+1C40  A2 23       LDX #$23
+1C42        runtime_map_scroll_right_row_0_4:
+1C42  BD A1 04    LDA $04A1,X
+1C45  9D A2 04    STA $04A2,X
+1C48  BD A1 D8    LDA $D8A1,X
+1C4B  9D A2 D8    STA $D8A2,X
+1C4E  CA          DEX
+1C4F  BD A1 04    LDA $04A1,X
+1C52  9D A2 04    STA $04A2,X
+1C55  BD A1 D8    LDA $D8A1,X
+1C58  9D A2 D8    STA $D8A2,X
+1C5B  CA          DEX
+1C5C  10 E4       BPL runtime_map_scroll_right_row_0_4
+1C5E  A0 00       LDY #$00
+1C60  B1 FB       LDA ($FB),Y
+1C62  AA          TAX
+1C63  BD EE 26    LDA asset_map_chars_0,X
+1C66  8D A1 04    STA $04A1
+1C69  BD F2 26    LDA asset_map_colors_0,X
+1C6C  8D A1 D8    STA $D8A1
+1C6F  18          CLC
+1C70  A5 FB       LDA $FB
+1C72  69 50       ADC #$50
+1C74  85 FB       STA $FB
+1C76  A5 FC       LDA $FC
+1C78  69 00       ADC #$00
+1C7A  85 FC       STA $FC
+1C7C  AD ED 04    LDA $04ED
+1C7F  8D EE 04    STA $04EE
+1C82  AD ED D8    LDA $D8ED
+1C85  8D EE D8    STA $D8EE
+1C88  A2 23       LDX #$23
+1C8A        runtime_map_scroll_right_row_0_5:
+1C8A  BD C9 04    LDA $04C9,X
+1C8D  9D CA 04    STA $04CA,X
+1C90  BD C9 D8    LDA $D8C9,X
+1C93  9D CA D8    STA $D8CA,X
+1C96  CA          DEX
+1C97  BD C9 04    LDA $04C9,X
+1C9A  9D CA 04    STA $04CA,X
+1C9D  BD C9 D8    LDA $D8C9,X
+1CA0  9D CA D8    STA $D8CA,X
+1CA3  CA          DEX
+1CA4  10 E4       BPL runtime_map_scroll_right_row_0_5
+1CA6  A0 00       LDY #$00
+1CA8  B1 FB       LDA ($FB),Y
+1CAA  AA          TAX
+1CAB  BD EE 26    LDA asset_map_chars_0,X
+1CAE  8D C9 04    STA $04C9
+1CB1  BD F2 26    LDA asset_map_colors_0,X
+1CB4  8D C9 D8    STA $D8C9
+1CB7  18          CLC
+1CB8  A5 FB       LDA $FB
+1CBA  69 50       ADC #$50
+1CBC  85 FB       STA $FB
+1CBE  A5 FC       LDA $FC
+1CC0  69 00       ADC #$00
+1CC2  85 FC       STA $FC
+1CC4  AD 15 05    LDA $0515
+1CC7  8D 16 05    STA $0516
+1CCA  AD 15 D9    LDA $D915
+1CCD  8D 16 D9    STA $D916
+1CD0  A2 23       LDX #$23
+1CD2        runtime_map_scroll_right_row_0_6:
+1CD2  BD F1 04    LDA $04F1,X
+1CD5  9D F2 04    STA $04F2,X
+1CD8  BD F1 D8    LDA $D8F1,X
+1CDB  9D F2 D8    STA $D8F2,X
+1CDE  CA          DEX
+1CDF  BD F1 04    LDA $04F1,X
+1CE2  9D F2 04    STA $04F2,X
+1CE5  BD F1 D8    LDA $D8F1,X
+1CE8  9D F2 D8    STA $D8F2,X
+1CEB  CA          DEX
+1CEC  10 E4       BPL runtime_map_scroll_right_row_0_6
+1CEE  A0 00       LDY #$00
+1CF0  B1 FB       LDA ($FB),Y
+1CF2  AA          TAX
+1CF3  BD EE 26    LDA asset_map_chars_0,X
+1CF6  8D F1 04    STA $04F1
+1CF9  BD F2 26    LDA asset_map_colors_0,X
+1CFC  8D F1 D8    STA $D8F1
+1CFF  18          CLC
+1D00  A5 FB       LDA $FB
+1D02  69 50       ADC #$50
+1D04  85 FB       STA $FB
+1D06  A5 FC       LDA $FC
+1D08  69 00       ADC #$00
+1D0A  85 FC       STA $FC
+1D0C  AD 3D 05    LDA $053D
+1D0F  8D 3E 05    STA $053E
+1D12  AD 3D D9    LDA $D93D
+1D15  8D 3E D9    STA $D93E
+1D18  A2 23       LDX #$23
+1D1A        runtime_map_scroll_right_row_0_7:
+1D1A  BD 19 05    LDA $0519,X
+1D1D  9D 1A 05    STA $051A,X
+1D20  BD 19 D9    LDA $D919,X
+1D23  9D 1A D9    STA $D91A,X
+1D26  CA          DEX
+1D27  BD 19 05    LDA $0519,X
+1D2A  9D 1A 05    STA $051A,X
+1D2D  BD 19 D9    LDA $D919,X
+1D30  9D 1A D9    STA $D91A,X
+1D33  CA          DEX
+1D34  10 E4       BPL runtime_map_scroll_right_row_0_7
+1D36  A0 00       LDY #$00
+1D38  B1 FB       LDA ($FB),Y
+1D3A  AA          TAX
+1D3B  BD EE 26    LDA asset_map_chars_0,X
+1D3E  8D 19 05    STA $0519
+1D41  BD F2 26    LDA asset_map_colors_0,X
+1D44  8D 19 D9    STA $D919
+1D47  18          CLC
+1D48  A5 FB       LDA $FB
+1D4A  69 50       ADC #$50
+1D4C  85 FB       STA $FB
+1D4E  A5 FC       LDA $FC
+1D50  69 00       ADC #$00
+1D52  85 FC       STA $FC
+1D54  AD 65 05    LDA $0565
+1D57  8D 66 05    STA $0566
+1D5A  AD 65 D9    LDA $D965
+1D5D  8D 66 D9    STA $D966
+1D60  A2 23       LDX #$23
+1D62        runtime_map_scroll_right_row_0_8:
+1D62  BD 41 05    LDA $0541,X
+1D65  9D 42 05    STA $0542,X
+1D68  BD 41 D9    LDA $D941,X
+1D6B  9D 42 D9    STA $D942,X
+1D6E  CA          DEX
+1D6F  BD 41 05    LDA $0541,X
+1D72  9D 42 05    STA $0542,X
+1D75  BD 41 D9    LDA $D941,X
+1D78  9D 42 D9    STA $D942,X
+1D7B  CA          DEX
+1D7C  10 E4       BPL runtime_map_scroll_right_row_0_8
+1D7E  A0 00       LDY #$00
+1D80  B1 FB       LDA ($FB),Y
+1D82  AA          TAX
+1D83  BD EE 26    LDA asset_map_chars_0,X
+1D86  8D 41 05    STA $0541
+1D89  BD F2 26    LDA asset_map_colors_0,X
+1D8C  8D 41 D9    STA $D941
+1D8F  18          CLC
+1D90  A5 FB       LDA $FB
+1D92  69 50       ADC #$50
+1D94  85 FB       STA $FB
+1D96  A5 FC       LDA $FC
+1D98  69 00       ADC #$00
+1D9A  85 FC       STA $FC
+1D9C  AD 8D 05    LDA $058D
+1D9F  8D 8E 05    STA $058E
+1DA2  AD 8D D9    LDA $D98D
+1DA5  8D 8E D9    STA $D98E
+1DA8  A2 23       LDX #$23
+1DAA        runtime_map_scroll_right_row_0_9:
+1DAA  BD 69 05    LDA $0569,X
+1DAD  9D 6A 05    STA $056A,X
+1DB0  BD 69 D9    LDA $D969,X
+1DB3  9D 6A D9    STA $D96A,X
+1DB6  CA          DEX
+1DB7  BD 69 05    LDA $0569,X
+1DBA  9D 6A 05    STA $056A,X
+1DBD  BD 69 D9    LDA $D969,X
+1DC0  9D 6A D9    STA $D96A,X
+1DC3  CA          DEX
+1DC4  10 E4       BPL runtime_map_scroll_right_row_0_9
+1DC6  A0 00       LDY #$00
+1DC8  B1 FB       LDA ($FB),Y
+1DCA  AA          TAX
+1DCB  BD EE 26    LDA asset_map_chars_0,X
+1DCE  8D 69 05    STA $0569
+1DD1  BD F2 26    LDA asset_map_colors_0,X
+1DD4  8D 69 D9    STA $D969
+1DD7  18          CLC
+1DD8  A5 FB       LDA $FB
+1DDA  69 50       ADC #$50
+1DDC  85 FB       STA $FB
+1DDE  A5 FC       LDA $FC
+1DE0  69 00       ADC #$00
+1DE2  85 FC       STA $FC
+1DE4  AD B5 05    LDA $05B5
+1DE7  8D B6 05    STA $05B6
+1DEA  AD B5 D9    LDA $D9B5
+1DED  8D B6 D9    STA $D9B6
+1DF0  A2 23       LDX #$23
+1DF2        runtime_map_scroll_right_row_0_10:
+1DF2  BD 91 05    LDA $0591,X
+1DF5  9D 92 05    STA $0592,X
+1DF8  BD 91 D9    LDA $D991,X
+1DFB  9D 92 D9    STA $D992,X
+1DFE  CA          DEX
+1DFF  BD 91 05    LDA $0591,X
+1E02  9D 92 05    STA $0592,X
+1E05  BD 91 D9    LDA $D991,X
+1E08  9D 92 D9    STA $D992,X
+1E0B  CA          DEX
+1E0C  10 E4       BPL runtime_map_scroll_right_row_0_10
+1E0E  A0 00       LDY #$00
+1E10  B1 FB       LDA ($FB),Y
+1E12  AA          TAX
+1E13  BD EE 26    LDA asset_map_chars_0,X
+1E16  8D 91 05    STA $0591
+1E19  BD F2 26    LDA asset_map_colors_0,X
+1E1C  8D 91 D9    STA $D991
+1E1F  18          CLC
+1E20  A5 FB       LDA $FB
+1E22  69 50       ADC #$50
+1E24  85 FB       STA $FB
+1E26  A5 FC       LDA $FC
+1E28  69 00       ADC #$00
+1E2A  85 FC       STA $FC
+1E2C  AD DD 05    LDA $05DD
+1E2F  8D DE 05    STA $05DE
+1E32  AD DD D9    LDA $D9DD
+1E35  8D DE D9    STA $D9DE
+1E38  A2 23       LDX #$23
+1E3A        runtime_map_scroll_right_row_0_11:
+1E3A  BD B9 05    LDA $05B9,X
+1E3D  9D BA 05    STA $05BA,X
+1E40  BD B9 D9    LDA $D9B9,X
+1E43  9D BA D9    STA $D9BA,X
+1E46  CA          DEX
+1E47  BD B9 05    LDA $05B9,X
+1E4A  9D BA 05    STA $05BA,X
+1E4D  BD B9 D9    LDA $D9B9,X
+1E50  9D BA D9    STA $D9BA,X
+1E53  CA          DEX
+1E54  10 E4       BPL runtime_map_scroll_right_row_0_11
+1E56  A0 00       LDY #$00
+1E58  B1 FB       LDA ($FB),Y
+1E5A  AA          TAX
+1E5B  BD EE 26    LDA asset_map_chars_0,X
+1E5E  8D B9 05    STA $05B9
+1E61  BD F2 26    LDA asset_map_colors_0,X
+1E64  8D B9 D9    STA $D9B9
+1E67  18          CLC
+1E68  A5 FB       LDA $FB
+1E6A  69 50       ADC #$50
+1E6C  85 FB       STA $FB
+1E6E  A5 FC       LDA $FC
+1E70  69 00       ADC #$00
+1E72  85 FC       STA $FC
+1E74  AD 05 06    LDA $0605
+1E77  8D 06 06    STA $0606
+1E7A  AD 05 DA    LDA $DA05
+1E7D  8D 06 DA    STA $DA06
+1E80  A2 23       LDX #$23
+1E82        runtime_map_scroll_right_row_0_12:
+1E82  BD E1 05    LDA $05E1,X
+1E85  9D E2 05    STA $05E2,X
+1E88  BD E1 D9    LDA $D9E1,X
+1E8B  9D E2 D9    STA $D9E2,X
+1E8E  CA          DEX
+1E8F  BD E1 05    LDA $05E1,X
+1E92  9D E2 05    STA $05E2,X
+1E95  BD E1 D9    LDA $D9E1,X
+1E98  9D E2 D9    STA $D9E2,X
+1E9B  CA          DEX
+1E9C  10 E4       BPL runtime_map_scroll_right_row_0_12
+1E9E  A0 00       LDY #$00
+1EA0  B1 FB       LDA ($FB),Y
+1EA2  AA          TAX
+1EA3  BD EE 26    LDA asset_map_chars_0,X
+1EA6  8D E1 05    STA $05E1
+1EA9  BD F2 26    LDA asset_map_colors_0,X
+1EAC  8D E1 D9    STA $D9E1
+1EAF  18          CLC
+1EB0  A5 FB       LDA $FB
+1EB2  69 50       ADC #$50
+1EB4  85 FB       STA $FB
+1EB6  A5 FC       LDA $FC
+1EB8  69 00       ADC #$00
+1EBA  85 FC       STA $FC
+1EBC  AD 2D 06    LDA $062D
+1EBF  8D 2E 06    STA $062E
+1EC2  AD 2D DA    LDA $DA2D
+1EC5  8D 2E DA    STA $DA2E
+1EC8  A2 23       LDX #$23
+1ECA        runtime_map_scroll_right_row_0_13:
+1ECA  BD 09 06    LDA $0609,X
+1ECD  9D 0A 06    STA $060A,X
+1ED0  BD 09 DA    LDA $DA09,X
+1ED3  9D 0A DA    STA $DA0A,X
+1ED6  CA          DEX
+1ED7  BD 09 06    LDA $0609,X
+1EDA  9D 0A 06    STA $060A,X
+1EDD  BD 09 DA    LDA $DA09,X
+1EE0  9D 0A DA    STA $DA0A,X
+1EE3  CA          DEX
+1EE4  10 E4       BPL runtime_map_scroll_right_row_0_13
+1EE6  A0 00       LDY #$00
+1EE8  B1 FB       LDA ($FB),Y
+1EEA  AA          TAX
+1EEB  BD EE 26    LDA asset_map_chars_0,X
+1EEE  8D 09 06    STA $0609
+1EF1  BD F2 26    LDA asset_map_colors_0,X
+1EF4  8D 09 DA    STA $DA09
+1EF7  18          CLC
+1EF8  A5 FB       LDA $FB
+1EFA  69 50       ADC #$50
+1EFC  85 FB       STA $FB
+1EFE  A5 FC       LDA $FC
+1F00  69 00       ADC #$00
+1F02  85 FC       STA $FC
+1F04  AD 55 06    LDA $0655
+1F07  8D 56 06    STA $0656
+1F0A  AD 55 DA    LDA $DA55
+1F0D  8D 56 DA    STA $DA56
+1F10  A2 23       LDX #$23
+1F12        runtime_map_scroll_right_row_0_14:
+1F12  BD 31 06    LDA $0631,X
+1F15  9D 32 06    STA $0632,X
+1F18  BD 31 DA    LDA $DA31,X
+1F1B  9D 32 DA    STA $DA32,X
+1F1E  CA          DEX
+1F1F  BD 31 06    LDA $0631,X
+1F22  9D 32 06    STA $0632,X
+1F25  BD 31 DA    LDA $DA31,X
+1F28  9D 32 DA    STA $DA32,X
+1F2B  CA          DEX
+1F2C  10 E4       BPL runtime_map_scroll_right_row_0_14
+1F2E  A0 00       LDY #$00
+1F30  B1 FB       LDA ($FB),Y
+1F32  AA          TAX
+1F33  BD EE 26    LDA asset_map_chars_0,X
+1F36  8D 31 06    STA $0631
+1F39  BD F2 26    LDA asset_map_colors_0,X
+1F3C  8D 31 DA    STA $DA31
+1F3F  18          CLC
+1F40  A5 FB       LDA $FB
+1F42  69 50       ADC #$50
+1F44  85 FB       STA $FB
+1F46  A5 FC       LDA $FC
+1F48  69 00       ADC #$00
+1F4A  85 FC       STA $FC
+1F4C  AD 7D 06    LDA $067D
+1F4F  8D 7E 06    STA $067E
+1F52  AD 7D DA    LDA $DA7D
+1F55  8D 7E DA    STA $DA7E
+1F58  A2 23       LDX #$23
+1F5A        runtime_map_scroll_right_row_0_15:
+1F5A  BD 59 06    LDA $0659,X
+1F5D  9D 5A 06    STA $065A,X
+1F60  BD 59 DA    LDA $DA59,X
+1F63  9D 5A DA    STA $DA5A,X
+1F66  CA          DEX
+1F67  BD 59 06    LDA $0659,X
+1F6A  9D 5A 06    STA $065A,X
+1F6D  BD 59 DA    LDA $DA59,X
+1F70  9D 5A DA    STA $DA5A,X
+1F73  CA          DEX
+1F74  10 E4       BPL runtime_map_scroll_right_row_0_15
+1F76  A0 00       LDY #$00
+1F78  B1 FB       LDA ($FB),Y
+1F7A  AA          TAX
+1F7B  BD EE 26    LDA asset_map_chars_0,X
+1F7E  8D 59 06    STA $0659
+1F81  BD F2 26    LDA asset_map_colors_0,X
+1F84  8D 59 DA    STA $DA59
+1F87  18          CLC
+1F88  A5 FB       LDA $FB
+1F8A  69 50       ADC #$50
+1F8C  85 FB       STA $FB
+1F8E  A5 FC       LDA $FC
+1F90  69 00       ADC #$00
+1F92  85 FC       STA $FC
+1F94  AD A5 06    LDA $06A5
+1F97  8D A6 06    STA $06A6
+1F9A  AD A5 DA    LDA $DAA5
+1F9D  8D A6 DA    STA $DAA6
+1FA0  A2 23       LDX #$23
+1FA2        runtime_map_scroll_right_row_0_16:
+1FA2  BD 81 06    LDA $0681,X
+1FA5  9D 82 06    STA $0682,X
+1FA8  BD 81 DA    LDA $DA81,X
+1FAB  9D 82 DA    STA $DA82,X
+1FAE  CA          DEX
+1FAF  BD 81 06    LDA $0681,X
+1FB2  9D 82 06    STA $0682,X
+1FB5  BD 81 DA    LDA $DA81,X
+1FB8  9D 82 DA    STA $DA82,X
+1FBB  CA          DEX
+1FBC  10 E4       BPL runtime_map_scroll_right_row_0_16
+1FBE  A0 00       LDY #$00
+1FC0  B1 FB       LDA ($FB),Y
+1FC2  AA          TAX
+1FC3  BD EE 26    LDA asset_map_chars_0,X
+1FC6  8D 81 06    STA $0681
+1FC9  BD F2 26    LDA asset_map_colors_0,X
+1FCC  8D 81 DA    STA $DA81
+1FCF  18          CLC
+1FD0  A5 FB       LDA $FB
+1FD2  69 50       ADC #$50
+1FD4  85 FB       STA $FB
+1FD6  A5 FC       LDA $FC
+1FD8  69 00       ADC #$00
+1FDA  85 FC       STA $FC
+1FDC  AD CD 06    LDA $06CD
+1FDF  8D CE 06    STA $06CE
+1FE2  AD CD DA    LDA $DACD
+1FE5  8D CE DA    STA $DACE
+1FE8  A2 23       LDX #$23
+1FEA        runtime_map_scroll_right_row_0_17:
+1FEA  BD A9 06    LDA $06A9,X
+1FED  9D AA 06    STA $06AA,X
+1FF0  BD A9 DA    LDA $DAA9,X
+1FF3  9D AA DA    STA $DAAA,X
+1FF6  CA          DEX
+1FF7  BD A9 06    LDA $06A9,X
+1FFA  9D AA 06    STA $06AA,X
+1FFD  BD A9 DA    LDA $DAA9,X
+2000  9D AA DA    STA $DAAA,X
+2003  CA          DEX
+2004  10 E4       BPL runtime_map_scroll_right_row_0_17
+2006  A0 00       LDY #$00
+2008  B1 FB       LDA ($FB),Y
+200A  AA          TAX
+200B  BD EE 26    LDA asset_map_chars_0,X
+200E  8D A9 06    STA $06A9
+2011  BD F2 26    LDA asset_map_colors_0,X
+2014  8D A9 DA    STA $DAA9
+2017  18          CLC
+2018  A5 FB       LDA $FB
+201A  69 50       ADC #$50
+201C  85 FB       STA $FB
+201E  A5 FC       LDA $FC
+2020  69 00       ADC #$00
+2022  85 FC       STA $FC
+2024  AD F5 06    LDA $06F5
+2027  8D F6 06    STA $06F6
+202A  AD F5 DA    LDA $DAF5
+202D  8D F6 DA    STA $DAF6
+2030  A2 23       LDX #$23
+2032        runtime_map_scroll_right_row_0_18:
+2032  BD D1 06    LDA $06D1,X
+2035  9D D2 06    STA $06D2,X
+2038  BD D1 DA    LDA $DAD1,X
+203B  9D D2 DA    STA $DAD2,X
+203E  CA          DEX
+203F  BD D1 06    LDA $06D1,X
+2042  9D D2 06    STA $06D2,X
+2045  BD D1 DA    LDA $DAD1,X
+2048  9D D2 DA    STA $DAD2,X
+204B  CA          DEX
+204C  10 E4       BPL runtime_map_scroll_right_row_0_18
+204E  A0 00       LDY #$00
+2050  B1 FB       LDA ($FB),Y
+2052  AA          TAX
+2053  BD EE 26    LDA asset_map_chars_0,X
+2056  8D D1 06    STA $06D1
+2059  BD F2 26    LDA asset_map_colors_0,X
+205C  8D D1 DA    STA $DAD1
+205F  18          CLC
+2060  A5 FB       LDA $FB
+2062  69 50       ADC #$50
+2064  85 FB       STA $FB
+2066  A5 FC       LDA $FC
+2068  69 00       ADC #$00
+206A  85 FC       STA $FC
+206C  AD 1D 07    LDA $071D
+206F  8D 1E 07    STA $071E
+2072  AD 1D DB    LDA $DB1D
+2075  8D 1E DB    STA $DB1E
+2078  A2 23       LDX #$23
+207A        runtime_map_scroll_right_row_0_19:
+207A  BD F9 06    LDA $06F9,X
+207D  9D FA 06    STA $06FA,X
+2080  BD F9 DA    LDA $DAF9,X
+2083  9D FA DA    STA $DAFA,X
+2086  CA          DEX
+2087  BD F9 06    LDA $06F9,X
+208A  9D FA 06    STA $06FA,X
+208D  BD F9 DA    LDA $DAF9,X
+2090  9D FA DA    STA $DAFA,X
+2093  CA          DEX
+2094  10 E4       BPL runtime_map_scroll_right_row_0_19
+2096  A0 00       LDY #$00
+2098  B1 FB       LDA ($FB),Y
+209A  AA          TAX
+209B  BD EE 26    LDA asset_map_chars_0,X
+209E  8D F9 06    STA $06F9
+20A1  BD F2 26    LDA asset_map_colors_0,X
+20A4  8D F9 DA    STA $DAF9
+20A7  60          RTS
+            ; Map 0: shift Screen RAM and Color RAM one character up
+20A8        runtime_map_scroll_shift_up_0:
+20A8  A2 DA       LDX #$DA
+20AA        runtime_map_scroll_up_row_0_0:
+20AA  BD 4F 03    LDA $034F,X
+20AD  9D 27 03    STA $0327,X
+20B0  BD 4F D7    LDA $D74F,X
+20B3  9D 27 D7    STA $D727,X
+20B6  E8          INX
+20B7  BD 4F 03    LDA $034F,X
+20BA  9D 27 03    STA $0327,X
+20BD  BD 4F D7    LDA $D74F,X
+20C0  9D 27 D7    STA $D727,X
+20C3  E8          INX
+20C4  D0 E4       BNE runtime_map_scroll_up_row_0_0
+20C6  A2 DA       LDX #$DA
+20C8        runtime_map_scroll_up_row_0_1:
+20C8  BD 77 03    LDA $0377,X
+20CB  9D 4F 03    STA $034F,X
+20CE  BD 77 D7    LDA $D777,X
+20D1  9D 4F D7    STA $D74F,X
+20D4  E8          INX
+20D5  BD 77 03    LDA $0377,X
+20D8  9D 4F 03    STA $034F,X
+20DB  BD 77 D7    LDA $D777,X
+20DE  9D 4F D7    STA $D74F,X
+20E1  E8          INX
+20E2  D0 E4       BNE runtime_map_scroll_up_row_0_1
+20E4  A2 DA       LDX #$DA
+20E6        runtime_map_scroll_up_row_0_2:
+20E6  BD 9F 03    LDA $039F,X
+20E9  9D 77 03    STA $0377,X
+20EC  BD 9F D7    LDA $D79F,X
+20EF  9D 77 D7    STA $D777,X
+20F2  E8          INX
+20F3  BD 9F 03    LDA $039F,X
+20F6  9D 77 03    STA $0377,X
+20F9  BD 9F D7    LDA $D79F,X
+20FC  9D 77 D7    STA $D777,X
+20FF  E8          INX
+2100  D0 E4       BNE runtime_map_scroll_up_row_0_2
+2102  A2 DA       LDX #$DA
+2104        runtime_map_scroll_up_row_0_3:
+2104  BD C7 03    LDA $03C7,X
+2107  9D 9F 03    STA $039F,X
+210A  BD C7 D7    LDA $D7C7,X
+210D  9D 9F D7    STA $D79F,X
+2110  E8          INX
+2111  BD C7 03    LDA $03C7,X
+2114  9D 9F 03    STA $039F,X
+2117  BD C7 D7    LDA $D7C7,X
+211A  9D 9F D7    STA $D79F,X
+211D  E8          INX
+211E  D0 E4       BNE runtime_map_scroll_up_row_0_3
+2120  A2 DA       LDX #$DA
+2122        runtime_map_scroll_up_row_0_4:
+2122  BD EF 03    LDA $03EF,X
+2125  9D C7 03    STA $03C7,X
+2128  BD EF D7    LDA $D7EF,X
+212B  9D C7 D7    STA $D7C7,X
+212E  E8          INX
+212F  BD EF 03    LDA $03EF,X
+2132  9D C7 03    STA $03C7,X
+2135  BD EF D7    LDA $D7EF,X
+2138  9D C7 D7    STA $D7C7,X
+213B  E8          INX
+213C  D0 E4       BNE runtime_map_scroll_up_row_0_4
+213E  A2 DA       LDX #$DA
+2140        runtime_map_scroll_up_row_0_5:
+2140  BD 17 04    LDA $0417,X
+2143  9D EF 03    STA $03EF,X
+2146  BD 17 D8    LDA $D817,X
+2149  9D EF D7    STA $D7EF,X
+214C  E8          INX
+214D  BD 17 04    LDA $0417,X
+2150  9D EF 03    STA $03EF,X
+2153  BD 17 D8    LDA $D817,X
+2156  9D EF D7    STA $D7EF,X
+2159  E8          INX
+215A  D0 E4       BNE runtime_map_scroll_up_row_0_5
+215C  A2 DA       LDX #$DA
+215E        runtime_map_scroll_up_row_0_6:
+215E  BD 3F 04    LDA $043F,X
+2161  9D 17 04    STA $0417,X
+2164  BD 3F D8    LDA $D83F,X
+2167  9D 17 D8    STA $D817,X
+216A  E8          INX
+216B  BD 3F 04    LDA $043F,X
+216E  9D 17 04    STA $0417,X
+2171  BD 3F D8    LDA $D83F,X
+2174  9D 17 D8    STA $D817,X
+2177  E8          INX
+2178  D0 E4       BNE runtime_map_scroll_up_row_0_6
+217A  A2 DA       LDX #$DA
+217C        runtime_map_scroll_up_row_0_7:
+217C  BD 67 04    LDA $0467,X
+217F  9D 3F 04    STA $043F,X
+2182  BD 67 D8    LDA $D867,X
+2185  9D 3F D8    STA $D83F,X
+2188  E8          INX
+2189  BD 67 04    LDA $0467,X
+218C  9D 3F 04    STA $043F,X
+218F  BD 67 D8    LDA $D867,X
+2192  9D 3F D8    STA $D83F,X
+2195  E8          INX
+2196  D0 E4       BNE runtime_map_scroll_up_row_0_7
+2198  A2 DA       LDX #$DA
+219A        runtime_map_scroll_up_row_0_8:
+219A  BD 8F 04    LDA $048F,X
+219D  9D 67 04    STA $0467,X
+21A0  BD 8F D8    LDA $D88F,X
+21A3  9D 67 D8    STA $D867,X
+21A6  E8          INX
+21A7  BD 8F 04    LDA $048F,X
+21AA  9D 67 04    STA $0467,X
+21AD  BD 8F D8    LDA $D88F,X
+21B0  9D 67 D8    STA $D867,X
+21B3  E8          INX
+21B4  D0 E4       BNE runtime_map_scroll_up_row_0_8
+21B6  A2 DA       LDX #$DA
+21B8        runtime_map_scroll_up_row_0_9:
+21B8  BD B7 04    LDA $04B7,X
+21BB  9D 8F 04    STA $048F,X
+21BE  BD B7 D8    LDA $D8B7,X
+21C1  9D 8F D8    STA $D88F,X
+21C4  E8          INX
+21C5  BD B7 04    LDA $04B7,X
+21C8  9D 8F 04    STA $048F,X
+21CB  BD B7 D8    LDA $D8B7,X
+21CE  9D 8F D8    STA $D88F,X
+21D1  E8          INX
+21D2  D0 E4       BNE runtime_map_scroll_up_row_0_9
+21D4  A2 DA       LDX #$DA
+21D6        runtime_map_scroll_up_row_0_10:
+21D6  BD DF 04    LDA $04DF,X
+21D9  9D B7 04    STA $04B7,X
+21DC  BD DF D8    LDA $D8DF,X
+21DF  9D B7 D8    STA $D8B7,X
+21E2  E8          INX
+21E3  BD DF 04    LDA $04DF,X
+21E6  9D B7 04    STA $04B7,X
+21E9  BD DF D8    LDA $D8DF,X
+21EC  9D B7 D8    STA $D8B7,X
+21EF  E8          INX
+21F0  D0 E4       BNE runtime_map_scroll_up_row_0_10
+21F2  A2 DA       LDX #$DA
+21F4        runtime_map_scroll_up_row_0_11:
+21F4  BD 07 05    LDA $0507,X
+21F7  9D DF 04    STA $04DF,X
+21FA  BD 07 D9    LDA $D907,X
+21FD  9D DF D8    STA $D8DF,X
+2200  E8          INX
+2201  BD 07 05    LDA $0507,X
+2204  9D DF 04    STA $04DF,X
+2207  BD 07 D9    LDA $D907,X
+220A  9D DF D8    STA $D8DF,X
+220D  E8          INX
+220E  D0 E4       BNE runtime_map_scroll_up_row_0_11
+2210  A2 DA       LDX #$DA
+2212        runtime_map_scroll_up_row_0_12:
+2212  BD 2F 05    LDA $052F,X
+2215  9D 07 05    STA $0507,X
+2218  BD 2F D9    LDA $D92F,X
+221B  9D 07 D9    STA $D907,X
+221E  E8          INX
+221F  BD 2F 05    LDA $052F,X
+2222  9D 07 05    STA $0507,X
+2225  BD 2F D9    LDA $D92F,X
+2228  9D 07 D9    STA $D907,X
+222B  E8          INX
+222C  D0 E4       BNE runtime_map_scroll_up_row_0_12
+222E  A2 DA       LDX #$DA
+2230        runtime_map_scroll_up_row_0_13:
+2230  BD 57 05    LDA $0557,X
+2233  9D 2F 05    STA $052F,X
+2236  BD 57 D9    LDA $D957,X
+2239  9D 2F D9    STA $D92F,X
+223C  E8          INX
+223D  BD 57 05    LDA $0557,X
+2240  9D 2F 05    STA $052F,X
+2243  BD 57 D9    LDA $D957,X
+2246  9D 2F D9    STA $D92F,X
+2249  E8          INX
+224A  D0 E4       BNE runtime_map_scroll_up_row_0_13
+224C  A2 DA       LDX #$DA
+224E        runtime_map_scroll_up_row_0_14:
+224E  BD 7F 05    LDA $057F,X
+2251  9D 57 05    STA $0557,X
+2254  BD 7F D9    LDA $D97F,X
+2257  9D 57 D9    STA $D957,X
+225A  E8          INX
+225B  BD 7F 05    LDA $057F,X
+225E  9D 57 05    STA $0557,X
+2261  BD 7F D9    LDA $D97F,X
+2264  9D 57 D9    STA $D957,X
+2267  E8          INX
+2268  D0 E4       BNE runtime_map_scroll_up_row_0_14
+226A  A2 DA       LDX #$DA
+226C        runtime_map_scroll_up_row_0_15:
+226C  BD A7 05    LDA $05A7,X
+226F  9D 7F 05    STA $057F,X
+2272  BD A7 D9    LDA $D9A7,X
+2275  9D 7F D9    STA $D97F,X
+2278  E8          INX
+2279  BD A7 05    LDA $05A7,X
+227C  9D 7F 05    STA $057F,X
+227F  BD A7 D9    LDA $D9A7,X
+2282  9D 7F D9    STA $D97F,X
+2285  E8          INX
+2286  D0 E4       BNE runtime_map_scroll_up_row_0_15
+2288  A2 DA       LDX #$DA
+228A        runtime_map_scroll_up_row_0_16:
+228A  BD CF 05    LDA $05CF,X
+228D  9D A7 05    STA $05A7,X
+2290  BD CF D9    LDA $D9CF,X
+2293  9D A7 D9    STA $D9A7,X
+2296  E8          INX
+2297  BD CF 05    LDA $05CF,X
+229A  9D A7 05    STA $05A7,X
+229D  BD CF D9    LDA $D9CF,X
+22A0  9D A7 D9    STA $D9A7,X
+22A3  E8          INX
+22A4  D0 E4       BNE runtime_map_scroll_up_row_0_16
+22A6  A2 DA       LDX #$DA
+22A8        runtime_map_scroll_up_row_0_17:
+22A8  BD F7 05    LDA $05F7,X
+22AB  9D CF 05    STA $05CF,X
+22AE  BD F7 D9    LDA $D9F7,X
+22B1  9D CF D9    STA $D9CF,X
+22B4  E8          INX
+22B5  BD F7 05    LDA $05F7,X
+22B8  9D CF 05    STA $05CF,X
+22BB  BD F7 D9    LDA $D9F7,X
+22BE  9D CF D9    STA $D9CF,X
+22C1  E8          INX
+22C2  D0 E4       BNE runtime_map_scroll_up_row_0_17
+22C4  A2 DA       LDX #$DA
+22C6        runtime_map_scroll_up_row_0_18:
+22C6  BD 1F 06    LDA $061F,X
+22C9  9D F7 05    STA $05F7,X
+22CC  BD 1F DA    LDA $DA1F,X
+22CF  9D F7 D9    STA $D9F7,X
+22D2  E8          INX
+22D3  BD 1F 06    LDA $061F,X
+22D6  9D F7 05    STA $05F7,X
+22D9  BD 1F DA    LDA $DA1F,X
+22DC  9D F7 D9    STA $D9F7,X
+22DF  E8          INX
+22E0  D0 E4       BNE runtime_map_scroll_up_row_0_18
+22E2  AD 0C C1    LDA $C10C
+22E5  18          CLC
+22E6  69 13       ADC #$13
+22E8  8D B3 C7    STA $C7B3
+22EB  AD 0A C1    LDA $C10A
+22EE  8D B2 C7    STA $C7B2
+22F1  A9 00       LDA #$00
+22F3  8D B6 C7    STA $C7B6
+22F6  A9 00       LDA #$00
+22F8  8D BA C7    STA $C7BA
+22FB  AD B3 C7    LDA $C7B3
+22FE  8D B7 C7    STA $C7B7
+2301  A9 00       LDA #$00
+2303  8D BF C7    STA $C7BF
+2306  0E B7 C7    ASL $C7B7
+2309  2E BF C7    ROL $C7BF
+230C  0E B7 C7    ASL $C7B7
+230F  2E BF C7    ROL $C7BF
+2312  0E B7 C7    ASL $C7B7
+2315  2E BF C7    ROL $C7BF
+2318  0E B7 C7    ASL $C7B7
+231B  2E BF C7    ROL $C7BF
+231E  18          CLC
+231F  AD B6 C7    LDA $C7B6
+2322  6D B7 C7    ADC $C7B7
+2325  8D B6 C7    STA $C7B6
+2328  AD BA C7    LDA $C7BA
+232B  6D BF C7    ADC $C7BF
+232E  8D BA C7    STA $C7BA
+2331  0E B7 C7    ASL $C7B7
+2334  2E BF C7    ROL $C7BF
+2337  0E B7 C7    ASL $C7B7
+233A  2E BF C7    ROL $C7BF
+233D  18          CLC
+233E  AD B6 C7    LDA $C7B6
+2341  6D B7 C7    ADC $C7B7
+2344  8D B6 C7    STA $C7B6
+2347  AD BA C7    LDA $C7BA
+234A  6D BF C7    ADC $C7BF
+234D  8D BA C7    STA $C7BA
+2350  18          CLC
+2351  AD B6 C7    LDA $C7B6
+2354  6D B2 C7    ADC $C7B2
+2357  8D B6 C7    STA $C7B6
+235A  AD BA C7    LDA $C7BA
+235D  69 00       ADC #$00
+235F  8D BA C7    STA $C7BA
+2362  18          CLC
+2363  AD B6 C7    LDA $C7B6
+2366  69 00       ADC #$00
+2368  85 FB       STA $FB
+236A  AD BA C7    LDA $C7BA
+236D  69 80       ADC #$80
+236F  85 FC       STA $FC
+2371  A0 00       LDY #$00
+2373  A0 00       LDY #$00
+2375        runtime_map_scroll_up_line_0:
+2375  B1 FB       LDA ($FB),Y
+2377  AA          TAX
+2378  BD EE 26    LDA asset_map_chars_0,X
+237B  99 F9 06    STA $06F9,Y
+237E  BD F2 26    LDA asset_map_colors_0,X
+2381  99 F9 DA    STA $DAF9,Y
+2384  C8          INY
+2385  C0 26       CPY #$26
+2387  D0 EC       BNE runtime_map_scroll_up_line_0
+2389  60          RTS
+            ; Map 0: shift Screen RAM and Color RAM one character down
+238A        runtime_map_scroll_shift_down_0:
+238A  A2 DA       LDX #$DA
+238C        runtime_map_scroll_down_row_0_18:
+238C  BD F7 05    LDA $05F7,X
+238F  9D 1F 06    STA $061F,X
+2392  BD F7 D9    LDA $D9F7,X
+2395  9D 1F DA    STA $DA1F,X
+2398  E8          INX
+2399  BD F7 05    LDA $05F7,X
+239C  9D 1F 06    STA $061F,X
+239F  BD F7 D9    LDA $D9F7,X
+23A2  9D 1F DA    STA $DA1F,X
+23A5  E8          INX
+23A6  D0 E4       BNE runtime_map_scroll_down_row_0_18
+23A8  A2 DA       LDX #$DA
+23AA        runtime_map_scroll_down_row_0_17:
+23AA  BD CF 05    LDA $05CF,X
+23AD  9D F7 05    STA $05F7,X
+23B0  BD CF D9    LDA $D9CF,X
+23B3  9D F7 D9    STA $D9F7,X
+23B6  E8          INX
+23B7  BD CF 05    LDA $05CF,X
+23BA  9D F7 05    STA $05F7,X
+23BD  BD CF D9    LDA $D9CF,X
+23C0  9D F7 D9    STA $D9F7,X
+23C3  E8          INX
+23C4  D0 E4       BNE runtime_map_scroll_down_row_0_17
+23C6  A2 DA       LDX #$DA
+23C8        runtime_map_scroll_down_row_0_16:
+23C8  BD A7 05    LDA $05A7,X
+23CB  9D CF 05    STA $05CF,X
+23CE  BD A7 D9    LDA $D9A7,X
+23D1  9D CF D9    STA $D9CF,X
+23D4  E8          INX
+23D5  BD A7 05    LDA $05A7,X
+23D8  9D CF 05    STA $05CF,X
+23DB  BD A7 D9    LDA $D9A7,X
+23DE  9D CF D9    STA $D9CF,X
+23E1  E8          INX
+23E2  D0 E4       BNE runtime_map_scroll_down_row_0_16
+23E4  A2 DA       LDX #$DA
+23E6        runtime_map_scroll_down_row_0_15:
+23E6  BD 7F 05    LDA $057F,X
+23E9  9D A7 05    STA $05A7,X
+23EC  BD 7F D9    LDA $D97F,X
+23EF  9D A7 D9    STA $D9A7,X
+23F2  E8          INX
+23F3  BD 7F 05    LDA $057F,X
+23F6  9D A7 05    STA $05A7,X
+23F9  BD 7F D9    LDA $D97F,X
+23FC  9D A7 D9    STA $D9A7,X
+23FF  E8          INX
+2400  D0 E4       BNE runtime_map_scroll_down_row_0_15
+2402  A2 DA       LDX #$DA
+2404        runtime_map_scroll_down_row_0_14:
+2404  BD 57 05    LDA $0557,X
+2407  9D 7F 05    STA $057F,X
+240A  BD 57 D9    LDA $D957,X
+240D  9D 7F D9    STA $D97F,X
+2410  E8          INX
+2411  BD 57 05    LDA $0557,X
+2414  9D 7F 05    STA $057F,X
+2417  BD 57 D9    LDA $D957,X
+241A  9D 7F D9    STA $D97F,X
+241D  E8          INX
+241E  D0 E4       BNE runtime_map_scroll_down_row_0_14
+2420  A2 DA       LDX #$DA
+2422        runtime_map_scroll_down_row_0_13:
+2422  BD 2F 05    LDA $052F,X
+2425  9D 57 05    STA $0557,X
+2428  BD 2F D9    LDA $D92F,X
+242B  9D 57 D9    STA $D957,X
+242E  E8          INX
+242F  BD 2F 05    LDA $052F,X
+2432  9D 57 05    STA $0557,X
+2435  BD 2F D9    LDA $D92F,X
+2438  9D 57 D9    STA $D957,X
+243B  E8          INX
+243C  D0 E4       BNE runtime_map_scroll_down_row_0_13
+243E  A2 DA       LDX #$DA
+2440        runtime_map_scroll_down_row_0_12:
+2440  BD 07 05    LDA $0507,X
+2443  9D 2F 05    STA $052F,X
+2446  BD 07 D9    LDA $D907,X
+2449  9D 2F D9    STA $D92F,X
+244C  E8          INX
+244D  BD 07 05    LDA $0507,X
+2450  9D 2F 05    STA $052F,X
+2453  BD 07 D9    LDA $D907,X
+2456  9D 2F D9    STA $D92F,X
+2459  E8          INX
+245A  D0 E4       BNE runtime_map_scroll_down_row_0_12
+245C  A2 DA       LDX #$DA
+245E        runtime_map_scroll_down_row_0_11:
+245E  BD DF 04    LDA $04DF,X
+2461  9D 07 05    STA $0507,X
+2464  BD DF D8    LDA $D8DF,X
+2467  9D 07 D9    STA $D907,X
+246A  E8          INX
+246B  BD DF 04    LDA $04DF,X
+246E  9D 07 05    STA $0507,X
+2471  BD DF D8    LDA $D8DF,X
+2474  9D 07 D9    STA $D907,X
+2477  E8          INX
+2478  D0 E4       BNE runtime_map_scroll_down_row_0_11
+247A  A2 DA       LDX #$DA
+247C        runtime_map_scroll_down_row_0_10:
+247C  BD B7 04    LDA $04B7,X
+247F  9D DF 04    STA $04DF,X
+2482  BD B7 D8    LDA $D8B7,X
+2485  9D DF D8    STA $D8DF,X
+2488  E8          INX
+2489  BD B7 04    LDA $04B7,X
+248C  9D DF 04    STA $04DF,X
+248F  BD B7 D8    LDA $D8B7,X
+2492  9D DF D8    STA $D8DF,X
+2495  E8          INX
+2496  D0 E4       BNE runtime_map_scroll_down_row_0_10
+2498  A2 DA       LDX #$DA
+249A        runtime_map_scroll_down_row_0_9:
+249A  BD 8F 04    LDA $048F,X
+249D  9D B7 04    STA $04B7,X
+24A0  BD 8F D8    LDA $D88F,X
+24A3  9D B7 D8    STA $D8B7,X
+24A6  E8          INX
+24A7  BD 8F 04    LDA $048F,X
+24AA  9D B7 04    STA $04B7,X
+24AD  BD 8F D8    LDA $D88F,X
+24B0  9D B7 D8    STA $D8B7,X
+24B3  E8          INX
+24B4  D0 E4       BNE runtime_map_scroll_down_row_0_9
+24B6  A2 DA       LDX #$DA
+24B8        runtime_map_scroll_down_row_0_8:
+24B8  BD 67 04    LDA $0467,X
+24BB  9D 8F 04    STA $048F,X
+24BE  BD 67 D8    LDA $D867,X
+24C1  9D 8F D8    STA $D88F,X
+24C4  E8          INX
+24C5  BD 67 04    LDA $0467,X
+24C8  9D 8F 04    STA $048F,X
+24CB  BD 67 D8    LDA $D867,X
+24CE  9D 8F D8    STA $D88F,X
+24D1  E8          INX
+24D2  D0 E4       BNE runtime_map_scroll_down_row_0_8
+24D4  A2 DA       LDX #$DA
+24D6        runtime_map_scroll_down_row_0_7:
+24D6  BD 3F 04    LDA $043F,X
+24D9  9D 67 04    STA $0467,X
+24DC  BD 3F D8    LDA $D83F,X
+24DF  9D 67 D8    STA $D867,X
+24E2  E8          INX
+24E3  BD 3F 04    LDA $043F,X
+24E6  9D 67 04    STA $0467,X
+24E9  BD 3F D8    LDA $D83F,X
+24EC  9D 67 D8    STA $D867,X
+24EF  E8          INX
+24F0  D0 E4       BNE runtime_map_scroll_down_row_0_7
+24F2  A2 DA       LDX #$DA
+24F4        runtime_map_scroll_down_row_0_6:
+24F4  BD 17 04    LDA $0417,X
+24F7  9D 3F 04    STA $043F,X
+24FA  BD 17 D8    LDA $D817,X
+24FD  9D 3F D8    STA $D83F,X
+2500  E8          INX
+2501  BD 17 04    LDA $0417,X
+2504  9D 3F 04    STA $043F,X
+2507  BD 17 D8    LDA $D817,X
+250A  9D 3F D8    STA $D83F,X
+250D  E8          INX
+250E  D0 E4       BNE runtime_map_scroll_down_row_0_6
+2510  A2 DA       LDX #$DA
+2512        runtime_map_scroll_down_row_0_5:
+2512  BD EF 03    LDA $03EF,X
+2515  9D 17 04    STA $0417,X
+2518  BD EF D7    LDA $D7EF,X
+251B  9D 17 D8    STA $D817,X
+251E  E8          INX
+251F  BD EF 03    LDA $03EF,X
+2522  9D 17 04    STA $0417,X
+2525  BD EF D7    LDA $D7EF,X
+2528  9D 17 D8    STA $D817,X
+252B  E8          INX
+252C  D0 E4       BNE runtime_map_scroll_down_row_0_5
+252E  A2 DA       LDX #$DA
+2530        runtime_map_scroll_down_row_0_4:
+2530  BD C7 03    LDA $03C7,X
+2533  9D EF 03    STA $03EF,X
+2536  BD C7 D7    LDA $D7C7,X
+2539  9D EF D7    STA $D7EF,X
+253C  E8          INX
+253D  BD C7 03    LDA $03C7,X
+2540  9D EF 03    STA $03EF,X
+2543  BD C7 D7    LDA $D7C7,X
+2546  9D EF D7    STA $D7EF,X
+2549  E8          INX
+254A  D0 E4       BNE runtime_map_scroll_down_row_0_4
+254C  A2 DA       LDX #$DA
+254E        runtime_map_scroll_down_row_0_3:
+254E  BD 9F 03    LDA $039F,X
+2551  9D C7 03    STA $03C7,X
+2554  BD 9F D7    LDA $D79F,X
+2557  9D C7 D7    STA $D7C7,X
+255A  E8          INX
+255B  BD 9F 03    LDA $039F,X
+255E  9D C7 03    STA $03C7,X
+2561  BD 9F D7    LDA $D79F,X
+2564  9D C7 D7    STA $D7C7,X
+2567  E8          INX
+2568  D0 E4       BNE runtime_map_scroll_down_row_0_3
+256A  A2 DA       LDX #$DA
+256C        runtime_map_scroll_down_row_0_2:
+256C  BD 77 03    LDA $0377,X
+256F  9D 9F 03    STA $039F,X
+2572  BD 77 D7    LDA $D777,X
+2575  9D 9F D7    STA $D79F,X
+2578  E8          INX
+2579  BD 77 03    LDA $0377,X
+257C  9D 9F 03    STA $039F,X
+257F  BD 77 D7    LDA $D777,X
+2582  9D 9F D7    STA $D79F,X
+2585  E8          INX
+2586  D0 E4       BNE runtime_map_scroll_down_row_0_2
+2588  A2 DA       LDX #$DA
+258A        runtime_map_scroll_down_row_0_1:
+258A  BD 4F 03    LDA $034F,X
+258D  9D 77 03    STA $0377,X
+2590  BD 4F D7    LDA $D74F,X
+2593  9D 77 D7    STA $D777,X
+2596  E8          INX
+2597  BD 4F 03    LDA $034F,X
+259A  9D 77 03    STA $0377,X
+259D  BD 4F D7    LDA $D74F,X
+25A0  9D 77 D7    STA $D777,X
+25A3  E8          INX
+25A4  D0 E4       BNE runtime_map_scroll_down_row_0_1
+25A6  A2 DA       LDX #$DA
+25A8        runtime_map_scroll_down_row_0_0:
+25A8  BD 27 03    LDA $0327,X
+25AB  9D 4F 03    STA $034F,X
+25AE  BD 27 D7    LDA $D727,X
+25B1  9D 4F D7    STA $D74F,X
+25B4  E8          INX
+25B5  BD 27 03    LDA $0327,X
+25B8  9D 4F 03    STA $034F,X
+25BB  BD 27 D7    LDA $D727,X
+25BE  9D 4F D7    STA $D74F,X
+25C1  E8          INX
+25C2  D0 E4       BNE runtime_map_scroll_down_row_0_0
+25C4  AD 0C C1    LDA $C10C
+25C7  8D B3 C7    STA $C7B3
+25CA  AD 0A C1    LDA $C10A
+25CD  8D B2 C7    STA $C7B2
+25D0  A9 00       LDA #$00
+25D2  8D B6 C7    STA $C7B6
+25D5  A9 00       LDA #$00
+25D7  8D BA C7    STA $C7BA
+25DA  AD B3 C7    LDA $C7B3
+25DD  8D B7 C7    STA $C7B7
+25E0  A9 00       LDA #$00
+25E2  8D BF C7    STA $C7BF
+25E5  0E B7 C7    ASL $C7B7
+25E8  2E BF C7    ROL $C7BF
+25EB  0E B7 C7    ASL $C7B7
+25EE  2E BF C7    ROL $C7BF
+25F1  0E B7 C7    ASL $C7B7
+25F4  2E BF C7    ROL $C7BF
+25F7  0E B7 C7    ASL $C7B7
+25FA  2E BF C7    ROL $C7BF
+25FD  18          CLC
+25FE  AD B6 C7    LDA $C7B6
+2601  6D B7 C7    ADC $C7B7
+2604  8D B6 C7    STA $C7B6
+2607  AD BA C7    LDA $C7BA
+260A  6D BF C7    ADC $C7BF
+260D  8D BA C7    STA $C7BA
+2610  0E B7 C7    ASL $C7B7
+2613  2E BF C7    ROL $C7BF
+2616  0E B7 C7    ASL $C7B7
+2619  2E BF C7    ROL $C7BF
+261C  18          CLC
+261D  AD B6 C7    LDA $C7B6
+2620  6D B7 C7    ADC $C7B7
+2623  8D B6 C7    STA $C7B6
+2626  AD BA C7    LDA $C7BA
+2629  6D BF C7    ADC $C7BF
+262C  8D BA C7    STA $C7BA
+262F  18          CLC
+2630  AD B6 C7    LDA $C7B6
+2633  6D B2 C7    ADC $C7B2
+2636  8D B6 C7    STA $C7B6
+2639  AD BA C7    LDA $C7BA
+263C  69 00       ADC #$00
+263E  8D BA C7    STA $C7BA
+2641  18          CLC
+2642  AD B6 C7    LDA $C7B6
+2645  69 00       ADC #$00
+2647  85 FB       STA $FB
+2649  AD BA C7    LDA $C7BA
+264C  69 80       ADC #$80
+264E  85 FC       STA $FC
+2650  A0 00       LDY #$00
+2652  A0 00       LDY #$00
+2654        runtime_map_scroll_down_line_0:
+2654  B1 FB       LDA ($FB),Y
+2656  AA          TAX
+2657  BD EE 26    LDA asset_map_chars_0,X
+265A  99 01 04    STA $0401,Y
+265D  BD F2 26    LDA asset_map_colors_0,X
+2660  99 01 D8    STA $D801,Y
+2663  C8          INY
+2664  C0 26       CPY #$26
+2666  D0 EC       BNE runtime_map_scroll_down_line_0
+2668  60          RTS
+            ; Dynamic map 0: redraw visible cells from runtime RAM
+2669        runtime_map_redraw_0:
+2669  4C 10 14    JMP runtime_map_viewport_0
+            ; User data
+266C        sprite_frames_hero_0:
+266C  00 18 00 00 3C 00 00 7E 00 00 DB 00 01 FF 80 03 FF C0 03 3C C0 03 7E C0 03 FF C0 01 FF 80 00 7E 00 00 3C 00 00 66 00 00 C3 00 01 81 80 03 00 C0 06 00 60 0C 00 30 18 00 18 30 00 0C 60 00 06 .byte $00, $18, $00, $00, $3C, $00, $00, $7E, $00, $00, $DB, $00, $01, $FF, $80, $03, $FF, $C0, $03, $3C, $C0, $03, $7E, $C0, $03, $FF, $C0, $01, $FF, $80, $00, $7E, $00, $00, $3C, $00, $00, $66, $00, $00, $C3, $00, $01, $81, $80, $03, $00, $C0, $06, $00, $60, $0C, $00, $30, $18, $00, $18, $30, $00, $0C, $60, $00, $06
+26AB        sprite_frames_hero_1:
+26AB  00 18 00 00 3C 00 00 7E 00 00 DB 00 01 FF 80 03 FF C0 03 3C C0 03 7E C0 03 FF C0 01 FF 80 00 7E 00 00 3C 00 00 66 00 00 C3 00 01 81 80 03 00 C0 06 00 60 18 00 18 30 00 0C 60 00 06 30 00 0C .byte $00, $18, $00, $00, $3C, $00, $00, $7E, $00, $00, $DB, $00, $01, $FF, $80, $03, $FF, $C0, $03, $3C, $C0, $03, $7E, $C0, $03, $FF, $C0, $01, $FF, $80, $00, $7E, $00, $00, $3C, $00, $00, $66, $00, $00, $C3, $00, $01, $81, $80, $03, $00, $C0, $06, $00, $60, $18, $00, $18, $30, $00, $0C, $60, $00, $06, $30, $00, $0C
+26EA        asset_map_collisions_0:
+26EA  00 01 00 01 .byte $00, $01, $00, $01
+26EE        asset_map_chars_0:
+26EE  00 01 02 03 .byte $00, $01, $02, $03
+26F2        asset_map_colors_0:
+26F2  00 0E 07 05 .byte $00, $0E, $07, $05
+26F6        asset_bytes_1:
+26F6  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+27F6        asset_bytes_6:
+27F6  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 03 03 03 03 03 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 03 03 03 03 03 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $03, $03, $03, $03, $03, $03, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $03, $03, $03, $03, $03, $03, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+28F6        asset_bytes_8:
+28F6  00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 03 03 03 03 03 03 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 02 02 00 00 00 00 00 00 00 00 00 00 02 02 02 00 00 00 00 00 00 00 00 00 00 00 00 02 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 02 02 02 00 00 00 00 00 00 00 00 00 00 00 00 02 02 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 01 00 00 00 00 00 00 00 00 00 00 01 01 01 00 00 00 00 00 00 00 00 00 00 00 00 01 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 01 01 01 00 00 00 00 00 00 00 00 00 00 00 00 01 01 00 00 00 00 00 00 00 00 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $03, $03, $03, $03, $03, $03, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $02, $02, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $02, $02, $02, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $02, $02, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $02, $02, $02, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $02, $02, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $01, $01, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $01, $01, $01, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $01, $01, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $01, $01, $01, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $01, $01, $00, $00, $00, $00, $00, $00, $00, $00, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01
+29F6        asset_bytes_10:
+29F6  01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 01 .byte $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01
+2A36        sprite_sequence_0_idle-right:
+2A36  B8          .byte $B8
+2A37        sprite_sequence_0_run-right:
+2A37  B8 B9       .byte $B8, $B9
+2A39        asset_bytes_12:
+2A39  00 00 00 00 00 00 00 00 FF 81 BD A5 A5 BD 81 FF 00 00 00 00 00 00 FF FF FF FF 18 18 18 18 18 18 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 .byte $00, $00, $00, $00, $00, $00, $00, $00, $FF, $81, $BD, $A5, $A5, $BD, $81, $FF, $00, $00, $00, $00, $00, $00, $FF, $FF, $FF, $FF, $18, $18, $18, $18, $18, $18, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00

@@ -28,6 +28,35 @@ export interface CharsetAsset {
   readonly bytes: ReadonlyArray<number>;
 }
 
+export interface SpriteAssetFrame {
+  readonly id: string;
+  readonly data: ReadonlyArray<number>;
+}
+
+export interface SpriteAssetAnimation {
+  readonly name: string;
+  readonly frames: ReadonlyArray<number>;
+  readonly speed: number;
+  readonly loop: boolean;
+}
+
+export interface SpriteAsset {
+  readonly type: "spriteAsset";
+  readonly version: 1;
+  readonly sourcePath: string;
+  readonly id: string;
+  readonly mode: "hires" | "multicolor";
+  readonly color: number;
+  readonly multicolor1: number | null;
+  readonly multicolor2: number | null;
+  readonly origin: Readonly<{ x: number; y: number }>;
+  readonly hitbox: Readonly<Required<SpriteHitbox>>;
+  readonly frames: ReadonlyArray<SpriteAssetFrame>;
+  readonly animations: Readonly<Record<string, SpriteAssetAnimation>>;
+  readonly initialAnimation: string | null;
+  readonly framesRef: SpriteFramesRef;
+}
+
 export interface TileAsset {
   readonly chars: ReadonlyArray<number>;
   readonly colors: ReadonlyArray<number>;
@@ -47,9 +76,13 @@ export interface RawMapAsset {
 }
 
 export interface MapObjectAsset {
+  readonly id: string;
   readonly type: string;
   readonly x: number;
   readonly y: number;
+  readonly worldX: number;
+  readonly worldY: number;
+  readonly sprite?: string;
   readonly properties: Readonly<Record<string, unknown>>;
 }
 
@@ -79,6 +112,86 @@ export interface MapTileRef {
   ne(value: number | RuntimeByteRef): RuntimeCondition;
   isSolid(): RuntimeCondition;
   hasCollision(value: number): RuntimeCondition;
+}
+
+export interface MapHorizontalScrollerRef {
+  readonly type: "mapHorizontalScrollerRef";
+  draw(): void;
+  left(pixels?: number): void;
+  right(pixels?: number): void;
+  up(pixels?: number): void;
+  down(pixels?: number): void;
+  follow(entity: MapEntityRef, options?: {
+    axis?: "x" | "y" | "both";
+    deadZone?: { x: number; y: number; width: number; height: number };
+    offset?: { x?: number; y?: number };
+    offsetX?: number;
+    offsetY?: number;
+    maxSpeed?: number;
+    project?: boolean;
+    cullingMargin?: number | { x?: number; y?: number };
+  }): void;
+  project(entity: MapEntityRef, options?: { cullingMargin?: number | { x?: number; y?: number }; margin?: number | { x?: number; y?: number } }): void;
+}
+
+export type MapScrollerPanel = "top" | "bottom"
+  | { position: "top" | "bottom"; rows: number }
+  | { top: number }
+  | { bottom: number };
+
+export interface MapEntityProjectionOptions {
+  cameraX?: number | RuntimeWordRef;
+  cameraY?: number | RuntimeWordRef;
+  screenOffsetX?: number;
+  screenOffsetY?: number;
+  viewportWidth?: number;
+  viewportHeight?: number;
+  cullingMargin?: number | { x?: number; y?: number };
+  margin?: number | { x?: number; y?: number };
+}
+
+export type MapCollisionBehavior = "solid" | "platform" | "danger" | "ladder" | "exit" | "passable";
+
+export interface MapEntityRef {
+  readonly type: "mapEntityRef";
+  readonly id: number;
+  readonly asset: MapAsset;
+  readonly object: MapObjectAsset;
+  readonly sprite: SpriteRef;
+  readonly spriteAsset: SpriteAsset | null;
+  readonly initialAnimation: string | null;
+  readonly worldX: RuntimeWordRef;
+  readonly worldY: RuntimeWordRef;
+  readonly screenX: RuntimeWordRef;
+  readonly screenY: RuntimeByteRef;
+  readonly velocityX: RuntimeByteRef;
+  readonly velocityY: RuntimeByteRef;
+  readonly onGround: RuntimeBoolRef;
+  readonly hitCeiling: RuntimeBoolRef;
+  readonly hitLeft: RuntimeBoolRef;
+  readonly hitRight: RuntimeBoolRef;
+  readonly enabled: RuntimeBoolRef;
+  readonly onDanger: RuntimeBoolRef;
+  readonly onLadder: RuntimeBoolRef;
+  readonly atExit: RuntimeBoolRef;
+  readonly hitbox: Required<SpriteHitbox>;
+  setWorldPosition(x: number | RuntimeWordRef, y: number | RuntimeWordRef): void;
+  setVelocity(x: number | RuntimeByteRef, y: number | RuntimeByteRef): void;
+  moveAndCollide(x?: number | RuntimeByteRef, y?: number | RuntimeByteRef): void;
+  jump(speed: number): void;
+  isOnGround(): RuntimeCondition;
+  isActive(): RuntimeCondition;
+  isOnDanger(): RuntimeCondition;
+  isOnLadder(): RuntimeCondition;
+  isAtExit(): RuntimeCondition;
+  project(options?: MapEntityProjectionOptions): void;
+  enable(): void;
+  disable(): void;
+  respawn(selector?: string | { id?: string; type?: string }): void;
+  collides(other: MapEntityRef): RuntimeCondition;
+  play(name: string, direction?: "left" | "right" | string): void;
+  pauseAnimation(): void;
+  resumeAnimation(): void;
 }
 
 export interface RuntimeCondition {
@@ -220,6 +333,9 @@ export interface SpriteRef {
 }
 
 export interface C64Api {
+  program: {
+    start(address: number): void;
+  };
   [key: string]: any;
   var: {
     byte(name: string, options?: { address?: number; initial?: number }): RuntimeByteRef;
@@ -258,12 +374,66 @@ export interface C64Api {
   assets: {
     loadMap(filePath: string): MapAsset;
     defineMap(definition: unknown): MapAsset;
+    loadSprite(filePath: string, options?: { address?: number }): SpriteAsset;
+    defineSprite(definition: unknown, options?: { address?: number }): SpriteAsset;
   };
   charset: {
     use(charset: CharsetAsset | MapAsset, options?: { address?: number; background?: number; multicolor1?: number; multicolor2?: number }): void;
   };
   map: {
     draw(asset: MapAsset, options?: { x?: number; y?: number }): void;
+    drawViewport(asset: MapAsset, options: {
+      sourceX?: number | RuntimeByteRef;
+      sourceY?: number | RuntimeByteRef;
+      width: number;
+      height: number;
+      x?: number;
+      y?: number;
+    }): void;
+    horizontalScroller(asset: MapAsset, options: {
+      sourceX?: number;
+      sourceY?: number;
+      width: number;
+      height: number;
+      x?: number;
+      y?: number;
+      panel?: MapScrollerPanel;
+    }): MapHorizontalScrollerRef;
+    scroller(asset: MapAsset, options: {
+      sourceX?: number;
+      sourceY?: number;
+      width: number;
+      height: number;
+      x?: number;
+      y?: number;
+      panel?: MapScrollerPanel;
+    }): MapHorizontalScrollerRef;
+    object(asset: MapAsset, selector: string | { id?: string; type?: string }): MapObjectAsset;
+    objects(asset: MapAsset, selector?: string | { id?: string; type?: string }): ReadonlyArray<MapObjectAsset>;
+    spawn(asset: MapAsset, selector: string | { id?: string; type?: string }, options: {
+      sprite: number | SpriteRef;
+      spriteAsset?: string | SpriteAsset;
+      spriteOptions?: SpriteCreateOptions;
+      hitbox?: SpriteHitbox;
+      animation?: string;
+      velocityX?: number;
+      velocityY?: number;
+      maxCollisionSpeed?: number;
+      active?: boolean;
+      collisionBehaviors?: Record<number, MapCollisionBehavior>;
+    }): MapEntityRef;
+    spawnAll(asset: MapAsset, selector: string | { id?: string; type?: string }, options?: {
+      firstSprite?: number;
+      spriteAsset?: string | SpriteAsset;
+      spriteOptions?: SpriteCreateOptions;
+      hitbox?: SpriteHitbox;
+      animation?: string;
+      velocityX?: number;
+      velocityY?: number;
+      maxCollisionSpeed?: number;
+      active?: boolean;
+      collisionBehaviors?: Record<number, MapCollisionBehavior>;
+    }): ReadonlyArray<MapEntityRef>;
     tileAt(asset: MapAsset, x: number | RuntimeByteRef, y: number | RuntimeByteRef): MapTileRef;
     setTile(asset: MapAsset, x: number | RuntimeByteRef, y: number | RuntimeByteRef, value: number | RuntimeByteRef): void;
     pixelToTile(asset: MapAsset, source: { x: number | RuntimeByteRef | RuntimeWordRef; y: number | RuntimeByteRef | RuntimeWordRef }, target: { x: RuntimeByteRef | RuntimeWordRef; y: RuntimeByteRef | RuntimeWordRef }): void;
@@ -291,6 +461,8 @@ export declare function compileJsToBasicData(source: string, options?: { codeSta
 export declare function loadMapAsset(filePath: string, baseDirectory?: string): RawMapAsset;
 export declare function normalizeMapAsset(definition: unknown, sourcePath?: string): RawMapAsset;
 export declare function expandMapAsset(asset: RawMapAsset | MapAsset): { width: number; height: number; chars: number[]; colors: number[] };
+export declare function loadSpriteAsset(filePath: string, baseDirectory?: string): Omit<SpriteAsset, "framesRef">;
+export declare function normalizeSpriteAsset(definition: unknown, sourcePath?: string): Omit<SpriteAsset, "framesRef">;
 export declare function createPrg(machineCode: Uint8Array, sysAddress?: number): Uint8Array;
 export declare function createBasicSysStub(sysAddress?: number): Uint8Array;
 export declare function exportBasicData(bytes: ArrayLike<number>, startLine?: number, step?: number, chunkSize?: number): string;
