@@ -1,0 +1,397 @@
+[
+  {
+    "type": "map-runtime",
+    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\snake-room.json",
+    "address": 32768,
+    "endAddress": 33067,
+    "bytes": 300,
+    "indexBits": 16,
+    "objects": 2,
+    "activation": "eager-once",
+    "activeMapContract": false,
+    "storage": "inline",
+    "sharedMapRamSlot": false
+  },
+  {
+    "type": "charset",
+    "mode": "hires",
+    "address": 12288,
+    "endAddress": 14335,
+    "bytes": 2048,
+    "storedBytes": 24,
+    "romCopiedBytes": 512,
+    "characters": 67,
+    "storage": "inline"
+  },
+  {
+    "type": "map",
+    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\snake-room.json",
+    "mapWidth": 20,
+    "mapHeight": 15,
+    "screenWidth": 20,
+    "screenHeight": 15,
+    "tileCount": 4,
+    "bytes": 300,
+    "objects": 2,
+    "charsetMode": "hires"
+  },
+  {
+    "type": "game-runtime",
+    "scenes": [],
+    "startScene": null,
+    "transitionPolicy": null,
+    "activeMapContract": false,
+    "mapActivationPolicy": null,
+    "registeredMaps": 1,
+    "sharedMapRamSlot": false,
+    "deterministicRng": true,
+    "fixedPools": [],
+    "counters": [
+      {
+        "name": "snakeScore",
+        "digits": 3,
+        "storage": "unpacked-bcd"
+      }
+    ]
+  },
+  {
+    "type": "sid-audio",
+    "player": false,
+    "tempo": null,
+    "expandedSteps": null,
+    "storedSteps": null,
+    "logicalTickRateHz": null,
+    "videoStandardCompensation": null,
+    "loop": false,
+    "musicVoices": [],
+    "reservedSfxVoice": null,
+    "effectCalls": 1,
+    "fadeCalls": 0,
+    "patterns": [],
+    "instruments": [],
+    "omittedReservedVoiceBytes": 0,
+    "compactedRepeatTableBytes": 0,
+    "pooledIdenticalVoiceTableBytes": 0,
+    "priorityPolicy": "shared-voice-warning"
+  },
+  {
+    "type": "optimization-summary",
+    "mode": "balanced",
+    "programBytes": 4093,
+    "profiles": [
+      {
+        "mode": "size",
+        "assetProgramBytesEstimate": 149,
+        "startupCyclesEstimate": 5650,
+        "compressedChunks": 2,
+        "runtimeStrategy": "shared-repeated-routines",
+        "estimatedProgramBytes": 4093
+      },
+      {
+        "mode": "balanced",
+        "assetProgramBytesEstimate": 149,
+        "startupCyclesEstimate": 5650,
+        "compressedChunks": 2,
+        "runtimeStrategy": "shared-repeated-routines",
+        "estimatedProgramBytes": 4093,
+        "programBytes": 4093
+      },
+      {
+        "mode": "speed",
+        "assetProgramBytesEstimate": 361,
+        "startupCyclesEstimate": 4542,
+        "compressedChunks": 0,
+        "runtimeStrategy": "inline-hot-paths",
+        "estimatedProgramBytes": 4305
+      }
+    ],
+    "rle": {
+      "candidates": 3,
+      "compressedChunks": 2,
+      "rawBytes": 324,
+      "storedBytes": 80,
+      "estimatedNetSavedBytes": 212
+    },
+    "sharedRoutines": {
+      "sidClick": false,
+      "spriteSync": 0,
+      "spriteAabb": false
+    },
+    "omittedRoutines": [
+      "sid-player",
+      "sid-fade",
+      "sprite-animator",
+      "sprite-multiplexer",
+      "map-activation",
+      "game-scenes",
+      "hires-runtime"
+    ],
+    "audio": {
+      "compactedRepeatTableBytes": 0,
+      "pooledIdenticalVoiceTableBytes": 0
+    },
+    "multiplexer": {
+      "enabled": false,
+      "logicalSprites": 0,
+      "sortComparisonsWorstCase": 0,
+      "sortCyclesEstimate": 0,
+      "projectionCyclesEstimate": 0,
+      "totalCyclesEstimate": 0
+    }
+  },
+  {
+    "type": "memory-layout",
+    "ranges": [
+      {
+        "name": "screen RAM",
+        "kind": "video",
+        "start": 1024,
+        "end": 2023,
+        "bytes": 1000
+      },
+      {
+        "name": "program",
+        "kind": "program",
+        "start": 2064,
+        "end": 6156,
+        "bytes": 4093
+      },
+      {
+        "name": "charset",
+        "kind": "charset",
+        "start": 12288,
+        "end": 14335,
+        "bytes": 2048,
+        "mode": "hires"
+      },
+      {
+        "name": "map 0",
+        "kind": "map",
+        "start": 32768,
+        "end": 33067,
+        "bytes": 300,
+        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\snake-room.json"
+      },
+      {
+        "name": "IRQ state",
+        "kind": "runtime",
+        "start": 49406,
+        "end": 49406,
+        "bytes": 1
+      },
+      {
+        "name": "variable snakeHeadX",
+        "kind": "variable",
+        "start": 49408,
+        "end": 49408,
+        "bytes": 1
+      },
+      {
+        "name": "variable snakeHeadY",
+        "kind": "variable",
+        "start": 49409,
+        "end": 49409,
+        "bytes": 1
+      },
+      {
+        "name": "variable snakeNextX",
+        "kind": "variable",
+        "start": 49410,
+        "end": 49410,
+        "bytes": 1
+      },
+      {
+        "name": "variable snakeNextY",
+        "kind": "variable",
+        "start": 49411,
+        "end": 49411,
+        "bytes": 1
+      },
+      {
+        "name": "variable snakeHeadSlot",
+        "kind": "variable",
+        "start": 49412,
+        "end": 49412,
+        "bytes": 1
+      },
+      {
+        "name": "variable snakeTailSlot",
+        "kind": "variable",
+        "start": 49413,
+        "end": 49413,
+        "bytes": 1
+      },
+      {
+        "name": "variable snakeTailX",
+        "kind": "variable",
+        "start": 49414,
+        "end": 49414,
+        "bytes": 1
+      },
+      {
+        "name": "variable snakeTailY",
+        "kind": "variable",
+        "start": 49415,
+        "end": 49415,
+        "bytes": 1
+      },
+      {
+        "name": "variable snakeDirection",
+        "kind": "variable",
+        "start": 49416,
+        "end": 49416,
+        "bytes": 1
+      },
+      {
+        "name": "variable snakeGrowing",
+        "kind": "variable",
+        "start": 49417,
+        "end": 49417,
+        "bytes": 1
+      },
+      {
+        "name": "variable snakeGameOver",
+        "kind": "variable",
+        "start": 49418,
+        "end": 49418,
+        "bytes": 1
+      },
+      {
+        "name": "variable snakeStarted",
+        "kind": "variable",
+        "start": 49419,
+        "end": 49419,
+        "bytes": 1
+      },
+      {
+        "name": "variable snakeRestartRequested",
+        "kind": "variable",
+        "start": 49420,
+        "end": 49420,
+        "bytes": 1
+      },
+      {
+        "name": "variable snakeFoodPlaced",
+        "kind": "variable",
+        "start": 49421,
+        "end": 49421,
+        "bytes": 1
+      },
+      {
+        "name": "variable snakeFoodX",
+        "kind": "variable",
+        "start": 49422,
+        "end": 49422,
+        "bytes": 1
+      },
+      {
+        "name": "variable snakeFoodY",
+        "kind": "variable",
+        "start": 49423,
+        "end": 49423,
+        "bytes": 1
+      },
+      {
+        "name": "variable __counter_snakeScore_0",
+        "kind": "variable",
+        "start": 49424,
+        "end": 49424,
+        "bytes": 1
+      },
+      {
+        "name": "variable __counter_snakeScore_1",
+        "kind": "variable",
+        "start": 49425,
+        "end": 49425,
+        "bytes": 1
+      },
+      {
+        "name": "variable __counter_snakeScore_2",
+        "kind": "variable",
+        "start": 49426,
+        "end": 49426,
+        "bytes": 1
+      },
+      {
+        "name": "variable snakeResetX",
+        "kind": "variable",
+        "start": 49427,
+        "end": 49427,
+        "bytes": 1
+      },
+      {
+        "name": "variable snakeResetY",
+        "kind": "variable",
+        "start": 49428,
+        "end": 49428,
+        "bytes": 1
+      },
+      {
+        "name": "sprite animator",
+        "kind": "runtime",
+        "start": 49920,
+        "end": 49983,
+        "bytes": 64
+      },
+      {
+        "name": "sprite gameplay runtime",
+        "kind": "runtime",
+        "start": 50176,
+        "end": 50303,
+        "bytes": 128
+      },
+      {
+        "name": "sprite logical state",
+        "kind": "runtime",
+        "start": 50432,
+        "end": 50559,
+        "bytes": 128
+      },
+      {
+        "name": "Y-sorted sprite multiplexer",
+        "kind": "runtime",
+        "start": 50560,
+        "end": 50599,
+        "bytes": 40
+      },
+      {
+        "name": "compiler runtime",
+        "kind": "runtime",
+        "start": 51000,
+        "end": 51071,
+        "bytes": 72
+      },
+      {
+        "name": "keyboard input runtime",
+        "kind": "runtime",
+        "start": 51072,
+        "end": 51103,
+        "bytes": 32
+      },
+      {
+        "name": "collision runtime",
+        "kind": "runtime",
+        "start": 51104,
+        "end": 51121,
+        "bytes": 18
+      },
+      {
+        "name": "dynamic map, viewport and entity temporary state",
+        "kind": "runtime",
+        "start": 51122,
+        "end": 51145,
+        "bytes": 24
+      },
+      {
+        "name": "color RAM",
+        "kind": "video",
+        "start": 55296,
+        "end": 56295,
+        "bytes": 1000
+      }
+    ],
+    "conflicts": [],
+    "programBytes": 4093,
+    "assetBytes": 2348
+  }
+]

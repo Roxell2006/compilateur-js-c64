@@ -1,7 +1,7 @@
 {
   "name": "js-c64",
-  "version": "0.1.0",
-  "description": "JavaScript DSL that emits Commodore 64 6502 machine code, PRG files and listings.",
+  "version": "1.0.0",
+  "description": "JavaScript DSL and mini game engine that emits Commodore 64 6502 programs, assets and D64 disks.",
   "type": "module",
   "bin": {
     "c64js": "./src/cli.js"
@@ -13,6 +13,7 @@
     "./assembler": "./src/assembler6502.js",
     "./compiler": "./src/compiler.js",
     "./assets": "./src/assets.js",
+    "./d64": "./src/d64Writer.js",
     "./irq/raster": "./src/irq/raster.js"
   },
   "files": [
@@ -22,6 +23,10 @@
     "README.md",
     "LICENSE",
     "CHANGELOG.md",
+    "RELEASE_CHECKLIST.md",
+    "release-budgets.json",
+    "MODE_EMPLOI_DEBUTANT.txt",
+    "MODE_EMPLOI_PUBLICATION_NPM.txt",
     "index.d.ts"
   ],
   "scripts": {
@@ -29,7 +34,10 @@
     "build:raster": "node src/cli.js build examples/raster-bars.js -o dist/raster-bars.prg",
     "build:raster-ready": "node src/cli.js build examples/raster-ready-border-cycle.js -o dist/raster-ready-border-cycle.prg",
     "build:demos": "node scripts/build-examples.js",
-    "test": "vitest run"
+    "build:release": "node scripts/build-release.js",
+    "release:check": "node scripts/release-check.js",
+    "test": "vitest run",
+    "prepublishOnly": "npm run release:check"
   },
   "keywords": [
     "commodore64",
@@ -40,12 +48,16 @@
     "dsl",
     "javascript"
   ],
-  "author": "",
+  "author": "Roxell2006",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yourname/js-c64.git"
+    "url": "git+https://github.com/Roxell2006/compilateur-js-c64.git"
   },
+  "bugs": {
+    "url": "https://github.com/Roxell2006/compilateur-js-c64/issues"
+  },
+  "homepage": "https://github.com/Roxell2006/compilateur-js-c64#readme",
   "engines": {
     "node": ">=18"
   },

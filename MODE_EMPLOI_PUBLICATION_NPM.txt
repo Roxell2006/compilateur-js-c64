@@ -74,7 +74,7 @@ Exemple :
 
 Dans package.json, il y a aussi :
 
-"version": "0.1.0"
+"version": "1.0.0"
 
 Cette version sera celle publiee sur npm.
 
@@ -82,13 +82,13 @@ Regle importante :
 
 - vous ne pouvez pas publier deux fois la meme version
 
-Si vous avez deja publie la version 0.1.0, vous devrez passer par exemple a :
+Si vous avez deja publie la version 1.0.0, vous devrez passer par exemple a :
 
-"version": "0.1.1"
+"version": "1.0.1"
 
 ou :
 
-"version": "0.2.0"
+"version": "1.1.0"
 
 
 6. VERIFIER LES INFOS IMPORTANTES DU PACKAGE
@@ -106,16 +106,15 @@ Avant de publier, regardez dans package.json :
 - exports
 - files
 
-Dans ce projet, certaines valeurs sont encore generiques.
-
-Exemple a corriger :
+Dans cette release, le depot configure est :
 
 "repository": {
   "type": "git",
-  "url": "git+https://github.com/yourname/js-c64.git"
+  "url": "git+https://github.com/Roxell2006/compilateur-js-c64.git"
 }
 
-Il faut remplacer "yourname" par votre vrai compte GitHub.
+L'auteur, le depot, la page des erreurs et la version sont controles
+automatiquement par npm run release:check.
 
 
 7. VERIFIER CE QUI SERA PUBLIE
@@ -135,6 +134,8 @@ Le champ "files" autorise :
 - README.md
 - LICENSE
 - CHANGELOG.md
+- MODE_EMPLOI_DEBUTANT.txt
+- MODE_EMPLOI_PUBLICATION_NPM.txt
 - index.d.ts
 
 Le fichier .npmignore exclut par exemple :
@@ -152,19 +153,21 @@ Donc npm ne devrait publier que les fichiers utiles de la librairie.
 8. TESTER LE PACKAGE AVANT PUBLICATION
 --------------------------------------
 
-Dans le terminal :
+Dans le terminal, lancez le controle complet :
 
-npm test
+npm run release:check
 
-Si les tests passent, c'est deja une bonne base.
+Cette commande effectue automatiquement :
 
-Vous pouvez aussi verifier que la CLI marche :
+- les tests unitaires et d'integration
+- la construction de tous les exemples
+- la construction du jeu multilevel.d64
+- le controle des budgets des quatre jeux de validation
+- npm pack et la verification de tous les exports publies
+- l'installation du paquet dans un dossier temporaire vide
+- une vraie compilation avec le npx c64js installe
 
-node src/cli.js build examples/hello.js -o hello.prg
-
-Ou bien :
-
-npm run build:demos
+La publication est bloquee automatiquement si une de ces etapes echoue.
 
 
 9. CREER UN COMPTE NPM
@@ -412,7 +415,7 @@ Sequence simple :
 1. modifier le code
 2. mettre a jour CHANGELOG.md
 3. changer la version
-4. lancer les tests
+4. lancer npm run release:check
 5. verifier avec npm pack --dry-run
 6. publier avec npm publish
 
@@ -477,7 +480,7 @@ Avant de publier, verifiez ceci :
 [ ] package.json a le bon nom
 [ ] la version est nouvelle
 [ ] le repository pointe vers le bon GitHub
-[ ] npm test passe
+[ ] npm run release:check passe
 [ ] README.md est lisible
 [ ] LICENSE est present
 [ ] CHANGELOG.md est a jour
@@ -501,7 +504,7 @@ Apres publication, verifiez ceci :
 
 Voici un exemple simple de sequence de commandes :
 
-npm test
+npm run release:check
 npm whoami
 npm pack --dry-run
 npm publish
@@ -530,7 +533,7 @@ Pour ce depot precis, avant publication je vous conseille de verifier surtout :
 ----------------------
 
 1. npm login
-2. npm test
+2. npm run release:check
 3. npm pack --dry-run
 4. verifier package.json
 5. npm publish
@@ -546,4 +549,3 @@ Pour completer ce guide, vous pouvez aussi lire :
 - CHANGELOG.md
 - .npmignore
 - MODE_EMPLOI_NPM.txt
-

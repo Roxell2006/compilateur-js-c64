@@ -52,10 +52,10 @@ const level = c64.assets.defineMap({
     ]
   },
   tiles: [
-    { chars: [0], colors: [0], collision: 0 },
-    { chars: [1], colors: [14], collision: 1, properties: { solid: true } },
-    { chars: [2], colors: [7], collision: 0, properties: { decorativeCap: true } },
-    { chars: [3], colors: [5], collision: 1, properties: { solid: true, platform: true } }
+    { chars: [64], colors: [0], collision: 0 },
+    { chars: [65], colors: [14], collision: 1, properties: { solid: true } },
+    { chars: [66], colors: [7], collision: 0, properties: { decorativeCap: true } },
+    { chars: [67], colors: [5], collision: 1, properties: { solid: true, platform: true } }
   ],
   map: {
     width: MAP_WIDTH,

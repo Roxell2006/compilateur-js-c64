@@ -22,20 +22,26 @@ Un nouveau projet conserve les indices employés par `c64.printAt()` et les autr
 fonctions de texte. Le champ `Tester un texte ou un score` permet de vérifier
 directement un texte comme `SCORE: 000`.
 
-Les codes 0 à 64 forment la zone système et sont protégés contre la modification,
+Les codes 0 à 63 forment la zone système et sont protégés contre la modification,
 le déplacement et la suppression. Dupliquer une lettre crée toutefois une copie
-modifiable à la fin du charset. Les créations commencent au code 65, affiché comme
-`Shift+A`, puis continuent avec `Shift+B` jusqu'à `Shift+Z` et les codes spéciaux.
+modifiable à la fin du charset. Les créations commencent au code 64, puis les
+codes 65 à 90 peuvent notamment servir aux variantes `Shift+A` à `Shift+Z`.
 Dans un jeu, utilisez le code numérique du caractère personnalisé :
 
 ```js
-c64.writeChar(10, 10, 65, c64.COLOR_YELLOW); // premier caractère personnalisé
+c64.writeChar(10, 10, 64, c64.COLOR_YELLOW); // premier caractère personnalisé
 ```
 
 Lorsqu'un ancien JSON possède assez de place, le studio ajoute automatiquement la
 zone système devant ses caractères et remappe tous les indices de métatuiles : leur
 apparence reste inchangée. Le bouton `Restaurer A–Z / 0–9` permet de refaire cette
 installation manuellement.
+
+À l'export JSON, JS, binaire ou assembleur, ces 64 caractères et leurs 512
+octets ne sont jamais écrits. Seuls les caractères personnalisés sont exportés,
+sans propriété spéciale à ajouter. Dès qu'un programme installe ce charset, le
+compilateur copie automatiquement les glyphes originaux depuis la ROM du C64
+vers la RAM, puis place les caractères personnalisés à partir du code écran 64.
 
 Pour utiliser un export JSON dans un programme `js-c64`, placez le fichier dans votre projet puis chargez-le :
 

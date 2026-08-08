@@ -926,37 +926,44 @@ reprendre de graphismes, noms ni niveaux protégés :
 Rendre les jeux agréables à produire, déboguer et optimiser avant de figer l'API
 1.0.
 
+### État au 7 août 2026
+
+La v0.11.0 est terminée et validée par `examples/sid-game-audio.js`. Cette
+évolution conserve l'ancienne forme de `playSong()`, ajoute la gestion sûre des
+voix, les instruments, les patterns et le fade IRQ, puis fournit trois profils
+d'optimisation mesurables avant le gel de l'API 1.0.
+
 ### Audio
 
-- priorité entre musique et effets sonores ;
-- réservation configurable d'une voix SID pour les bruitages ;
-- pause/reprise/fade de la musique ;
-- patterns et instruments réutilisables ;
-- tempo stable PAL/NTSC ;
-- diagnostic lorsque musique et effet modifient la même voix.
+- [x] priorité déterministe des effets grâce à une voix SID réservée ;
+- [x] réservation configurable avec `c64.sid.reserveSfxVoice(1..3)` ;
+- [x] pause/reprise de la musique sans perdre sa position ;
+- [x] fade progressif non bloquant dans l'IRQ musicale ;
+- [x] patterns imbriquables/répétables et instruments réutilisables ;
+- [x] tempo logique 50 Hz stable PAL/NTSC par accumulateur ;
+- [x] diagnostic lorsque musique et effet modifient la même voix ;
+- [x] boucle optionnelle avec `loop: true` ;
+- [x] rapport `sid-audio` sur les voix, le timing et les octets économisés.
 
-### Diagnostics
-
-- rapport mémoire détaillé ;
-- estimation des cycles des routines critiques ;
-- avertissement lorsqu'une tâche de frame dépasse son budget ;
-- symboles exploitables dans le moniteur VICE ;
-- assertion runtime optionnelle en build debug ;
-- modes `--debug` et `--release`.
 
 ### Optimisation
 
-- élimination des routines inutilisées ;
-- mutualisation des séquences répétées ;
-- choix `--opt size`, `--opt speed` et `--opt balanced` seulement après mesure ;
-- compression RLE des maps et charsets quand elle réduit réellement la taille ;
-- rapport comparatif taille/vitesse.
+- [x] audit complet et élimination des familles de routines inutilisées, avec la liste dans le rapport de build ;
+- [x] suppression automatique des trois tables musicales de la voix réservée ;
+- [x] runtime de fade émis seulement à la demande ;
+- [x] mutualisation des tables musicales identiques entre plusieurs voix ;
+- [x] encodage compact des répétitions internes exactes aux tables musicales bouclées ;
+- [x] choix `--opt size`, `--opt speed` et `--opt balanced`, avec `balanced` par défaut ;
+- [x] compression RLE par bloc des maps et charsets seulement lorsque données et décompresseur réduisent réellement le PRG ;
+- [x] rapport JSON comparatif taille/vitesse avec `--report`, économies RLE/audio et routines partagées ou omises.
 
 ### Option avancée
 
-Le multiplexeur introduit avant la v0.10.1 doit ici être profilé et optimisé avec
-les autres systèmes. Une augmentation au-delà des seize sprites logiques peut
-être étudiée, mais elle ne doit pas bloquer la 1.0.
+- [x] profilage du multiplexeur dans `optimization-summary` : comparaisons de tri,
+  projection VIC-II et estimation conservatrice des cycles ;
+- [x] conservation de la limite déterministe de seize sprites logiques. Une
+  augmentation au-delà de seize reste une étude postérieure et ne bloque pas la
+  1.0.
 
 ---
 
@@ -964,21 +971,150 @@ les autres systèmes. Une augmentation au-delà des seize sprites logiques peut
 
 ### Objectif
 
-Stabiliser une API cohérente, documentée et validée par plusieurs jeux complets.
+Stabiliser une API cohérente, documentée et validée par plusieurs jeux complets,
+puis livrer un package NPM capable de produire aussi bien un PRG autonome qu'un
+jeu multi-niveaux sur disquette D64.
 
-### Systèmes de haut niveau
+### Décision d'architecture pour les jeux multi-niveaux
 
-- scènes `title`, `game`, `pause`, `gameOver` ;
-- transitions explicites entre scènes ;
-- score, vies et affichage numérique ;
-- générateur pseudo-aléatoire déterministe avec seed ;
-- pools fixes d'entités, projectiles et ennemis ;
-- spawns provenant de la couche objets d'une map ;
-- sauvegarde de configuration ou high-score en option, hors cœur initial.
+`c64.assets.loadMap()` et `loadSprite()` sont exécutés par Node.js pendant la
+compilation : ils déclarent les fichiers connus du jeu. Ils ne peuvent donc pas,
+à eux seuls, représenter le moment où le C64 change de niveau.
 
-Les entités doivent utiliser des pools de taille fixe décidée à la compilation.
-Il ne faut pas introduire de système général avec allocation dynamique, héritage
-ou ramasse-miettes sur le C64.
+Le modèle 1.0 doit rester simple :
+
+```js
+const level1 = c64.assets.loadMap("assets/level1.json");
+const level2 = c64.assets.loadMap("assets/level2.json");
+
+c64.game.init(() => level1.activate());
+
+c64.game.frame(() => {
+  c64.control.if(levelFinished, () => level2.activate());
+});
+```
+
+- dans un build PRG normal, les assets restent intégrés et `activate()` prépare
+  le niveau depuis les données du programme ;
+- dans un build D64, chaque `loadMap()`/`loadSprite()` est repéré par le
+  compilateur et son contenu volumineux devient un module PRG de données sur la
+  disquette ; ce type de répertoire est requis par la routine KERNAL `LOAD` ;
+- `activate()` charge immédiatement pendant l'initialisation ou demande une
+  transition différée lorsqu'il est appelé dans la frame. Le chargeur KERNAL
+  installe alors la map, son charset, ses tables et ses sprites dépendants avant
+  de reprendre le jeu ;
+- le PRG principal contient uniquement le code, le chargeur, les noms de
+  fichiers et les petites métadonnées indispensables, pas les pixels ni les
+  cellules des niveaux externalisés ;
+- une seule map de niveau occupe le slot RAM actif. Changer de niveau réutilise
+  ce slot au lieu de réserver simultanément la RAM de `level1`, `level2`, etc. ;
+- les sprites peuvent être `resident` (joueur/interface, chargés une fois) ou
+  dépendre d'un niveau et partager des slots rechargeables ;
+- le chargement est volontairement bloquant mais exécuté uniquement hors d'une
+  frame active. Une demande faite pendant la frame est traitée juste après
+  celle-ci. La musique et les IRQ sont suspendues puis restaurées proprement.
+
+Cette activation explicite évite un chargement disque imprévisible au milieu
+d'une IRQ tout en conservant un JavaScript lisible pour un débutant.
+
+### Plan de livraison — trois phases maximum
+
+#### Phase 1 — API de jeu 1.0 et contrat des niveaux
+
+- [x] créer les scènes fixes `title`, `game`, `pause` et `gameOver`, avec des
+  transitions explicites et sans allocation dynamique ;
+- [x] ajouter score, vies et affichage numérique sans conversion coûteuse dans
+  la boucle de frame ;
+- [x] ajouter un générateur pseudo-aléatoire déterministe avec seed ;
+- [x] ajouter des pools de taille connue à la compilation pour ennemis,
+  projectiles et objets temporaires ;
+- [x] stabiliser les spawns provenant de la couche objets des maps ;
+- [x] ajouter `mapAsset.activate()`, `isActive()` et les identifiants de map
+  active/en attente, sans casser l'initialisation des jeux à une seule map ;
+- [x] ajouter une demande de changement de niveau bornée à un seul slot afin
+  qu'un `activate()` appelé dans la frame soit exécuté en sécurité entre deux
+  frames ;
+- [x] faire réutiliser le même slot de cellules RAM par toutes les maps de niveau
+  dans le mode disque (`$8000-$9FFF`) au lieu de conserver leur allocation
+  distincte ;
+- [x] définir les sprites `resident` et les sprites rechargeables par niveau via
+  `loadSprite(..., { resident: false })` et `activate({ sprites: [...] })` ;
+- [x] figer l'API publique, les types TypeScript, les erreurs et le plan mémoire
+  avant de commencer le writer D64.
+
+Les entités restent dans des pools fixes décidés à la compilation. La 1.0
+n'introduit ni allocation générale, ni héritage runtime, ni ramasse-miettes.
+La sauvegarde de configuration ou du high-score reste facultative et ne bloque
+pas la sortie 1.0.
+
+#### Phase 2 — Build D64 et chargement d'assets sur 1541
+
+- [x] ajouter `--format d64` et la détection automatique de l'extension `.d64` ;
+  un build D64 implique automatiquement le mode d'assets disque ;
+- [x] prévoir `--disk-name`, `--program-name` et `--device` avec des valeurs par
+  défaut utilisables immédiatement par un débutant ;
+- [x] ajouter l'option orthogonale `--assets inline|disk` afin de produire un
+  `.asm`, `.lst` ou `.bas` correspondant exactement au runtime disque ;
+- [x] produire une image D64 standard de 174 848 octets avec BAM, répertoire,
+  un programme principal `PRG` et des modules PRG de données avec adresse de
+  chargement ;
+- [x] générer des noms PETSCII uniques de seize caractères maximum et signaler
+  clairement les collisions de noms ou le manque de blocs libres ;
+- [x] créer un manifeste déterministe reliant chaque source JSON à son fichier
+  disque, son type, son adresse/slot RAM et sa taille ;
+- [x] externaliser map, charset, tables de tiles/collisions et données de sprites,
+  sans recopier le JSON source ; les objets utiles deviennent les valeurs fixes
+  d'initialisation des pools d'entités dans le PRG ;
+- [x] ajouter un chargeur 6502 fondé sur `SETNAM`, `SETLFS` et `LOAD`, avec
+  périphérique 8 configurable, contrôle d'erreur et restauration des IRQ/SID ;
+- [x] charger directement dans les slots RAM définitifs lorsque possible et
+  n'utiliser une zone temporaire que pour un format compressé ;
+- [x] dédupliquer les sprites résidents communs à plusieurs niveaux et recharger
+  seulement les dépendances propres au prochain niveau ;
+- [x] exposer dans `assetReport` le contenu de la disquette, les blocs utilisés,
+  les adresses, les dépendances et la taille du PRG principal ;
+- [x] ajouter `examples/multilevel-d64.js` avec trois maps, un joueur résident,
+  des sprites propres aux niveaux et une vraie transition `level1 → level2 → level3` ;
+- [x] tester l'image dans VICE : montage, `LOAD"*",8,1`, démarrage, trois
+  changements de niveau et gestion lisible d'un fichier absent.
+
+État de la phase 2 : la chaîne automatique, les tests unitaires et la démo sont
+terminés. `dist/multilevel.d64` a été contrôlé avec VICE 3.7 en émulation 1541
+réelle jusqu'au troisième niveau. Ce contrôle a notamment révélé puis corrigé
+le rejet `TYPE MISMATCH` des anciennes entrées USR par le KERNAL `LOAD`.
+
+Commandes cibles :
+
+```powershell
+c64js build examples/multilevel-d64.js -o dist/multilevel.d64 --format d64
+c64js build examples/multilevel-d64.js -o dist/multilevel.asm --format asm --assets disk
+c64js build examples/multilevel-d64.js -o dist/multilevel.prg --format prg --assets inline
+```
+
+#### Phase 3 — Validation, gel de l'API et publication NPM
+
+- [x] rendre jouables et stables les quatre jeux de validation en PAL et NTSC ;
+- [x] ajouter des tests déterministes de scènes, RNG, pools, activation de niveau,
+  writer D64, chaîne de secteurs 1541 et chargeur disque ;
+- [x] faire construire tous les exemples PRG et le jeu D64 dans la CI ;
+- [x] ajouter un test `npm pack`, installation dans un projet vide et exécution
+  réelle de `npx c64js` sous Linux et Windows ;
+- [x] corriger les métadonnées de publication (`author`, dépôt GitHub, version
+  `1.0.0`) et vérifier automatiquement que chaque export NPM cible bien un
+  fichier publié ;
+- [x] figer README, guide débutant, guide D64, schémas, types et changelog ;
+- [x] établir des budgets maximums de RAM, cycles et taille pour chaque jeu ;
+- [x] produire une release candidate et effectuer le contrôle dans VICE. La
+  publication NPM reste volontairement une action manuelle authentifiée et ne
+  doit être lancée que si `npm run release:check` reste entièrement vert.
+
+### Hors périmètre bloquant de la 1.0
+
+- sauvegarde de high-score sur disque ;
+- chargement rapide avec fastloader spécifique ;
+- compression disque sophistiquée et chargement continu pendant le gameplay ;
+- plus de seize sprites logiques ;
+- allocation dynamique ou moteur de scènes généraliste.
 
 ### Jeux de validation obligatoires
 
@@ -1029,40 +1165,13 @@ Chaque fonctionnalité doit être couverte à plusieurs niveaux :
 
 ---
 
-## Ordre d'implémentation recommandé
+## État de livraison 1.0
 
-Si le temps est limité, suivre cet ordre sans commencer le scrolling trop tôt :
-
-1. figer une syntaxe minimale d'expressions et de conditions ;
-2. créer l'IR typé et les branches 6502 ;
-3. créer une boucle de frame et des inputs snapshot ;
-4. formaliser le runtime IRQ et le plan mémoire ;
-5. livrer le mouvement et les collisions sprites ;
-6. réaliser un casse-brique jouable ;
-7. définir le format JSON charset/tile/map ;
-8. créer d'abord le compilateur d'assets, puis l'éditeur visuel ;
-9. livrer les maps statiques et leurs collisions ;
-10. réaliser Snake/Tetris et un jeu de labyrinthe ;
-11. seulement ensuite développer caméra, fine scroll et streaming ;
-12. stabiliser scènes, pools d'entités, audio et diagnostics pour la 1.0.
-
----
-
-## Prochaine tranche de travail concrète
-
-La prochaine implémentation ne devrait pas commencer par une API de collision ou
-par l'éditeur graphique. Elle devrait produire un petit prototype vertical :
-
-1. `RuntimeValue` pour byte/bool ;
-2. comparaisons et `c64.control.if()` ;
-3. snapshot joystick port 2 ;
-4. `c64.game.frame()` synchronisé à une frame ;
-5. variable X 9 bits pour un sprite ;
-6. exemple où le joueur déplace un sprite à gauche/droite ;
-7. test du PRG dans VICE avec musique active.
-
-Ce prototype vérifiera la décision d'architecture la plus importante avant que
-de nombreuses API publiques dépendent d'elle.
+Les trois phases sont terminées. `npm run release:check` constitue désormais la
+porte de sortie unique : 130 tests, tous les exemples, le D64 multi-niveaux, les
+budgets des quatre jeux, le contenu du tarball et une installation réelle de la
+CLI. La seule étape non automatisée est `npm publish`, qui exige volontairement
+la connexion et la confirmation du propriétaire du compte NPM.
 
 ---
 

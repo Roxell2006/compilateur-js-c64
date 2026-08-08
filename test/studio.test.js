@@ -8,6 +8,33 @@ const Core = globalThis.JsC64SpriteAsset;
 const Project = globalThis.JsC64StudioProject;
 
 describe("v0.10.1 sprite asset studio core", () => {
+  it("reserves ROM codes 0..63 automatically and strips legacy embedded system glyphs", () => {
+    const compact = normalizeMapAsset({
+      version: 1,
+      charset: { mode: "hires", characters: [[255, 129, 129, 129, 129, 129, 129, 255]] },
+      tiles: [{ chars: [32] }, { chars: [64] }],
+      map: { width: 2, height: 1, data: [0, 1] }
+    });
+    expect(compact.charset).toEqual(expect.objectContaining({
+      romCharacters: 64, characterCount: 65, storedBytes: [255, 129, 129, 129, 129, 129, 129, 255]
+    }));
+
+    const legacyCharacters = Array.from({ length: 64 }, () => Array(8).fill(0));
+    legacyCharacters[1] = [24, 60, 102, 126, 102, 102, 102, 0];
+    legacyCharacters[48] = [60, 102, 110, 118, 102, 102, 60, 0];
+    legacyCharacters[57] = [60, 102, 102, 62, 6, 102, 60, 0];
+    legacyCharacters.push([170, 85, 170, 85, 170, 85, 170, 85]);
+    const migrated = normalizeMapAsset({
+      version: 1,
+      charset: { mode: "hires", characters: legacyCharacters },
+      tiles: [{ chars: [64] }],
+      map: { width: 1, height: 1, data: [0] }
+    });
+    expect(migrated.charset).toEqual(expect.objectContaining({
+      romCharacters: 64, characterCount: 65, storedBytes: [170, 85, 170, 85, 170, 85, 170, 85]
+    }));
+  });
+
   it("encodes all hires and multicolor edge pixels in the VIC-II 63-byte layout", () => {
     const hires = Core.blankFrame("hires");
     Core.setPixelValue(hires, 0, 0, 1, "hires");

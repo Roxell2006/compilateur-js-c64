@@ -1,0 +1,236 @@
+[
+  {
+    "type": "map-entity-budget",
+    "entityCount": 0,
+    "logicalSpriteCount": 1,
+    "physicalSprites": 1,
+    "virtualSprites": 0,
+    "maxVisibleEntities": 0,
+    "spriteMemoryBytes": 0
+  },
+  {
+    "type": "game-runtime",
+    "scenes": [],
+    "startScene": null,
+    "transitionPolicy": null,
+    "activeMapContract": false,
+    "mapActivationPolicy": null,
+    "registeredMaps": 0,
+    "sharedMapRamSlot": false,
+    "deterministicRng": false,
+    "fixedPools": [],
+    "counters": [
+      {
+        "name": "demoScore",
+        "digits": 3,
+        "storage": "unpacked-bcd"
+      }
+    ]
+  },
+  {
+    "type": "sid-audio",
+    "player": false,
+    "tempo": null,
+    "expandedSteps": null,
+    "storedSteps": null,
+    "logicalTickRateHz": null,
+    "videoStandardCompensation": null,
+    "loop": false,
+    "musicVoices": [],
+    "reservedSfxVoice": null,
+    "effectCalls": 1,
+    "fadeCalls": 0,
+    "patterns": [],
+    "instruments": [],
+    "omittedReservedVoiceBytes": 0,
+    "compactedRepeatTableBytes": 0,
+    "pooledIdenticalVoiceTableBytes": 0,
+    "priorityPolicy": "shared-voice-warning"
+  },
+  {
+    "type": "optimization-summary",
+    "mode": "balanced",
+    "programBytes": 945,
+    "profiles": [
+      {
+        "mode": "size",
+        "assetProgramBytesEstimate": 0,
+        "startupCyclesEstimate": 0,
+        "compressedChunks": 0,
+        "runtimeStrategy": "shared-repeated-routines",
+        "estimatedProgramBytes": 945
+      },
+      {
+        "mode": "balanced",
+        "assetProgramBytesEstimate": 0,
+        "startupCyclesEstimate": 0,
+        "compressedChunks": 0,
+        "runtimeStrategy": "shared-repeated-routines",
+        "estimatedProgramBytes": 945,
+        "programBytes": 945
+      },
+      {
+        "mode": "speed",
+        "assetProgramBytesEstimate": 0,
+        "startupCyclesEstimate": 0,
+        "compressedChunks": 0,
+        "runtimeStrategy": "inline-hot-paths",
+        "estimatedProgramBytes": 945
+      }
+    ],
+    "rle": {
+      "candidates": 0,
+      "compressedChunks": 0,
+      "rawBytes": 0,
+      "storedBytes": 0,
+      "estimatedNetSavedBytes": 0
+    },
+    "sharedRoutines": {
+      "sidClick": false,
+      "spriteSync": 1,
+      "spriteAabb": false
+    },
+    "omittedRoutines": [
+      "sid-player",
+      "sid-fade",
+      "sprite-animator",
+      "sprite-multiplexer",
+      "map-runtime",
+      "map-activation",
+      "game-scenes",
+      "hires-runtime"
+    ],
+    "audio": {
+      "compactedRepeatTableBytes": 0,
+      "pooledIdenticalVoiceTableBytes": 0
+    },
+    "multiplexer": {
+      "enabled": false,
+      "logicalSprites": 1,
+      "sortComparisonsWorstCase": 0,
+      "sortCyclesEstimate": 0,
+      "projectionCyclesEstimate": 0,
+      "totalCyclesEstimate": 0
+    }
+  },
+  {
+    "type": "memory-layout",
+    "ranges": [
+      {
+        "name": "screen RAM",
+        "kind": "video",
+        "start": 1024,
+        "end": 2023,
+        "bytes": 1000
+      },
+      {
+        "name": "program",
+        "kind": "program",
+        "start": 2064,
+        "end": 3008,
+        "bytes": 945
+      },
+      {
+        "name": "sprite data",
+        "kind": "sprite",
+        "start": 8192,
+        "end": 8254,
+        "bytes": 63
+      },
+      {
+        "name": "IRQ state",
+        "kind": "runtime",
+        "start": 49406,
+        "end": 49406,
+        "bytes": 1
+      },
+      {
+        "name": "variable __counter_demoScore_0",
+        "kind": "variable",
+        "start": 49408,
+        "end": 49408,
+        "bytes": 1
+      },
+      {
+        "name": "variable __counter_demoScore_1",
+        "kind": "variable",
+        "start": 49409,
+        "end": 49409,
+        "bytes": 1
+      },
+      {
+        "name": "variable __counter_demoScore_2",
+        "kind": "variable",
+        "start": 49410,
+        "end": 49410,
+        "bytes": 1
+      },
+      {
+        "name": "sprite animator",
+        "kind": "runtime",
+        "start": 49920,
+        "end": 49983,
+        "bytes": 64
+      },
+      {
+        "name": "sprite gameplay runtime",
+        "kind": "runtime",
+        "start": 50176,
+        "end": 50303,
+        "bytes": 128
+      },
+      {
+        "name": "sprite logical state",
+        "kind": "runtime",
+        "start": 50432,
+        "end": 50559,
+        "bytes": 128
+      },
+      {
+        "name": "Y-sorted sprite multiplexer",
+        "kind": "runtime",
+        "start": 50560,
+        "end": 50599,
+        "bytes": 40
+      },
+      {
+        "name": "compiler runtime",
+        "kind": "runtime",
+        "start": 51000,
+        "end": 51071,
+        "bytes": 72
+      },
+      {
+        "name": "keyboard input runtime",
+        "kind": "runtime",
+        "start": 51072,
+        "end": 51103,
+        "bytes": 32
+      },
+      {
+        "name": "collision runtime",
+        "kind": "runtime",
+        "start": 51104,
+        "end": 51121,
+        "bytes": 18
+      },
+      {
+        "name": "dynamic map, viewport and entity temporary state",
+        "kind": "runtime",
+        "start": 51122,
+        "end": 51145,
+        "bytes": 24
+      },
+      {
+        "name": "color RAM",
+        "kind": "video",
+        "start": 55296,
+        "end": 56295,
+        "bytes": 1000
+      }
+    ],
+    "conflicts": [],
+    "programBytes": 945,
+    "assetBytes": 63
+  }
+]

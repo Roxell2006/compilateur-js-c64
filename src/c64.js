@@ -230,6 +230,37 @@ function createSidVoiceApi(voice) {
   };
 }
 
+function createSidPattern(name, entries) {
+  if (typeof name !== "string" || !name.trim()) {
+    throw new Error("c64.sid.pattern() needs a non-empty name");
+  }
+  if (!Array.isArray(entries)) {
+    throw new Error("c64.sid.pattern() needs an array of notes, rests or patterns");
+  }
+  const pattern = {
+    type: "sidPattern",
+    name: name.trim(),
+    entries: Object.freeze([...entries]),
+    repeat(count) {
+      if (!Number.isInteger(count) || count < 1 || count > 255) {
+        throw new Error("SID pattern repeat count must be between 1 and 255");
+      }
+      return Object.freeze({ type: "sidPatternRepeat", pattern, count });
+    }
+  };
+  return Object.freeze(pattern);
+}
+
+function createSidInstrument(name, options = {}) {
+  if (typeof name !== "string" || !name.trim()) {
+    throw new Error("c64.sid.instrument() needs a non-empty name");
+  }
+  if (!options || typeof options !== "object" || Array.isArray(options)) {
+    throw new Error("c64.sid.instrument() needs an options object");
+  }
+  return Object.freeze({ type: "sidInstrument", name: name.trim(), ...options });
+}
+
 c64.sid = {
   volume(value) {
     pushInstruction("sidVolume", value);
@@ -249,11 +280,29 @@ c64.sid = {
   rest(voice, duration = 0) {
     pushInstruction("sidRest", voice, duration);
   },
+  pattern(name, entries) {
+    return createSidPattern(name, entries);
+  },
+  instrument(name, options) {
+    return createSidInstrument(name, options);
+  },
   playSong(songDefinition) {
     pushInstruction("sidPlaySong", songDefinition);
   },
+  reserveSfxVoice(voice) {
+    pushInstruction("sidReserveSfxVoice", voice);
+  },
   installPlayer(line = 250) {
     pushInstruction("sidInstallPlayer", line);
+  },
+  pauseSong() {
+    pushInstruction("sidPauseSong");
+  },
+  resumeSong() {
+    pushInstruction("sidResumeSong");
+  },
+  fadeSong(targetVolume, stepEvery = 4) {
+    pushInstruction("sidFadeSong", targetVolume, stepEvery);
   },
   stopSong() {
     pushInstruction("sidStopSong");
@@ -324,6 +373,36 @@ c64.table = {
   }
 };
 
+// Fixed pools are expanded while the DSL is evaluated. The generated C64
+// program therefore knows their exact size and never needs a heap or a GC.
+c64.pool = {
+  fixed(name, size, factory) {
+    const normalizedName = String(name);
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(normalizedName)) {
+      throw new Error("c64.pool.fixed() needs a JavaScript-like name");
+    }
+    if (!Number.isInteger(size) || size < 1 || size > 255) {
+      throw new Error("c64.pool.fixed() size must be between 1 and 255");
+    }
+    if (typeof factory !== "function") throw new Error("c64.pool.fixed() needs a factory callback");
+    pushInstruction("gamePoolRegister", normalizedName, size);
+    const items = Object.freeze(Array.from({ length: size }, (_, index) => factory(index)));
+    return Object.freeze({
+      type: "fixedPoolRef",
+      name: normalizedName,
+      size,
+      items,
+      at(index) {
+        if (!Number.isInteger(index) || index < 0 || index >= size) throw new Error(`pool ${normalizedName} index must be between 0 and ${size - 1}`);
+        return items[index];
+      },
+      forEach(handler) {
+        items.forEach(handler);
+      }
+    });
+  }
+};
+
 // Asset sources stay as JSON on the development machine. Only their validated,
 // compact byte representation is embedded in the generated C64 program.
 function createMapCellRef(asset, x, y) {
@@ -362,14 +441,27 @@ function createDynamicMapAsset(asset) {
       pushInstruction("mapRedraw", dynamicAsset);
     }
   });
-  const dynamicAsset = Object.freeze({ ...asset, map: Object.freeze(mapAccessor) });
+  const dynamicAsset = Object.freeze({
+    ...asset,
+    map: Object.freeze(mapAccessor),
+    activate(options = {}) {
+      pushInstruction("mapActivate", dynamicAsset, options);
+    },
+    isActive() {
+      return condition("mapActive", dynamicAsset);
+    }
+  });
   pushInstruction("mapRegister", dynamicAsset);
   return dynamicAsset;
 }
 
 function registerUsableSpriteAsset(asset, options = {}) {
-  const framesRef = c64.sprite.frames(asset.id, asset.frames.map((frame) => frame.data), { address: options.address });
-  const usable = Object.freeze({ ...asset, framesRef });
+  const resident = options.resident !== false;
+  const framesRef = c64.sprite.frames(asset.id, asset.frames.map((frame) => frame.data), {
+    address: options.address,
+    resident
+  });
+  const usable = Object.freeze({ ...asset, framesRef, resident });
   registerSpriteAsset(usable);
   pushInstruction("spriteAssetRegister", usable);
   return usable;
@@ -943,6 +1035,59 @@ c64.input = {
   }
 };
 
+const GAME_SCENE_NAMES = Object.freeze(["title", "game", "pause", "gameOver"]);
+
+function normalizeGameSceneName(name) {
+  const normalized = String(name);
+  if (!GAME_SCENE_NAMES.includes(normalized)) {
+    throw new Error(`game scene must be one of: ${GAME_SCENE_NAMES.join(", ")}`);
+  }
+  return normalized;
+}
+
+function captureOptionalGameSceneHandler(handler, label) {
+  if (handler === undefined) return [];
+  if (typeof handler !== "function") throw new Error(`${label} must be a callback`);
+  return captureBlock(handler);
+}
+
+function createGameCounter(name, options = {}) {
+  const normalizedName = String(name);
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(normalizedName)) {
+    throw new Error("c64.game.counter() needs a JavaScript-like name");
+  }
+  const digits = options.digits ?? 5;
+  const initial = options.initial ?? 0;
+  if (!Number.isInteger(digits) || digits < 1 || digits > 5) {
+    throw new Error("c64.game.counter() digits must be between 1 and 5");
+  }
+  const maximum = (10 ** digits) - 1;
+  if (!Number.isInteger(initial) || initial < 0 || initial > maximum) {
+    throw new Error(`c64.game.counter() initial value must be between 0 and ${maximum}`);
+  }
+  const text = String(initial).padStart(digits, "0");
+  const digitRefs = Object.freeze(Array.from(text, (digit, index) => c64.var.byte(
+    `__counter_${normalizedName}_${index}`,
+    { initial: Number(digit) }
+  )));
+  const ref = {
+    type: "gameCounterRef",
+    name: normalizedName,
+    digits,
+    digitRefs,
+    set(value) { pushInstruction("gameCounterSet", ref, value); },
+    add(value = 1) { pushInstruction("gameCounterAdd", ref, value); },
+    sub(value = 1) { pushInstruction("gameCounterSub", ref, value); },
+    inc() { pushInstruction("gameCounterAdd", ref, 1); },
+    dec() { pushInstruction("gameCounterSub", ref, 1); },
+    draw(x, y, drawOptions = {}) {
+      pushInstruction("gameCounterDraw", ref, x, y, drawOptions.color ?? getProgramState().currentTextColor);
+    }
+  };
+  pushInstruction("gameCounterRegister", ref, initial);
+  return Object.freeze(ref);
+}
+
 c64.game = {
   init(handler) {
     pushInstruction("gameInit", captureBlock(handler));
@@ -958,6 +1103,56 @@ c64.game = {
     // immediately after their raster band. Non-scrolling programs still use
     // line 240, and an explicit user value always wins.
     pushInstruction("gameFrame", captureBlock(handler), { rasterLine: options.rasterLine, hz: options.hz ?? 50 });
+  },
+  scene(name, handlers = {}) {
+    const sceneName = normalizeGameSceneName(name);
+    if (!handlers || typeof handlers !== "object") throw new Error("c64.game.scene() needs an object with enter, update and/or exit callbacks");
+    pushInstruction("gameScene", sceneName, {
+      enter: captureOptionalGameSceneHandler(handlers.enter, `scene ${sceneName} enter`),
+      update: captureOptionalGameSceneHandler(handlers.update, `scene ${sceneName} update`),
+      exit: captureOptionalGameSceneHandler(handlers.exit, `scene ${sceneName} exit`)
+    });
+  },
+  start(name = "title", options = {}) {
+    pushInstruction("gameSceneStart", normalizeGameSceneName(name), {
+      rasterLine: options.rasterLine,
+      hz: options.hz ?? 50
+    });
+  },
+  go(name) {
+    pushInstruction("gameSceneGo", normalizeGameSceneName(name));
+  },
+  is(name) {
+    return condition("gameScene", normalizeGameSceneName(name));
+  },
+  counter(name, options = {}) {
+    return createGameCounter(name, options);
+  },
+  score(options = {}) {
+    return createGameCounter(options.name ?? "score", { digits: options.digits ?? 5, initial: options.initial ?? 0 });
+  },
+  lives(options = {}) {
+    return createGameCounter(options.name ?? "lives", { digits: options.digits ?? 2, initial: options.initial ?? 3 });
+  }
+};
+
+// Deterministic global gameplay RNG. Reusing the same non-zero seed reproduces
+// the exact byte sequence, which is useful for tests and replays.
+c64.random = {
+  seed(value) {
+    if (!Number.isInteger(value) || value < 1 || value > 255) {
+      throw new Error("c64.random.seed() must be between 1 and 255");
+    }
+    pushInstruction("randomSeed", value);
+  },
+  byte(target) {
+    pushInstruction("randomByte", target);
+  },
+  range(target, maximum) {
+    if (!Number.isInteger(maximum) || maximum < 1 || maximum > 256) {
+      throw new Error("c64.random.range() maximum must be between 1 and 256");
+    }
+    pushInstruction("randomRange", target, maximum);
   }
 };
 
@@ -1097,7 +1292,7 @@ function createSpriteHandle(index, options = {}) {
 c64.sprite = {
   frames(name, frames, options = {}) {
     const ref = { type: "spriteFrames", name: String(name) };
-    pushInstruction("spriteFrames", ref, Array.from(frames, (frame) => Array.from(frame)), options.address);
+    pushInstruction("spriteFrames", ref, Array.from(frames, (frame) => Array.from(frame)), options);
     return ref;
   },
   create(index, options = {}) {

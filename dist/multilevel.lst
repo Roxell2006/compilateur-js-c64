@@ -1,0 +1,1591 @@
+0810  A9 FF       LDA #$FF
+0812  8D 78 C7    STA $C778
+0815  A9 FF       LDA #$FF
+0817  8D 79 C7    STA $C779
+081A  A9 00       LDA #$00
+081C  8D 7C C7    STA $C77C
+081F  A9 FF       LDA #$FF
+0821  8D 7A C7    STA $C77A
+0824  A9 FF       LDA #$FF
+0826  8D 7B C7    STA $C77B
+0829  A9 07       LDA #$07
+082B  A2 04       LDX #<disk_filename_7
+082D  A0 15       LDY #>disk_filename_7
+082F  20 0F 14    JSR runtime_disk_load_usr
+0832  A9 48       LDA #$48
+0834  8D 00 C5    STA $C500
+0837  A9 00       LDA #$00
+0839  8D 01 C5    STA $C501
+083C  A9 AA       LDA #$AA
+083E  8D 02 C5    STA $C502
+0841  A9 00       LDA #$00
+0843  8D 03 C5    STA $C503
+0846  A9 00       LDA #$00
+0848  8D 04 C5    STA $C504
+084B  A9 01       LDA #$01
+084D  8D 05 C5    STA $C505
+0850  20 74 0C    JSR runtime_sprite_sync_0
+0853  A9 80       LDA #$80
+0855  8D 04 C4    STA $C404
+0858  AD 04 C4    LDA $C404
+085B  8D F8 07    STA $07F8
+085E  A9 07       LDA #$07
+0860  8D 05 C4    STA $C405
+0863  A9 07       LDA #$07
+0865  8D 27 D0    STA $D027
+0868  A9 F8       LDA #$F8
+086A  8D 08 C5    STA $C508
+086D  A9 00       LDA #$00
+086F  8D 09 C5    STA $C509
+0872  A9 AA       LDA #$AA
+0874  8D 0A C5    STA $C50A
+0877  A9 00       LDA #$00
+0879  8D 0B C5    STA $C50B
+087C  A9 00       LDA #$00
+087E  8D 0C C5    STA $C50C
+0881  A9 01       LDA #$01
+0883  8D 0D C5    STA $C50D
+0886  20 B3 0C    JSR runtime_sprite_sync_1
+0889  A9 88       LDA #$88
+088B  8D 0C C4    STA $C40C
+088E  AD 0C C4    LDA $C40C
+0891  8D F9 07    STA $07F9
+0894  A9 02       LDA #$02
+0896  8D 0D C4    STA $C40D
+0899  A9 02       LDA #$02
+089B  8D 28 D0    STA $D028
+089E  AD 79 C7    LDA $C779
+08A1  C9 FF       CMP #$FF
+08A3  D0 03       BNE map_activation_requested_2
+08A5  4C F7 08    JMP map_activation_done_0
+08A8        map_activation_requested_2:
+08A8  CD 78 C7    CMP $C778
+08AB  F0 45       BEQ map_activation_clear_1
+08AD  AD 79 C7    LDA $C779
+08B0  C9 00       CMP #$00
+08B2  D0 10       BNE map_activation_next_0_3
+08B4  20 F2 0C    JSR runtime_map_activate_0
+08B7  AD 7C C7    LDA $C77C
+08BA  D0 36       BNE map_activation_clear_1
+08BC  A9 00       LDA #$00
+08BE  8D 78 C7    STA $C778
+08C1  4C F2 08    JMP map_activation_clear_1
+08C4        map_activation_next_0_3:
+08C4  AD 79 C7    LDA $C779
+08C7  C9 01       CMP #$01
+08C9  D0 10       BNE map_activation_next_1_4
+08CB  20 51 0F    JSR runtime_map_activate_1
+08CE  AD 7C C7    LDA $C77C
+08D1  D0 1F       BNE map_activation_clear_1
+08D3  A9 01       LDA #$01
+08D5  8D 78 C7    STA $C778
+08D8  4C F2 08    JMP map_activation_clear_1
+08DB        map_activation_next_1_4:
+08DB  AD 79 C7    LDA $C779
+08DE  C9 02       CMP #$02
+08E0  D0 10       BNE map_activation_next_2_5
+08E2  20 B0 11    JSR runtime_map_activate_2
+08E5  AD 7C C7    LDA $C77C
+08E8  D0 08       BNE map_activation_clear_1
+08EA  A9 02       LDA #$02
+08EC  8D 78 C7    STA $C778
+08EF  4C F2 08    JMP map_activation_clear_1
+08F2        map_activation_next_2_5:
+08F2        map_activation_clear_1:
+08F2  A9 FF       LDA #$FF
+08F4  8D 79 C7    STA $C779
+08F7        map_activation_done_0:
+            ; Deterministic game frame loop
+08F7  A9 00       LDA #$00
+08F9  8D 6A C7    STA $C76A
+08FC  A9 00       LDA #$00
+08FE  8D 6B C7    STA $C76B
+0901  A9 00       LDA #$00
+0903  8D 70 C7    STA $C770
+0906  A9 FF       LDA #$FF
+0908  8D 67 C7    STA $C767
+090B  A9 FF       LDA #$FF
+090D  8D 69 C7    STA $C769
+0910  A9 3C       LDA #$3C
+0912  8D 6F C7    STA $C76F
+0915        game_video_detect_low:
+0915  AD 11 D0    LDA $D011
+0918  30 FB       BMI game_video_detect_low
+091A        game_video_detect_high:
+091A  AD 11 D0    LDA $D011
+091D  10 FB       BPL game_video_detect_high
+091F        game_video_detect_scan:
+091F  AD 11 D0    LDA $D011
+0922  10 0F       BPL game_video_detect_done
+0924  AD 12 D0    LDA $D012
+0927  C9 20       CMP #$20
+0929  B0 03       BCS game_video_detect_pal
+092B  4C 1F 09    JMP game_video_detect_scan
+092E        game_video_detect_pal:
+092E  A9 32       LDA #$32
+0930  8D 6F C7    STA $C76F
+0933        game_video_detect_done:
+0933  A9 00       LDA #$00
+0935  8D 7A C7    STA $C77A
+0938  A9 FF       LDA #$FF
+093A  8D 7B C7    STA $C77B
+093D  20 03 0A    JSR game_scene_enter_dispatch
+0940        game_frame_loop:
+0940        game_frame_wait_leave:
+0940  AD 12 D0    LDA $D012
+0943  C9 F0       CMP #$F0
+0945  F0 F9       BEQ game_frame_wait_leave
+0947        game_frame_wait_target:
+0947  AD 12 D0    LDA $D012
+094A  C9 F0       CMP #$F0
+094C  D0 F9       BNE game_frame_wait_target
+094E  18          CLC
+094F  AD 70 C7    LDA $C770
+0952  69 32       ADC #$32
+0954  8D 70 C7    STA $C770
+0957  CD 6F C7    CMP $C76F
+095A  B0 03       BCS game_frame_logical_tick
+095C  4C 40 09    JMP game_frame_loop
+095F        game_frame_logical_tick:
+095F  38          SEC
+0960  AD 70 C7    LDA $C770
+0963  ED 6F C7    SBC $C76F
+0966  8D 70 C7    STA $C770
+0969  AD 67 C7    LDA $C767
+096C  8D 69 C7    STA $C769
+096F  AD 00 DC    LDA $DC00
+0972  8D 67 C7    STA $C767
+0975  EE 6A C7    INC $C76A
+0978  D0 03       BNE game_frame_counter_done_6
+097A  EE 6B C7    INC $C76B
+097D        game_frame_counter_done_6:
+097D  20 25 0A    JSR game_scene_update_dispatch
+0980  20 DF 09    JSR game_scene_apply_transition
+0983  AD 79 C7    LDA $C779
+0986  C9 FF       CMP #$FF
+0988  D0 03       BNE map_activation_requested_9
+098A  4C DC 09    JMP map_activation_done_7
+098D        map_activation_requested_9:
+098D  CD 78 C7    CMP $C778
+0990  F0 45       BEQ map_activation_clear_8
+0992  AD 79 C7    LDA $C779
+0995  C9 00       CMP #$00
+0997  D0 10       BNE map_activation_next_0_10
+0999  20 F2 0C    JSR runtime_map_activate_0
+099C  AD 7C C7    LDA $C77C
+099F  D0 36       BNE map_activation_clear_8
+09A1  A9 00       LDA #$00
+09A3  8D 78 C7    STA $C778
+09A6  4C D7 09    JMP map_activation_clear_8
+09A9        map_activation_next_0_10:
+09A9  AD 79 C7    LDA $C779
+09AC  C9 01       CMP #$01
+09AE  D0 10       BNE map_activation_next_1_11
+09B0  20 51 0F    JSR runtime_map_activate_1
+09B3  AD 7C C7    LDA $C77C
+09B6  D0 1F       BNE map_activation_clear_8
+09B8  A9 01       LDA #$01
+09BA  8D 78 C7    STA $C778
+09BD  4C D7 09    JMP map_activation_clear_8
+09C0        map_activation_next_1_11:
+09C0  AD 79 C7    LDA $C779
+09C3  C9 02       CMP #$02
+09C5  D0 10       BNE map_activation_next_2_12
+09C7  20 B0 11    JSR runtime_map_activate_2
+09CA  AD 7C C7    LDA $C77C
+09CD  D0 08       BNE map_activation_clear_8
+09CF  A9 02       LDA #$02
+09D1  8D 78 C7    STA $C778
+09D4  4C D7 09    JMP map_activation_clear_8
+09D7        map_activation_next_2_12:
+09D7        map_activation_clear_8:
+09D7  A9 FF       LDA #$FF
+09D9  8D 79 C7    STA $C779
+09DC        map_activation_done_7:
+09DC  4C 40 09    JMP game_frame_loop
+            ; Apply at most one requested scene transition between frames
+09DF        game_scene_apply_transition:
+09DF  AD 7B C7    LDA $C77B
+09E2  C9 FF       CMP #$FF
+09E4  D0 01       BNE game_scene_transition_requested
+09E6  60          RTS
+09E7        game_scene_transition_requested:
+09E7  CD 7A C7    CMP $C77A
+09EA  D0 06       BNE game_scene_transition_changed
+09EC  A9 FF       LDA #$FF
+09EE  8D 7B C7    STA $C77B
+09F1  60          RTS
+09F2        game_scene_transition_changed:
+09F2  48          PHA
+09F3  A9 FF       LDA #$FF
+09F5  8D 7B C7    STA $C77B
+09F8  20 44 0A    JSR game_scene_exit_dispatch
+09FB  68          PLA
+09FC  8D 7A C7    STA $C77A
+09FF  20 03 0A    JSR game_scene_enter_dispatch
+0A02  60          RTS
+0A03        game_scene_enter_dispatch:
+0A03  AD 7A C7    LDA $C77A
+0A06  C9 00       CMP #$00
+0A08  D0 04       BNE game_scene_enter_dispatch_next_0
+0A0A  20 5D 0A    JSR game_scene_title_enter
+0A0D  60          RTS
+0A0E        game_scene_enter_dispatch_next_0:
+0A0E  AD 7A C7    LDA $C77A
+0A11  C9 01       CMP #$01
+0A13  D0 04       BNE game_scene_enter_dispatch_next_1
+0A15  20 B3 0A    JSR game_scene_game_enter
+0A18  60          RTS
+0A19        game_scene_enter_dispatch_next_1:
+0A19  AD 7A C7    LDA $C77A
+0A1C  C9 03       CMP #$03
+0A1E  D0 04       BNE game_scene_enter_dispatch_next_3
+0A20  20 63 0C    JSR game_scene_gameOver_enter
+0A23  60          RTS
+0A24        game_scene_enter_dispatch_next_3:
+0A24  60          RTS
+0A25        game_scene_update_dispatch:
+0A25  AD 7A C7    LDA $C77A
+0A28  C9 00       CMP #$00
+0A2A  D0 04       BNE game_scene_update_dispatch_next_0
+0A2C  20 96 0A    JSR game_scene_title_update
+0A2F  60          RTS
+0A30        game_scene_update_dispatch_next_0:
+0A30  AD 7A C7    LDA $C77A
+0A33  C9 01       CMP #$01
+0A35  D0 04       BNE game_scene_update_dispatch_next_1
+0A37  20 B9 0A    JSR game_scene_game_update
+0A3A  60          RTS
+0A3B        game_scene_update_dispatch_next_1:
+0A3B  AD 7A C7    LDA $C77A
+0A3E  C9 03       CMP #$03
+0A40  D0 01       BNE game_scene_update_dispatch_next_3
+0A42  60          RTS
+0A43        game_scene_update_dispatch_next_3:
+0A43  60          RTS
+0A44        game_scene_exit_dispatch:
+0A44  AD 7A C7    LDA $C77A
+0A47  C9 00       CMP #$00
+0A49  D0 01       BNE game_scene_exit_dispatch_next_0
+0A4B  60          RTS
+0A4C        game_scene_exit_dispatch_next_0:
+0A4C  AD 7A C7    LDA $C77A
+0A4F  C9 01       CMP #$01
+0A51  D0 01       BNE game_scene_exit_dispatch_next_1
+0A53  60          RTS
+0A54        game_scene_exit_dispatch_next_1:
+0A54  AD 7A C7    LDA $C77A
+0A57  C9 03       CMP #$03
+0A59  D0 01       BNE game_scene_exit_dispatch_next_3
+0A5B  60          RTS
+0A5C        game_scene_exit_dispatch_next_3:
+0A5C  60          RTS
+            ; Scene title: enter
+0A5D        game_scene_title_enter:
+0A5D  A9 93       LDA #$93
+0A5F  20 D2 FF    JSR $FFD2
+0A62  A9 06       LDA #$06
+0A64  8D 20 D0    STA $D020
+0A67  A9 06       LDA #$06
+0A69  8D 21 D0    STA $D021
+0A6C  A9 01       LDA #$01
+0A6E  8D 86 02    STA $0286
+0A71  A2 00       LDX #$00
+0A73        printat_loop_13:
+0A73  BD B4 14    LDA str_screen_0,X
+0A76  F0 0B       BEQ printat_done_14
+0A78  9D 9D 05    STA $059D,X
+0A7B  A9 01       LDA #$01
+0A7D  9D 9D D9    STA $D99D,X
+0A80  E8          INX
+0A81  D0 F0       BNE printat_loop_13
+0A83        printat_done_14:
+0A83  A2 00       LDX #$00
+0A85        printat_loop_15:
+0A85  BD C3 14    LDA str_screen_1,X
+0A88  F0 0B       BEQ printat_done_16
+0A8A  9D 13 06    STA $0613,X
+0A8D  A9 01       LDA #$01
+0A8F  9D 13 DA    STA $DA13,X
+0A92  E8          INX
+0A93  D0 F0       BNE printat_loop_15
+0A95        printat_done_16:
+0A95  60          RTS
+            ; Scene title: update
+0A96        game_scene_title_update:
+0A96  AD 67 C7    LDA $C767
+0A99  29 10       AND #$10
+0A9B  F0 03       BEQ joystick_current_pressed_18
+0A9D  4C B2 0A    JMP control_if_else_17
+0AA0        joystick_current_pressed_18:
+0AA0  AD 69 C7    LDA $C769
+0AA3  29 10       AND #$10
+0AA5  D0 03       BNE condition_pass_18
+0AA7  4C B2 0A    JMP control_if_else_17
+0AAA        condition_pass_18:
+0AAA  A9 01       LDA #$01
+0AAC  8D 7B C7    STA $C77B
+0AAF  4C B2 0A    JMP control_if_end_17
+0AB2        control_if_else_17:
+0AB2        control_if_end_17:
+0AB2  60          RTS
+            ; Scene game: enter
+0AB3        game_scene_game_enter:
+0AB3  A9 00       LDA #$00
+0AB5  8D 79 C7    STA $C779
+0AB8  60          RTS
+            ; Scene game: update
+0AB9        game_scene_game_update:
+0AB9  AD 05 C5    LDA $C505
+0ABC  D0 03       BNE sprite_update_active_0_20
+0ABE  4C 5F 0B    JMP sprite_update_inactive_0_19
+0AC1        sprite_update_active_0_20:
+0AC1  18          CLC
+0AC2  AD 00 C5    LDA $C500
+0AC5  6D 03 C5    ADC $C503
+0AC8  8D 00 C5    STA $C500
+0ACB  AD 03 C5    LDA $C503
+0ACE  10 08       BPL sprite_vx_positive_21
+0AD0  AD 01 C5    LDA $C501
+0AD3  69 FF       ADC #$FF
+0AD5  4C DD 0A    JMP sprite_vx_done_21
+0AD8        sprite_vx_positive_21:
+0AD8  AD 01 C5    LDA $C501
+0ADB  69 00       ADC #$00
+0ADD        sprite_vx_done_21:
+0ADD  8D 01 C5    STA $C501
+0AE0  AD 04 C5    LDA $C504
+0AE3  10 0C       BPL sprite_vy_positive_22
+0AE5  18          CLC
+0AE6  AD 02 C5    LDA $C502
+0AE9  6D 04 C5    ADC $C504
+0AEC  90 12       BCC sprite_vy_clamp_min_22
+0AEE  4C FA 0A    JMP sprite_vy_store_22
+0AF1        sprite_vy_positive_22:
+0AF1  18          CLC
+0AF2  AD 02 C5    LDA $C502
+0AF5  6D 04 C5    ADC $C504
+0AF8  B0 0E       BCS sprite_vy_clamp_max_22
+0AFA        sprite_vy_store_22:
+0AFA  8D 02 C5    STA $C502
+0AFD  4C 0D 0B    JMP sprite_vy_done_22
+0B00        sprite_vy_clamp_min_22:
+0B00  A9 00       LDA #$00
+0B02  8D 02 C5    STA $C502
+0B05  4C 0D 0B    JMP sprite_vy_done_22
+0B08        sprite_vy_clamp_max_22:
+0B08  A9 FF       LDA #$FF
+0B0A  8D 02 C5    STA $C502
+0B0D        sprite_vy_done_22:
+0B0D  AD 01 C5    LDA $C501
+0B10  30 0D       BMI sprite_x_clamp_min_23
+0B12  C9 00       CMP #$00
+0B14  90 09       BCC sprite_x_clamp_min_23
+0B16  D0 11       BNE sprite_x_min_ok_23
+0B18  AD 00 C5    LDA $C500
+0B1B  C9 00       CMP #$00
+0B1D  B0 0A       BCS sprite_x_min_ok_23
+0B1F        sprite_x_clamp_min_23:
+0B1F  A9 00       LDA #$00
+0B21  8D 00 C5    STA $C500
+0B24  A9 00       LDA #$00
+0B26  8D 01 C5    STA $C501
+0B29        sprite_x_min_ok_23:
+0B29  AD 01 C5    LDA $C501
+0B2C  C9 01       CMP #$01
+0B2E  90 15       BCC sprite_x_max_ok_23
+0B30  D0 09       BNE sprite_x_clamp_max_23
+0B32  AD 00 C5    LDA $C500
+0B35  C9 FF       CMP #$FF
+0B37  90 0C       BCC sprite_x_max_ok_23
+0B39  F0 0A       BEQ sprite_x_max_ok_23
+0B3B        sprite_x_clamp_max_23:
+0B3B  A9 FF       LDA #$FF
+0B3D  8D 00 C5    STA $C500
+0B40  A9 01       LDA #$01
+0B42  8D 01 C5    STA $C501
+0B45        sprite_x_max_ok_23:
+0B45  AD 02 C5    LDA $C502
+0B48  C9 00       CMP #$00
+0B4A  B0 05       BCS sprite_y_min_ok_23
+0B4C  A9 00       LDA #$00
+0B4E  8D 02 C5    STA $C502
+0B51        sprite_y_min_ok_23:
+0B51  AD 02 C5    LDA $C502
+0B54  C9 FF       CMP #$FF
+0B56  90 07       BCC sprite_y_max_ok_23
+0B58  F0 05       BEQ sprite_y_max_ok_23
+0B5A  A9 FF       LDA #$FF
+0B5C  8D 02 C5    STA $C502
+0B5F        sprite_y_max_ok_23:
+0B5F        sprite_update_inactive_0_19:
+0B5F  20 74 0C    JSR runtime_sprite_sync_0
+0B62  AD 0D C5    LDA $C50D
+0B65  D0 03       BNE sprite_update_active_1_25
+0B67  4C 08 0C    JMP sprite_update_inactive_1_24
+0B6A        sprite_update_active_1_25:
+0B6A  18          CLC
+0B6B  AD 08 C5    LDA $C508
+0B6E  6D 0B C5    ADC $C50B
+0B71  8D 08 C5    STA $C508
+0B74  AD 0B C5    LDA $C50B
+0B77  10 08       BPL sprite_vx_positive_26
+0B79  AD 09 C5    LDA $C509
+0B7C  69 FF       ADC #$FF
+0B7E  4C 86 0B    JMP sprite_vx_done_26
+0B81        sprite_vx_positive_26:
+0B81  AD 09 C5    LDA $C509
+0B84  69 00       ADC #$00
+0B86        sprite_vx_done_26:
+0B86  8D 09 C5    STA $C509
+0B89  AD 0C C5    LDA $C50C
+0B8C  10 0C       BPL sprite_vy_positive_27
+0B8E  18          CLC
+0B8F  AD 0A C5    LDA $C50A
+0B92  6D 0C C5    ADC $C50C
+0B95  90 12       BCC sprite_vy_clamp_min_27
+0B97  4C A3 0B    JMP sprite_vy_store_27
+0B9A        sprite_vy_positive_27:
+0B9A  18          CLC
+0B9B  AD 0A C5    LDA $C50A
+0B9E  6D 0C C5    ADC $C50C
+0BA1  B0 0E       BCS sprite_vy_clamp_max_27
+0BA3        sprite_vy_store_27:
+0BA3  8D 0A C5    STA $C50A
+0BA6  4C B6 0B    JMP sprite_vy_done_27
+0BA9        sprite_vy_clamp_min_27:
+0BA9  A9 00       LDA #$00
+0BAB  8D 0A C5    STA $C50A
+0BAE  4C B6 0B    JMP sprite_vy_done_27
+0BB1        sprite_vy_clamp_max_27:
+0BB1  A9 FF       LDA #$FF
+0BB3  8D 0A C5    STA $C50A
+0BB6        sprite_vy_done_27:
+0BB6  AD 09 C5    LDA $C509
+0BB9  30 0D       BMI sprite_x_clamp_min_28
+0BBB  C9 00       CMP #$00
+0BBD  90 09       BCC sprite_x_clamp_min_28
+0BBF  D0 11       BNE sprite_x_min_ok_28
+0BC1  AD 08 C5    LDA $C508
+0BC4  C9 00       CMP #$00
+0BC6  B0 0A       BCS sprite_x_min_ok_28
+0BC8        sprite_x_clamp_min_28:
+0BC8  A9 00       LDA #$00
+0BCA  8D 08 C5    STA $C508
+0BCD  A9 00       LDA #$00
+0BCF  8D 09 C5    STA $C509
+0BD2        sprite_x_min_ok_28:
+0BD2  AD 09 C5    LDA $C509
+0BD5  C9 01       CMP #$01
+0BD7  90 15       BCC sprite_x_max_ok_28
+0BD9  D0 09       BNE sprite_x_clamp_max_28
+0BDB  AD 08 C5    LDA $C508
+0BDE  C9 FF       CMP #$FF
+0BE0  90 0C       BCC sprite_x_max_ok_28
+0BE2  F0 0A       BEQ sprite_x_max_ok_28
+0BE4        sprite_x_clamp_max_28:
+0BE4  A9 FF       LDA #$FF
+0BE6  8D 08 C5    STA $C508
+0BE9  A9 01       LDA #$01
+0BEB  8D 09 C5    STA $C509
+0BEE        sprite_x_max_ok_28:
+0BEE  AD 0A C5    LDA $C50A
+0BF1  C9 00       CMP #$00
+0BF3  B0 05       BCS sprite_y_min_ok_28
+0BF5  A9 00       LDA #$00
+0BF7  8D 0A C5    STA $C50A
+0BFA        sprite_y_min_ok_28:
+0BFA  AD 0A C5    LDA $C50A
+0BFD  C9 FF       CMP #$FF
+0BFF  90 07       BCC sprite_y_max_ok_28
+0C01  F0 05       BEQ sprite_y_max_ok_28
+0C03  A9 FF       LDA #$FF
+0C05  8D 0A C5    STA $C50A
+0C08        sprite_y_max_ok_28:
+0C08        sprite_update_inactive_1_24:
+0C08  20 B3 0C    JSR runtime_sprite_sync_1
+0C0B  AD 67 C7    LDA $C767
+0C0E  29 10       AND #$10
+0C10  F0 03       BEQ joystick_current_pressed_30
+0C12  4C 62 0C    JMP control_if_else_29
+0C15        joystick_current_pressed_30:
+0C15  AD 69 C7    LDA $C769
+0C18  29 10       AND #$10
+0C1A  D0 03       BNE condition_pass_30
+0C1C  4C 62 0C    JMP control_if_else_29
+0C1F        condition_pass_30:
+0C1F  AD 78 C7    LDA $C778
+0C22  C9 00       CMP #$00
+0C24  F0 03       BEQ condition_pass_32
+0C26  4C 36 0C    JMP control_if_else_31
+0C29        condition_pass_32:
+0C29  A9 01       LDA #$01
+0C2B  8D 79 C7    STA $C779
+0C2E  A9 07       LDA #$07
+0C30  8D 28 D0    STA $D028
+0C33  4C 36 0C    JMP control_if_end_31
+0C36        control_if_else_31:
+0C36        control_if_end_31:
+0C36  AD 78 C7    LDA $C778
+0C39  C9 01       CMP #$01
+0C3B  F0 03       BEQ condition_pass_34
+0C3D  4C 4D 0C    JMP control_if_else_33
+0C40        condition_pass_34:
+0C40  A9 02       LDA #$02
+0C42  8D 79 C7    STA $C779
+0C45  A9 03       LDA #$03
+0C47  8D 28 D0    STA $D028
+0C4A  4C 4D 0C    JMP control_if_end_33
+0C4D        control_if_else_33:
+0C4D        control_if_end_33:
+0C4D  AD 78 C7    LDA $C778
+0C50  C9 02       CMP #$02
+0C52  F0 03       BEQ condition_pass_36
+0C54  4C 5F 0C    JMP control_if_else_35
+0C57        condition_pass_36:
+0C57  A9 03       LDA #$03
+0C59  8D 7B C7    STA $C77B
+0C5C  4C 5F 0C    JMP control_if_end_35
+0C5F        control_if_else_35:
+0C5F        control_if_end_35:
+0C5F  4C 62 0C    JMP control_if_end_29
+0C62        control_if_else_29:
+0C62        control_if_end_29:
+0C62  60          RTS
+            ; Scene gameOver: enter
+0C63        game_scene_gameOver_enter:
+0C63  A9 00       LDA #$00
+0C65  8D 05 C5    STA $C505
+0C68  20 74 0C    JSR runtime_sprite_sync_0
+0C6B  A9 00       LDA #$00
+0C6D  8D 0D C5    STA $C50D
+0C70  20 B3 0C    JSR runtime_sprite_sync_1
+0C73  60          RTS
+            ; Shared VIC-II synchronization for sprite 0
+0C74        runtime_sprite_sync_0:
+0C74  AD 05 C5    LDA $C505
+0C77  D0 0B       BNE sprite_runtime_active_0_37
+0C79  AD 15 D0    LDA $D015
+0C7C  29 FE       AND #$FE
+0C7E  8D 15 D0    STA $D015
+0C81  4C B2 0C    JMP sprite_runtime_sync_done_0_40
+0C84        sprite_runtime_active_0_37:
+0C84  AD 15 D0    LDA $D015
+0C87  09 01       ORA #$01
+0C89  8D 15 D0    STA $D015
+0C8C  AD 00 C5    LDA $C500
+0C8F  8D 00 D0    STA $D000
+0C92  AD 01 C5    LDA $C501
+0C95  29 01       AND #$01
+0C97  D0 0B       BNE sprite_runtime_xhigh_0_38
+0C99  AD 10 D0    LDA $D010
+0C9C  29 FE       AND #$FE
+0C9E  8D 10 D0    STA $D010
+0CA1  4C AC 0C    JMP sprite_runtime_xdone_0_39
+0CA4        sprite_runtime_xhigh_0_38:
+0CA4  AD 10 D0    LDA $D010
+0CA7  09 01       ORA #$01
+0CA9  8D 10 D0    STA $D010
+0CAC        sprite_runtime_xdone_0_39:
+0CAC  AD 02 C5    LDA $C502
+0CAF  8D 01 D0    STA $D001
+0CB2        sprite_runtime_sync_done_0_40:
+0CB2  60          RTS
+            ; Shared VIC-II synchronization for sprite 1
+0CB3        runtime_sprite_sync_1:
+0CB3  AD 0D C5    LDA $C50D
+0CB6  D0 0B       BNE sprite_runtime_active_1_41
+0CB8  AD 15 D0    LDA $D015
+0CBB  29 FD       AND #$FD
+0CBD  8D 15 D0    STA $D015
+0CC0  4C F1 0C    JMP sprite_runtime_sync_done_1_44
+0CC3        sprite_runtime_active_1_41:
+0CC3  AD 15 D0    LDA $D015
+0CC6  09 02       ORA #$02
+0CC8  8D 15 D0    STA $D015
+0CCB  AD 08 C5    LDA $C508
+0CCE  8D 02 D0    STA $D002
+0CD1  AD 09 C5    LDA $C509
+0CD4  29 01       AND #$01
+0CD6  D0 0B       BNE sprite_runtime_xhigh_1_42
+0CD8  AD 10 D0    LDA $D010
+0CDB  29 FD       AND #$FD
+0CDD  8D 10 D0    STA $D010
+0CE0  4C EB 0C    JMP sprite_runtime_xdone_1_43
+0CE3        sprite_runtime_xhigh_1_42:
+0CE3  AD 10 D0    LDA $D010
+0CE6  09 02       ORA #$02
+0CE8  8D 10 D0    STA $D010
+0CEB        sprite_runtime_xdone_1_43:
+0CEB  AD 0A C5    LDA $C50A
+0CEE  8D 03 D0    STA $D003
+0CF1        sprite_runtime_sync_done_1_44:
+0CF1  60          RTS
+            ; Map 0: restore its embedded cells into runtime RAM
+0CF2        runtime_map_activate_0:
+0CF2  A9 06       LDA #$06
+0CF4  A2 D5       LDX #<disk_filename_0
+0CF6  A0 14       LDY #>disk_filename_0
+0CF8  20 0F 14    JSR runtime_disk_load_usr
+0CFB  AD 7C C7    LDA $C77C
+0CFE  D0 49       BNE runtime_map_activate_0_done
+0D00  A9 07       LDA #$07
+0D02  A2 E3       LDX #<disk_filename_2
+0D04  A0 14       LDY #>disk_filename_2
+0D06  20 0F 14    JSR runtime_disk_load_usr
+0D09  AD 7C C7    LDA $C77C
+0D0C  D0 3B       BNE runtime_map_activate_0_done
+0D0E  A9 08       LDA #$08
+0D10  A2 DB       LDX #<disk_filename_1
+0D12  A0 14       LDY #>disk_filename_1
+0D14  20 0F 14    JSR runtime_disk_load_usr
+0D17  AD 7C C7    LDA $C77C
+0D1A  D0 2D       BNE runtime_map_activate_0_done
+0D1C  A9 07       LDA #$07
+0D1E  A2 0B       LDX #<disk_filename_8
+0D20  A0 15       LDY #>disk_filename_8
+0D22  20 0F 14    JSR runtime_disk_load_usr
+0D25  AD 7C C7    LDA $C77C
+0D28  D0 1F       BNE runtime_map_activate_0_done
+0D2A  AD 00 DD    LDA $DD00
+0D2D  29 FC       AND #$FC
+0D2F  09 03       ORA #$03
+0D31  8D 00 DD    STA $DD00
+0D34  AD 18 D0    LDA $D018
+0D37  29 F1       AND #$F1
+0D39  09 0C       ORA #$0C
+0D3B  8D 18 D0    STA $D018
+0D3E  AD 16 D0    LDA $D016
+0D41  29 EF       AND #$EF
+0D43  8D 16 D0    STA $D016
+0D46  20 2F 0F    JSR runtime_map_redraw_0
+0D49        runtime_map_activate_0_done:
+0D49  60          RTS
+            ; Dynamic map 0: draw one changed metatile
+0D4A        runtime_map_draw_tile_0:
+0D4A  AD B2 C7    LDA $C7B2
+0D4D  8D C2 C7    STA $C7C2
+0D50  AD B3 C7    LDA $C7B3
+0D53  8D C3 C7    STA $C7C3
+0D56        runtime_map_draw_tile_body_0:
+0D56  A9 00       LDA #$00
+0D58  8D B6 C7    STA $C7B6
+0D5B  A9 00       LDA #$00
+0D5D  8D BA C7    STA $C7BA
+0D60  AD B3 C7    LDA $C7B3
+0D63  8D B7 C7    STA $C7B7
+0D66  A9 00       LDA #$00
+0D68  8D BF C7    STA $C7BF
+0D6B  0E B7 C7    ASL $C7B7
+0D6E  2E BF C7    ROL $C7BF
+0D71  18          CLC
+0D72  AD B6 C7    LDA $C7B6
+0D75  6D B7 C7    ADC $C7B7
+0D78  8D B6 C7    STA $C7B6
+0D7B  AD BA C7    LDA $C7BA
+0D7E  6D BF C7    ADC $C7BF
+0D81  8D BA C7    STA $C7BA
+0D84  0E B7 C7    ASL $C7B7
+0D87  2E BF C7    ROL $C7BF
+0D8A  0E B7 C7    ASL $C7B7
+0D8D  2E BF C7    ROL $C7BF
+0D90  18          CLC
+0D91  AD B6 C7    LDA $C7B6
+0D94  6D B7 C7    ADC $C7B7
+0D97  8D B6 C7    STA $C7B6
+0D9A  AD BA C7    LDA $C7BA
+0D9D  6D BF C7    ADC $C7BF
+0DA0  8D BA C7    STA $C7BA
+0DA3  18          CLC
+0DA4  AD B6 C7    LDA $C7B6
+0DA7  6D B2 C7    ADC $C7B2
+0DAA  8D B6 C7    STA $C7B6
+0DAD  AD BA C7    LDA $C7BA
+0DB0  69 00       ADC #$00
+0DB2  8D BA C7    STA $C7BA
+0DB5  18          CLC
+0DB6  AD B6 C7    LDA $C7B6
+0DB9  69 00       ADC #$00
+0DBB  85 FB       STA $FB
+0DBD  AD BA C7    LDA $C7BA
+0DC0  69 80       ADC #$80
+0DC2  85 FC       STA $FC
+0DC4  A0 00       LDY #$00
+0DC6  B1 FB       LDA ($FB),Y
+0DC8  8D B4 C7    STA $C7B4
+0DCB  AD B4 C7    LDA $C7B4
+0DCE  0A          ASL A
+0DCF  0A          ASL A
+0DD0  0A          ASL A
+0DD1  8D B5 C7    STA $C7B5
+0DD4  A9 00       LDA #$00
+0DD6  85 FB       STA $FB
+0DD8  A9 04       LDA #$04
+0DDA  85 FC       STA $FC
+0DDC  AD C3 C7    LDA $C7C3
+0DDF  8D B7 C7    STA $C7B7
+0DE2        runtime_map_screen_y_loop_0:
+0DE2  AD B7 C7    LDA $C7B7
+0DE5  F0 13       BEQ runtime_map_screen_y_done_0
+0DE7  18          CLC
+0DE8  A5 FB       LDA $FB
+0DEA  69 50       ADC #$50
+0DEC  85 FB       STA $FB
+0DEE  A5 FC       LDA $FC
+0DF0  69 00       ADC #$00
+0DF2  85 FC       STA $FC
+0DF4  CE B7 C7    DEC $C7B7
+0DF7  4C E2 0D    JMP runtime_map_screen_y_loop_0
+0DFA        runtime_map_screen_y_done_0:
+0DFA  A9 00       LDA #$00
+0DFC  8D B9 C7    STA $C7B9
+0DFF  AD C2 C7    LDA $C7C2
+0E02  8D B7 C7    STA $C7B7
+0E05        runtime_map_screen_x_loop_0:
+0E05  AD B7 C7    LDA $C7B7
+0E08  F0 0F       BEQ runtime_map_screen_x_done_0
+0E0A  18          CLC
+0E0B  AD B9 C7    LDA $C7B9
+0E0E  69 04       ADC #$04
+0E10  8D B9 C7    STA $C7B9
+0E13  CE B7 C7    DEC $C7B7
+0E16  4C 05 0E    JMP runtime_map_screen_x_loop_0
+0E19        runtime_map_screen_x_done_0:
+0E19  18          CLC
+0E1A  A5 FB       LDA $FB
+0E1C  6D B9 C7    ADC $C7B9
+0E1F  85 FB       STA $FB
+0E21  A5 FC       LDA $FC
+0E23  69 00       ADC #$00
+0E25  85 FC       STA $FC
+0E27  18          CLC
+0E28  A5 FB       LDA $FB
+0E2A  69 00       ADC #$00
+0E2C  85 FD       STA $FD
+0E2E  A5 FC       LDA $FC
+0E30  69 D4       ADC #$D4
+0E32  85 FE       STA $FE
+0E34  18          CLC
+0E35  AD B5 C7    LDA $C7B5
+0E38  69 00       ADC #$00
+0E3A  A8          TAY
+0E3B  B9 04 38    LDA $3804,Y
+0E3E  A0 00       LDY #$00
+0E40  91 FB       STA ($FB),Y
+0E42  18          CLC
+0E43  AD B5 C7    LDA $C7B5
+0E46  69 00       ADC #$00
+0E48  A8          TAY
+0E49  B9 24 38    LDA $3824,Y
+0E4C  A0 00       LDY #$00
+0E4E  91 FD       STA ($FD),Y
+0E50  18          CLC
+0E51  AD B5 C7    LDA $C7B5
+0E54  69 01       ADC #$01
+0E56  A8          TAY
+0E57  B9 04 38    LDA $3804,Y
+0E5A  A0 01       LDY #$01
+0E5C  91 FB       STA ($FB),Y
+0E5E  18          CLC
+0E5F  AD B5 C7    LDA $C7B5
+0E62  69 01       ADC #$01
+0E64  A8          TAY
+0E65  B9 24 38    LDA $3824,Y
+0E68  A0 01       LDY #$01
+0E6A  91 FD       STA ($FD),Y
+0E6C  18          CLC
+0E6D  AD B5 C7    LDA $C7B5
+0E70  69 02       ADC #$02
+0E72  A8          TAY
+0E73  B9 04 38    LDA $3804,Y
+0E76  A0 02       LDY #$02
+0E78  91 FB       STA ($FB),Y
+0E7A  18          CLC
+0E7B  AD B5 C7    LDA $C7B5
+0E7E  69 02       ADC #$02
+0E80  A8          TAY
+0E81  B9 24 38    LDA $3824,Y
+0E84  A0 02       LDY #$02
+0E86  91 FD       STA ($FD),Y
+0E88  18          CLC
+0E89  AD B5 C7    LDA $C7B5
+0E8C  69 03       ADC #$03
+0E8E  A8          TAY
+0E8F  B9 04 38    LDA $3804,Y
+0E92  A0 03       LDY #$03
+0E94  91 FB       STA ($FB),Y
+0E96  18          CLC
+0E97  AD B5 C7    LDA $C7B5
+0E9A  69 03       ADC #$03
+0E9C  A8          TAY
+0E9D  B9 24 38    LDA $3824,Y
+0EA0  A0 03       LDY #$03
+0EA2  91 FD       STA ($FD),Y
+0EA4  18          CLC
+0EA5  A5 FB       LDA $FB
+0EA7  69 28       ADC #$28
+0EA9  85 FB       STA $FB
+0EAB  A5 FC       LDA $FC
+0EAD  69 00       ADC #$00
+0EAF  85 FC       STA $FC
+0EB1  18          CLC
+0EB2  A5 FD       LDA $FD
+0EB4  69 28       ADC #$28
+0EB6  85 FD       STA $FD
+0EB8  A5 FE       LDA $FE
+0EBA  69 00       ADC #$00
+0EBC  85 FE       STA $FE
+0EBE  18          CLC
+0EBF  AD B5 C7    LDA $C7B5
+0EC2  69 04       ADC #$04
+0EC4  A8          TAY
+0EC5  B9 04 38    LDA $3804,Y
+0EC8  A0 00       LDY #$00
+0ECA  91 FB       STA ($FB),Y
+0ECC  18          CLC
+0ECD  AD B5 C7    LDA $C7B5
+0ED0  69 04       ADC #$04
+0ED2  A8          TAY
+0ED3  B9 24 38    LDA $3824,Y
+0ED6  A0 00       LDY #$00
+0ED8  91 FD       STA ($FD),Y
+0EDA  18          CLC
+0EDB  AD B5 C7    LDA $C7B5
+0EDE  69 05       ADC #$05
+0EE0  A8          TAY
+0EE1  B9 04 38    LDA $3804,Y
+0EE4  A0 01       LDY #$01
+0EE6  91 FB       STA ($FB),Y
+0EE8  18          CLC
+0EE9  AD B5 C7    LDA $C7B5
+0EEC  69 05       ADC #$05
+0EEE  A8          TAY
+0EEF  B9 24 38    LDA $3824,Y
+0EF2  A0 01       LDY #$01
+0EF4  91 FD       STA ($FD),Y
+0EF6  18          CLC
+0EF7  AD B5 C7    LDA $C7B5
+0EFA  69 06       ADC #$06
+0EFC  A8          TAY
+0EFD  B9 04 38    LDA $3804,Y
+0F00  A0 02       LDY #$02
+0F02  91 FB       STA ($FB),Y
+0F04  18          CLC
+0F05  AD B5 C7    LDA $C7B5
+0F08  69 06       ADC #$06
+0F0A  A8          TAY
+0F0B  B9 24 38    LDA $3824,Y
+0F0E  A0 02       LDY #$02
+0F10  91 FD       STA ($FD),Y
+0F12  18          CLC
+0F13  AD B5 C7    LDA $C7B5
+0F16  69 07       ADC #$07
+0F18  A8          TAY
+0F19  B9 04 38    LDA $3804,Y
+0F1C  A0 03       LDY #$03
+0F1E  91 FB       STA ($FB),Y
+0F20  18          CLC
+0F21  AD B5 C7    LDA $C7B5
+0F24  69 07       ADC #$07
+0F26  A8          TAY
+0F27  B9 24 38    LDA $3824,Y
+0F2A  A0 03       LDY #$03
+0F2C  91 FD       STA ($FD),Y
+0F2E  60          RTS
+            ; Dynamic map 0: redraw visible cells from runtime RAM
+0F2F        runtime_map_redraw_0:
+0F2F  A9 00       LDA #$00
+0F31  8D B3 C7    STA $C7B3
+0F34        runtime_map_redraw_row_0:
+0F34  A9 00       LDA #$00
+0F36  8D B2 C7    STA $C7B2
+0F39        runtime_map_redraw_column_0:
+0F39  20 4A 0D    JSR runtime_map_draw_tile_0
+0F3C  EE B2 C7    INC $C7B2
+0F3F  AD B2 C7    LDA $C7B2
+0F42  C9 0A       CMP #$0A
+0F44  D0 F3       BNE runtime_map_redraw_column_0
+0F46  EE B3 C7    INC $C7B3
+0F49  AD B3 C7    LDA $C7B3
+0F4C  C9 0A       CMP #$0A
+0F4E  D0 E4       BNE runtime_map_redraw_row_0
+0F50  60          RTS
+            ; Map 1: restore its embedded cells into runtime RAM
+0F51        runtime_map_activate_1:
+0F51  A9 06       LDA #$06
+0F53  A2 EA       LDX #<disk_filename_3
+0F55  A0 14       LDY #>disk_filename_3
+0F57  20 0F 14    JSR runtime_disk_load_usr
+0F5A  AD 7C C7    LDA $C77C
+0F5D  D0 49       BNE runtime_map_activate_1_done
+0F5F  A9 07       LDA #$07
+0F61  A2 F0       LDX #<disk_filename_4
+0F63  A0 14       LDY #>disk_filename_4
+0F65  20 0F 14    JSR runtime_disk_load_usr
+0F68  AD 7C C7    LDA $C77C
+0F6B  D0 3B       BNE runtime_map_activate_1_done
+0F6D  A9 08       LDA #$08
+0F6F  A2 DB       LDX #<disk_filename_1
+0F71  A0 14       LDY #>disk_filename_1
+0F73  20 0F 14    JSR runtime_disk_load_usr
+0F76  AD 7C C7    LDA $C77C
+0F79  D0 2D       BNE runtime_map_activate_1_done
+0F7B  A9 07       LDA #$07
+0F7D  A2 12       LDX #<disk_filename_9
+0F7F  A0 15       LDY #>disk_filename_9
+0F81  20 0F 14    JSR runtime_disk_load_usr
+0F84  AD 7C C7    LDA $C77C
+0F87  D0 1F       BNE runtime_map_activate_1_done
+0F89  AD 00 DD    LDA $DD00
+0F8C  29 FC       AND #$FC
+0F8E  09 03       ORA #$03
+0F90  8D 00 DD    STA $DD00
+0F93  AD 18 D0    LDA $D018
+0F96  29 F1       AND #$F1
+0F98  09 0C       ORA #$0C
+0F9A  8D 18 D0    STA $D018
+0F9D  AD 16 D0    LDA $D016
+0FA0  29 EF       AND #$EF
+0FA2  8D 16 D0    STA $D016
+0FA5  20 8E 11    JSR runtime_map_redraw_1
+0FA8        runtime_map_activate_1_done:
+0FA8  60          RTS
+            ; Dynamic map 1: draw one changed metatile
+0FA9        runtime_map_draw_tile_1:
+0FA9  AD B2 C7    LDA $C7B2
+0FAC  8D C2 C7    STA $C7C2
+0FAF  AD B3 C7    LDA $C7B3
+0FB2  8D C3 C7    STA $C7C3
+0FB5        runtime_map_draw_tile_body_1:
+0FB5  A9 00       LDA #$00
+0FB7  8D B6 C7    STA $C7B6
+0FBA  A9 00       LDA #$00
+0FBC  8D BA C7    STA $C7BA
+0FBF  AD B3 C7    LDA $C7B3
+0FC2  8D B7 C7    STA $C7B7
+0FC5  A9 00       LDA #$00
+0FC7  8D BF C7    STA $C7BF
+0FCA  0E B7 C7    ASL $C7B7
+0FCD  2E BF C7    ROL $C7BF
+0FD0  18          CLC
+0FD1  AD B6 C7    LDA $C7B6
+0FD4  6D B7 C7    ADC $C7B7
+0FD7  8D B6 C7    STA $C7B6
+0FDA  AD BA C7    LDA $C7BA
+0FDD  6D BF C7    ADC $C7BF
+0FE0  8D BA C7    STA $C7BA
+0FE3  0E B7 C7    ASL $C7B7
+0FE6  2E BF C7    ROL $C7BF
+0FE9  0E B7 C7    ASL $C7B7
+0FEC  2E BF C7    ROL $C7BF
+0FEF  18          CLC
+0FF0  AD B6 C7    LDA $C7B6
+0FF3  6D B7 C7    ADC $C7B7
+0FF6  8D B6 C7    STA $C7B6
+0FF9  AD BA C7    LDA $C7BA
+0FFC  6D BF C7    ADC $C7BF
+0FFF  8D BA C7    STA $C7BA
+1002  18          CLC
+1003  AD B6 C7    LDA $C7B6
+1006  6D B2 C7    ADC $C7B2
+1009  8D B6 C7    STA $C7B6
+100C  AD BA C7    LDA $C7BA
+100F  69 00       ADC #$00
+1011  8D BA C7    STA $C7BA
+1014  18          CLC
+1015  AD B6 C7    LDA $C7B6
+1018  69 00       ADC #$00
+101A  85 FB       STA $FB
+101C  AD BA C7    LDA $C7BA
+101F  69 80       ADC #$80
+1021  85 FC       STA $FC
+1023  A0 00       LDY #$00
+1025  B1 FB       LDA ($FB),Y
+1027  8D B4 C7    STA $C7B4
+102A  AD B4 C7    LDA $C7B4
+102D  0A          ASL A
+102E  0A          ASL A
+102F  0A          ASL A
+1030  8D B5 C7    STA $C7B5
+1033  A9 00       LDA #$00
+1035  85 FB       STA $FB
+1037  A9 04       LDA #$04
+1039  85 FC       STA $FC
+103B  AD C3 C7    LDA $C7C3
+103E  8D B7 C7    STA $C7B7
+1041        runtime_map_screen_y_loop_1:
+1041  AD B7 C7    LDA $C7B7
+1044  F0 13       BEQ runtime_map_screen_y_done_1
+1046  18          CLC
+1047  A5 FB       LDA $FB
+1049  69 50       ADC #$50
+104B  85 FB       STA $FB
+104D  A5 FC       LDA $FC
+104F  69 00       ADC #$00
+1051  85 FC       STA $FC
+1053  CE B7 C7    DEC $C7B7
+1056  4C 41 10    JMP runtime_map_screen_y_loop_1
+1059        runtime_map_screen_y_done_1:
+1059  A9 00       LDA #$00
+105B  8D B9 C7    STA $C7B9
+105E  AD C2 C7    LDA $C7C2
+1061  8D B7 C7    STA $C7B7
+1064        runtime_map_screen_x_loop_1:
+1064  AD B7 C7    LDA $C7B7
+1067  F0 0F       BEQ runtime_map_screen_x_done_1
+1069  18          CLC
+106A  AD B9 C7    LDA $C7B9
+106D  69 04       ADC #$04
+106F  8D B9 C7    STA $C7B9
+1072  CE B7 C7    DEC $C7B7
+1075  4C 64 10    JMP runtime_map_screen_x_loop_1
+1078        runtime_map_screen_x_done_1:
+1078  18          CLC
+1079  A5 FB       LDA $FB
+107B  6D B9 C7    ADC $C7B9
+107E  85 FB       STA $FB
+1080  A5 FC       LDA $FC
+1082  69 00       ADC #$00
+1084  85 FC       STA $FC
+1086  18          CLC
+1087  A5 FB       LDA $FB
+1089  69 00       ADC #$00
+108B  85 FD       STA $FD
+108D  A5 FC       LDA $FC
+108F  69 D4       ADC #$D4
+1091  85 FE       STA $FE
+1093  18          CLC
+1094  AD B5 C7    LDA $C7B5
+1097  69 00       ADC #$00
+1099  A8          TAY
+109A  B9 04 38    LDA $3804,Y
+109D  A0 00       LDY #$00
+109F  91 FB       STA ($FB),Y
+10A1  18          CLC
+10A2  AD B5 C7    LDA $C7B5
+10A5  69 00       ADC #$00
+10A7  A8          TAY
+10A8  B9 24 38    LDA $3824,Y
+10AB  A0 00       LDY #$00
+10AD  91 FD       STA ($FD),Y
+10AF  18          CLC
+10B0  AD B5 C7    LDA $C7B5
+10B3  69 01       ADC #$01
+10B5  A8          TAY
+10B6  B9 04 38    LDA $3804,Y
+10B9  A0 01       LDY #$01
+10BB  91 FB       STA ($FB),Y
+10BD  18          CLC
+10BE  AD B5 C7    LDA $C7B5
+10C1  69 01       ADC #$01
+10C3  A8          TAY
+10C4  B9 24 38    LDA $3824,Y
+10C7  A0 01       LDY #$01
+10C9  91 FD       STA ($FD),Y
+10CB  18          CLC
+10CC  AD B5 C7    LDA $C7B5
+10CF  69 02       ADC #$02
+10D1  A8          TAY
+10D2  B9 04 38    LDA $3804,Y
+10D5  A0 02       LDY #$02
+10D7  91 FB       STA ($FB),Y
+10D9  18          CLC
+10DA  AD B5 C7    LDA $C7B5
+10DD  69 02       ADC #$02
+10DF  A8          TAY
+10E0  B9 24 38    LDA $3824,Y
+10E3  A0 02       LDY #$02
+10E5  91 FD       STA ($FD),Y
+10E7  18          CLC
+10E8  AD B5 C7    LDA $C7B5
+10EB  69 03       ADC #$03
+10ED  A8          TAY
+10EE  B9 04 38    LDA $3804,Y
+10F1  A0 03       LDY #$03
+10F3  91 FB       STA ($FB),Y
+10F5  18          CLC
+10F6  AD B5 C7    LDA $C7B5
+10F9  69 03       ADC #$03
+10FB  A8          TAY
+10FC  B9 24 38    LDA $3824,Y
+10FF  A0 03       LDY #$03
+1101  91 FD       STA ($FD),Y
+1103  18          CLC
+1104  A5 FB       LDA $FB
+1106  69 28       ADC #$28
+1108  85 FB       STA $FB
+110A  A5 FC       LDA $FC
+110C  69 00       ADC #$00
+110E  85 FC       STA $FC
+1110  18          CLC
+1111  A5 FD       LDA $FD
+1113  69 28       ADC #$28
+1115  85 FD       STA $FD
+1117  A5 FE       LDA $FE
+1119  69 00       ADC #$00
+111B  85 FE       STA $FE
+111D  18          CLC
+111E  AD B5 C7    LDA $C7B5
+1121  69 04       ADC #$04
+1123  A8          TAY
+1124  B9 04 38    LDA $3804,Y
+1127  A0 00       LDY #$00
+1129  91 FB       STA ($FB),Y
+112B  18          CLC
+112C  AD B5 C7    LDA $C7B5
+112F  69 04       ADC #$04
+1131  A8          TAY
+1132  B9 24 38    LDA $3824,Y
+1135  A0 00       LDY #$00
+1137  91 FD       STA ($FD),Y
+1139  18          CLC
+113A  AD B5 C7    LDA $C7B5
+113D  69 05       ADC #$05
+113F  A8          TAY
+1140  B9 04 38    LDA $3804,Y
+1143  A0 01       LDY #$01
+1145  91 FB       STA ($FB),Y
+1147  18          CLC
+1148  AD B5 C7    LDA $C7B5
+114B  69 05       ADC #$05
+114D  A8          TAY
+114E  B9 24 38    LDA $3824,Y
+1151  A0 01       LDY #$01
+1153  91 FD       STA ($FD),Y
+1155  18          CLC
+1156  AD B5 C7    LDA $C7B5
+1159  69 06       ADC #$06
+115B  A8          TAY
+115C  B9 04 38    LDA $3804,Y
+115F  A0 02       LDY #$02
+1161  91 FB       STA ($FB),Y
+1163  18          CLC
+1164  AD B5 C7    LDA $C7B5
+1167  69 06       ADC #$06
+1169  A8          TAY
+116A  B9 24 38    LDA $3824,Y
+116D  A0 02       LDY #$02
+116F  91 FD       STA ($FD),Y
+1171  18          CLC
+1172  AD B5 C7    LDA $C7B5
+1175  69 07       ADC #$07
+1177  A8          TAY
+1178  B9 04 38    LDA $3804,Y
+117B  A0 03       LDY #$03
+117D  91 FB       STA ($FB),Y
+117F  18          CLC
+1180  AD B5 C7    LDA $C7B5
+1183  69 07       ADC #$07
+1185  A8          TAY
+1186  B9 24 38    LDA $3824,Y
+1189  A0 03       LDY #$03
+118B  91 FD       STA ($FD),Y
+118D  60          RTS
+            ; Dynamic map 1: redraw visible cells from runtime RAM
+118E        runtime_map_redraw_1:
+118E  A9 00       LDA #$00
+1190  8D B3 C7    STA $C7B3
+1193        runtime_map_redraw_row_1:
+1193  A9 00       LDA #$00
+1195  8D B2 C7    STA $C7B2
+1198        runtime_map_redraw_column_1:
+1198  20 A9 0F    JSR runtime_map_draw_tile_1
+119B  EE B2 C7    INC $C7B2
+119E  AD B2 C7    LDA $C7B2
+11A1  C9 0A       CMP #$0A
+11A3  D0 F3       BNE runtime_map_redraw_column_1
+11A5  EE B3 C7    INC $C7B3
+11A8  AD B3 C7    LDA $C7B3
+11AB  C9 0A       CMP #$0A
+11AD  D0 E4       BNE runtime_map_redraw_row_1
+11AF  60          RTS
+            ; Map 2: restore its embedded cells into runtime RAM
+11B0        runtime_map_activate_2:
+11B0  A9 06       LDA #$06
+11B2  A2 F7       LDX #<disk_filename_5
+11B4  A0 14       LDY #>disk_filename_5
+11B6  20 0F 14    JSR runtime_disk_load_usr
+11B9  AD 7C C7    LDA $C77C
+11BC  D0 49       BNE runtime_map_activate_2_done
+11BE  A9 07       LDA #$07
+11C0  A2 FD       LDX #<disk_filename_6
+11C2  A0 14       LDY #>disk_filename_6
+11C4  20 0F 14    JSR runtime_disk_load_usr
+11C7  AD 7C C7    LDA $C77C
+11CA  D0 3B       BNE runtime_map_activate_2_done
+11CC  A9 08       LDA #$08
+11CE  A2 DB       LDX #<disk_filename_1
+11D0  A0 14       LDY #>disk_filename_1
+11D2  20 0F 14    JSR runtime_disk_load_usr
+11D5  AD 7C C7    LDA $C77C
+11D8  D0 2D       BNE runtime_map_activate_2_done
+11DA  A9 07       LDA #$07
+11DC  A2 19       LDX #<disk_filename_10
+11DE  A0 15       LDY #>disk_filename_10
+11E0  20 0F 14    JSR runtime_disk_load_usr
+11E3  AD 7C C7    LDA $C77C
+11E6  D0 1F       BNE runtime_map_activate_2_done
+11E8  AD 00 DD    LDA $DD00
+11EB  29 FC       AND #$FC
+11ED  09 03       ORA #$03
+11EF  8D 00 DD    STA $DD00
+11F2  AD 18 D0    LDA $D018
+11F5  29 F1       AND #$F1
+11F7  09 0C       ORA #$0C
+11F9  8D 18 D0    STA $D018
+11FC  AD 16 D0    LDA $D016
+11FF  29 EF       AND #$EF
+1201  8D 16 D0    STA $D016
+1204  20 ED 13    JSR runtime_map_redraw_2
+1207        runtime_map_activate_2_done:
+1207  60          RTS
+            ; Dynamic map 2: draw one changed metatile
+1208        runtime_map_draw_tile_2:
+1208  AD B2 C7    LDA $C7B2
+120B  8D C2 C7    STA $C7C2
+120E  AD B3 C7    LDA $C7B3
+1211  8D C3 C7    STA $C7C3
+1214        runtime_map_draw_tile_body_2:
+1214  A9 00       LDA #$00
+1216  8D B6 C7    STA $C7B6
+1219  A9 00       LDA #$00
+121B  8D BA C7    STA $C7BA
+121E  AD B3 C7    LDA $C7B3
+1221  8D B7 C7    STA $C7B7
+1224  A9 00       LDA #$00
+1226  8D BF C7    STA $C7BF
+1229  0E B7 C7    ASL $C7B7
+122C  2E BF C7    ROL $C7BF
+122F  18          CLC
+1230  AD B6 C7    LDA $C7B6
+1233  6D B7 C7    ADC $C7B7
+1236  8D B6 C7    STA $C7B6
+1239  AD BA C7    LDA $C7BA
+123C  6D BF C7    ADC $C7BF
+123F  8D BA C7    STA $C7BA
+1242  0E B7 C7    ASL $C7B7
+1245  2E BF C7    ROL $C7BF
+1248  0E B7 C7    ASL $C7B7
+124B  2E BF C7    ROL $C7BF
+124E  18          CLC
+124F  AD B6 C7    LDA $C7B6
+1252  6D B7 C7    ADC $C7B7
+1255  8D B6 C7    STA $C7B6
+1258  AD BA C7    LDA $C7BA
+125B  6D BF C7    ADC $C7BF
+125E  8D BA C7    STA $C7BA
+1261  18          CLC
+1262  AD B6 C7    LDA $C7B6
+1265  6D B2 C7    ADC $C7B2
+1268  8D B6 C7    STA $C7B6
+126B  AD BA C7    LDA $C7BA
+126E  69 00       ADC #$00
+1270  8D BA C7    STA $C7BA
+1273  18          CLC
+1274  AD B6 C7    LDA $C7B6
+1277  69 00       ADC #$00
+1279  85 FB       STA $FB
+127B  AD BA C7    LDA $C7BA
+127E  69 80       ADC #$80
+1280  85 FC       STA $FC
+1282  A0 00       LDY #$00
+1284  B1 FB       LDA ($FB),Y
+1286  8D B4 C7    STA $C7B4
+1289  AD B4 C7    LDA $C7B4
+128C  0A          ASL A
+128D  0A          ASL A
+128E  0A          ASL A
+128F  8D B5 C7    STA $C7B5
+1292  A9 00       LDA #$00
+1294  85 FB       STA $FB
+1296  A9 04       LDA #$04
+1298  85 FC       STA $FC
+129A  AD C3 C7    LDA $C7C3
+129D  8D B7 C7    STA $C7B7
+12A0        runtime_map_screen_y_loop_2:
+12A0  AD B7 C7    LDA $C7B7
+12A3  F0 13       BEQ runtime_map_screen_y_done_2
+12A5  18          CLC
+12A6  A5 FB       LDA $FB
+12A8  69 50       ADC #$50
+12AA  85 FB       STA $FB
+12AC  A5 FC       LDA $FC
+12AE  69 00       ADC #$00
+12B0  85 FC       STA $FC
+12B2  CE B7 C7    DEC $C7B7
+12B5  4C A0 12    JMP runtime_map_screen_y_loop_2
+12B8        runtime_map_screen_y_done_2:
+12B8  A9 00       LDA #$00
+12BA  8D B9 C7    STA $C7B9
+12BD  AD C2 C7    LDA $C7C2
+12C0  8D B7 C7    STA $C7B7
+12C3        runtime_map_screen_x_loop_2:
+12C3  AD B7 C7    LDA $C7B7
+12C6  F0 0F       BEQ runtime_map_screen_x_done_2
+12C8  18          CLC
+12C9  AD B9 C7    LDA $C7B9
+12CC  69 04       ADC #$04
+12CE  8D B9 C7    STA $C7B9
+12D1  CE B7 C7    DEC $C7B7
+12D4  4C C3 12    JMP runtime_map_screen_x_loop_2
+12D7        runtime_map_screen_x_done_2:
+12D7  18          CLC
+12D8  A5 FB       LDA $FB
+12DA  6D B9 C7    ADC $C7B9
+12DD  85 FB       STA $FB
+12DF  A5 FC       LDA $FC
+12E1  69 00       ADC #$00
+12E3  85 FC       STA $FC
+12E5  18          CLC
+12E6  A5 FB       LDA $FB
+12E8  69 00       ADC #$00
+12EA  85 FD       STA $FD
+12EC  A5 FC       LDA $FC
+12EE  69 D4       ADC #$D4
+12F0  85 FE       STA $FE
+12F2  18          CLC
+12F3  AD B5 C7    LDA $C7B5
+12F6  69 00       ADC #$00
+12F8  A8          TAY
+12F9  B9 04 38    LDA $3804,Y
+12FC  A0 00       LDY #$00
+12FE  91 FB       STA ($FB),Y
+1300  18          CLC
+1301  AD B5 C7    LDA $C7B5
+1304  69 00       ADC #$00
+1306  A8          TAY
+1307  B9 24 38    LDA $3824,Y
+130A  A0 00       LDY #$00
+130C  91 FD       STA ($FD),Y
+130E  18          CLC
+130F  AD B5 C7    LDA $C7B5
+1312  69 01       ADC #$01
+1314  A8          TAY
+1315  B9 04 38    LDA $3804,Y
+1318  A0 01       LDY #$01
+131A  91 FB       STA ($FB),Y
+131C  18          CLC
+131D  AD B5 C7    LDA $C7B5
+1320  69 01       ADC #$01
+1322  A8          TAY
+1323  B9 24 38    LDA $3824,Y
+1326  A0 01       LDY #$01
+1328  91 FD       STA ($FD),Y
+132A  18          CLC
+132B  AD B5 C7    LDA $C7B5
+132E  69 02       ADC #$02
+1330  A8          TAY
+1331  B9 04 38    LDA $3804,Y
+1334  A0 02       LDY #$02
+1336  91 FB       STA ($FB),Y
+1338  18          CLC
+1339  AD B5 C7    LDA $C7B5
+133C  69 02       ADC #$02
+133E  A8          TAY
+133F  B9 24 38    LDA $3824,Y
+1342  A0 02       LDY #$02
+1344  91 FD       STA ($FD),Y
+1346  18          CLC
+1347  AD B5 C7    LDA $C7B5
+134A  69 03       ADC #$03
+134C  A8          TAY
+134D  B9 04 38    LDA $3804,Y
+1350  A0 03       LDY #$03
+1352  91 FB       STA ($FB),Y
+1354  18          CLC
+1355  AD B5 C7    LDA $C7B5
+1358  69 03       ADC #$03
+135A  A8          TAY
+135B  B9 24 38    LDA $3824,Y
+135E  A0 03       LDY #$03
+1360  91 FD       STA ($FD),Y
+1362  18          CLC
+1363  A5 FB       LDA $FB
+1365  69 28       ADC #$28
+1367  85 FB       STA $FB
+1369  A5 FC       LDA $FC
+136B  69 00       ADC #$00
+136D  85 FC       STA $FC
+136F  18          CLC
+1370  A5 FD       LDA $FD
+1372  69 28       ADC #$28
+1374  85 FD       STA $FD
+1376  A5 FE       LDA $FE
+1378  69 00       ADC #$00
+137A  85 FE       STA $FE
+137C  18          CLC
+137D  AD B5 C7    LDA $C7B5
+1380  69 04       ADC #$04
+1382  A8          TAY
+1383  B9 04 38    LDA $3804,Y
+1386  A0 00       LDY #$00
+1388  91 FB       STA ($FB),Y
+138A  18          CLC
+138B  AD B5 C7    LDA $C7B5
+138E  69 04       ADC #$04
+1390  A8          TAY
+1391  B9 24 38    LDA $3824,Y
+1394  A0 00       LDY #$00
+1396  91 FD       STA ($FD),Y
+1398  18          CLC
+1399  AD B5 C7    LDA $C7B5
+139C  69 05       ADC #$05
+139E  A8          TAY
+139F  B9 04 38    LDA $3804,Y
+13A2  A0 01       LDY #$01
+13A4  91 FB       STA ($FB),Y
+13A6  18          CLC
+13A7  AD B5 C7    LDA $C7B5
+13AA  69 05       ADC #$05
+13AC  A8          TAY
+13AD  B9 24 38    LDA $3824,Y
+13B0  A0 01       LDY #$01
+13B2  91 FD       STA ($FD),Y
+13B4  18          CLC
+13B5  AD B5 C7    LDA $C7B5
+13B8  69 06       ADC #$06
+13BA  A8          TAY
+13BB  B9 04 38    LDA $3804,Y
+13BE  A0 02       LDY #$02
+13C0  91 FB       STA ($FB),Y
+13C2  18          CLC
+13C3  AD B5 C7    LDA $C7B5
+13C6  69 06       ADC #$06
+13C8  A8          TAY
+13C9  B9 24 38    LDA $3824,Y
+13CC  A0 02       LDY #$02
+13CE  91 FD       STA ($FD),Y
+13D0  18          CLC
+13D1  AD B5 C7    LDA $C7B5
+13D4  69 07       ADC #$07
+13D6  A8          TAY
+13D7  B9 04 38    LDA $3804,Y
+13DA  A0 03       LDY #$03
+13DC  91 FB       STA ($FB),Y
+13DE  18          CLC
+13DF  AD B5 C7    LDA $C7B5
+13E2  69 07       ADC #$07
+13E4  A8          TAY
+13E5  B9 24 38    LDA $3824,Y
+13E8  A0 03       LDY #$03
+13EA  91 FD       STA ($FD),Y
+13EC  60          RTS
+            ; Dynamic map 2: redraw visible cells from runtime RAM
+13ED        runtime_map_redraw_2:
+13ED  A9 00       LDA #$00
+13EF  8D B3 C7    STA $C7B3
+13F2        runtime_map_redraw_row_2:
+13F2  A9 00       LDA #$00
+13F4  8D B2 C7    STA $C7B2
+13F7        runtime_map_redraw_column_2:
+13F7  20 08 12    JSR runtime_map_draw_tile_2
+13FA  EE B2 C7    INC $C7B2
+13FD  AD B2 C7    LDA $C7B2
+1400  C9 0A       CMP #$0A
+1402  D0 F3       BNE runtime_map_redraw_column_2
+1404  EE B3 C7    INC $C7B3
+1407  AD B3 C7    LDA $C7B3
+140A  C9 0A       CMP #$0A
+140C  D0 E4       BNE runtime_map_redraw_row_2
+140E  60          RTS
+            ; Load one load-address PRG data module through the C64 KERNAL
+140F        runtime_disk_load_usr:
+140F  20 BD FF    JSR $FFBD
+1412  A9 01       LDA #$01
+1414  A2 08       LDX #$08
+1416  A0 01       LDY #$01
+1418  20 BA FF    JSR $FFBA
+141B  08          PHP
+141C  78          SEI
+141D  A9 00       LDA #$00
+141F  A2 00       LDX #$00
+1421  A0 00       LDY #$00
+1423  20 D5 FF    JSR $FFD5
+1426  B0 07       BCS runtime_disk_load_error
+1428  A9 00       LDA #$00
+142A  8D 7C C7    STA $C77C
+142D  28          PLP
+142E  60          RTS
+142F        runtime_disk_load_error:
+142F  8D 7C C7    STA $C77C
+1432  A9 02       LDA #$02
+1434  8D 20 D0    STA $D020
+1437  A9 00       LDA #$00
+1439  8D 21 D0    STA $D021
+143C  AD 18 D0    LDA $D018
+143F  29 F1       AND #$F1
+1441  09 04       ORA #$04
+1443  8D 18 D0    STA $D018
+1446  AD 16 D0    LDA $D016
+1449  29 EF       AND #$EF
+144B  8D 16 D0    STA $D016
+144E  A9 04       LDA #$04
+1450  8D 00 04    STA $0400
+1453  A9 01       LDA #$01
+1455  8D 00 D8    STA $D800
+1458  A9 09       LDA #$09
+145A  8D 01 04    STA $0401
+145D  A9 01       LDA #$01
+145F  8D 01 D8    STA $D801
+1462  A9 13       LDA #$13
+1464  8D 02 04    STA $0402
+1467  A9 01       LDA #$01
+1469  8D 02 D8    STA $D802
+146C  A9 0B       LDA #$0B
+146E  8D 03 04    STA $0403
+1471  A9 01       LDA #$01
+1473  8D 03 D8    STA $D803
+1476  A9 20       LDA #$20
+1478  8D 04 04    STA $0404
+147B  A9 01       LDA #$01
+147D  8D 04 D8    STA $D804
+1480  A9 05       LDA #$05
+1482  8D 05 04    STA $0405
+1485  A9 01       LDA #$01
+1487  8D 05 D8    STA $D805
+148A  A9 12       LDA #$12
+148C  8D 06 04    STA $0406
+148F  A9 01       LDA #$01
+1491  8D 06 D8    STA $D806
+1494  A9 12       LDA #$12
+1496  8D 07 04    STA $0407
+1499  A9 01       LDA #$01
+149B  8D 07 D8    STA $D807
+149E  A9 0F       LDA #$0F
+14A0  8D 08 04    STA $0408
+14A3  A9 01       LDA #$01
+14A5  8D 08 D8    STA $D808
+14A8  A9 12       LDA #$12
+14AA  8D 09 04    STA $0409
+14AD  A9 01       LDA #$01
+14AF  8D 09 D8    STA $D809
+14B2  28          PLP
+14B3  60          RTS
+            ; String pool
+14B4        str_screen_0:
+14B4  0D 15 0C 14 09 0C 05 16 05 0C 20 04 36 34 00 .byte $0D, $15, $0C, $14, $09, $0C, $05, $16, $05, $0C, $20, $04, $36, $34, $00
+14C3        str_screen_1:
+14C3  06 09 12 05 20 10 0F 15 12 20 03 08 01 12 07 05 12 00 .byte $06, $09, $12, $05, $20, $10, $0F, $15, $12, $20, $03, $08, $01, $12, $07, $05, $12, $00
+            ; User data
+14D5        disk_filename_0:
+14D5  4C 45 56 45 4C 30 .byte $4C, $45, $56, $45, $4C, $30
+14DB        disk_filename_1:
+14DB  43 48 41 52 53 45 54 30 .byte $43, $48, $41, $52, $53, $45, $54, $30
+14E3        disk_filename_2:
+14E3  54 41 42 4C 45 53 30 .byte $54, $41, $42, $4C, $45, $53, $30
+14EA        disk_filename_3:
+14EA  4C 45 56 45 4C 31 .byte $4C, $45, $56, $45, $4C, $31
+14F0        disk_filename_4:
+14F0  54 41 42 4C 45 53 31 .byte $54, $41, $42, $4C, $45, $53, $31
+14F7        disk_filename_5:
+14F7  4C 45 56 45 4C 32 .byte $4C, $45, $56, $45, $4C, $32
+14FD        disk_filename_6:
+14FD  54 41 42 4C 45 53 32 .byte $54, $41, $42, $4C, $45, $53, $32
+1504        disk_filename_7:
+1504  53 50 52 49 54 45 30 .byte $53, $50, $52, $49, $54, $45, $30
+150B        disk_filename_8:
+150B  53 50 52 49 54 45 31 .byte $53, $50, $52, $49, $54, $45, $31
+1512        disk_filename_9:
+1512  53 50 52 49 54 45 32 .byte $53, $50, $52, $49, $54, $45, $32
+1519        disk_filename_10:
+1519  53 50 52 49 54 45 33 .byte $53, $50, $52, $49, $54, $45, $33

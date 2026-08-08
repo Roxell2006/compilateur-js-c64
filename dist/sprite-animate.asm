@@ -39,6 +39,17 @@ copydata_3040_sprite_frames_balloon_1_63_1:
   STA $D027
   LDA #$00
   STA $C400
+  STA $C401
+  STA $C402
+  STA $C403
+  LDA $C400
+  CMP #$00
+  BNE sprite_play_start_0_0_2
+  LDA $C403
+  BNE sprite_play_done_0_0_3
+sprite_play_start_0_0_2:
+  LDA #$00
+  STA $C400
   LDA #$00
   STA $C401
   LDA #$00
@@ -49,6 +60,7 @@ copydata_3040_sprite_frames_balloon_1_63_1:
   STA $C404
   LDA $C404
   STA $07F8
+sprite_play_done_0_0_3:
   LDA #$93
   JSR $FFD2
   LDA #$0E
@@ -58,25 +70,25 @@ copydata_3040_sprite_frames_balloon_1_63_1:
   LDA #$01
   STA $0286
   LDX #$00
-printat_loop_2:
+printat_loop_4:
   LDA str_screen_0,X
-  BEQ printat_done_3
+  BEQ printat_done_5
   STA $0431,X
   LDA #$01
   STA $D831,X
   INX
-  BNE printat_loop_2
-printat_done_3:
+  BNE printat_loop_4
+printat_done_5:
   LDX #$00
-printat_loop_4:
+printat_loop_6:
   LDA str_screen_1,X
-  BEQ printat_done_5
+  BEQ printat_done_7
   STA $0483,X
   LDA #$01
   STA $D883,X
   INX
-  BNE printat_loop_4
-printat_done_5:
+  BNE printat_loop_6
+printat_done_7:
 ; Deterministic game frame loop
   LDA #$00
   STA $C76A
@@ -125,59 +137,59 @@ game_frame_logical_tick:
   SBC $C76F
   STA $C770
   INC $C76A
-  BNE game_frame_counter_done_6
+  BNE game_frame_counter_done_8
   INC $C76B
-game_frame_counter_done_6:
+game_frame_counter_done_8:
   LDA $C505
-  BNE sprite_update_active_0_8
-  JMP sprite_update_inactive_0_7
-sprite_update_active_0_8:
+  BNE sprite_update_active_0_10
+  JMP sprite_update_inactive_0_9
+sprite_update_active_0_10:
   CLC
   LDA $C500
   ADC $C503
   STA $C500
   LDA $C503
-  BPL sprite_vx_positive_9
+  BPL sprite_vx_positive_11
   LDA $C501
   ADC #$FF
-  JMP sprite_vx_done_9
-sprite_vx_positive_9:
+  JMP sprite_vx_done_11
+sprite_vx_positive_11:
   LDA $C501
   ADC #$00
-sprite_vx_done_9:
+sprite_vx_done_11:
   STA $C501
   LDA $C504
-  BPL sprite_vy_positive_10
+  BPL sprite_vy_positive_12
   CLC
   LDA $C502
   ADC $C504
-  BCC sprite_vy_clamp_min_10
-  JMP sprite_vy_store_10
-sprite_vy_positive_10:
+  BCC sprite_vy_clamp_min_12
+  JMP sprite_vy_store_12
+sprite_vy_positive_12:
   CLC
   LDA $C502
   ADC $C504
-  BCS sprite_vy_clamp_max_10
-sprite_vy_store_10:
+  BCS sprite_vy_clamp_max_12
+sprite_vy_store_12:
   STA $C502
-  JMP sprite_vy_done_10
-sprite_vy_clamp_min_10:
+  JMP sprite_vy_done_12
+sprite_vy_clamp_min_12:
   LDA #$46
   STA $C502
-  JMP sprite_vy_done_10
-sprite_vy_clamp_max_10:
+  JMP sprite_vy_done_12
+sprite_vy_clamp_max_12:
   LDA #$78
   STA $C502
-sprite_vy_done_10:
+sprite_vy_done_12:
   LDA $C501
-  BMI sprite_x_clamp_min_11
+  BMI sprite_x_clamp_min_13
   CMP #$00
-  BCC sprite_x_clamp_min_11
-  BNE sprite_x_min_ok_11
+  BCC sprite_x_clamp_min_13
+  BNE sprite_x_min_ok_13
   LDA $C500
   CMP #$18
-  BCS sprite_x_min_ok_11
-sprite_x_clamp_min_11:
+  BCS sprite_x_min_ok_13
+sprite_x_clamp_min_13:
   LDA #$18
   STA $C500
   LDA #$00
@@ -186,16 +198,16 @@ sprite_x_clamp_min_11:
   SEC
   SBC $C503
   STA $C503
-sprite_x_min_ok_11:
+sprite_x_min_ok_13:
   LDA $C501
   CMP #$01
-  BCC sprite_x_max_ok_11
-  BNE sprite_x_clamp_max_11
+  BCC sprite_x_max_ok_13
+  BNE sprite_x_clamp_max_13
   LDA $C500
   CMP #$40
-  BCC sprite_x_max_ok_11
-  BEQ sprite_x_max_ok_11
-sprite_x_clamp_max_11:
+  BCC sprite_x_max_ok_13
+  BEQ sprite_x_max_ok_13
+sprite_x_clamp_max_13:
   LDA #$40
   STA $C500
   LDA #$01
@@ -204,62 +216,62 @@ sprite_x_clamp_max_11:
   SEC
   SBC $C503
   STA $C503
-sprite_x_max_ok_11:
+sprite_x_max_ok_13:
   LDA $C502
   CMP #$46
-  BCS sprite_y_min_ok_11
+  BCS sprite_y_min_ok_13
   LDA #$46
   STA $C502
-sprite_y_min_ok_11:
+sprite_y_min_ok_13:
   LDA $C502
   CMP #$78
-  BCC sprite_y_max_ok_11
-  BEQ sprite_y_max_ok_11
+  BCC sprite_y_max_ok_13
+  BEQ sprite_y_max_ok_13
   LDA #$78
   STA $C502
-sprite_y_max_ok_11:
-sprite_update_inactive_0_7:
+sprite_y_max_ok_13:
+sprite_update_inactive_0_9:
   LDA $C403
-  BNE sprite_anim_active_0_13
-  JMP sprite_anim_done_0_12
-sprite_anim_active_0_13:
+  BNE sprite_anim_active_0_15
+  JMP sprite_anim_done_0_14
+sprite_anim_active_0_15:
   LDA $C400
   CMP #$00
-  BNE sprite_anim_next_seq_0_0_14
+  BNE sprite_anim_next_seq_0_0_16
   INC $C402
   LDA $C402
   CMP #$06
-  BCS sprite_anim_advance_0_0_15
-  JMP sprite_anim_done_0_12
-sprite_anim_advance_0_0_15:
+  BCS sprite_anim_advance_0_0_17
+  JMP sprite_anim_done_0_14
+sprite_anim_advance_0_0_17:
   LDA #$00
   STA $C402
   INC $C401
   LDA $C401
   CMP #$02
-  BCC sprite_anim_pos_ok_0_0_16
+  BCC sprite_anim_pos_ok_0_0_18
   LDA #$00
   STA $C401
-sprite_anim_pos_ok_0_0_16:
+sprite_anim_pos_ok_0_0_18:
   LDX $C401
   LDA sprite_sequence_0_walk,X
   STA $C404
   LDA $C404
   STA $07F8
-  JMP sprite_anim_done_0_12
-sprite_anim_next_seq_0_0_14:
-sprite_anim_done_0_12:
+  JMP sprite_anim_done_0_14
+sprite_anim_next_seq_0_0_16:
+sprite_anim_done_0_14:
   JSR runtime_sprite_sync_0
   JMP game_frame_loop
 ; Shared VIC-II synchronization for sprite 0
 runtime_sprite_sync_0:
   LDA $C505
-  BNE sprite_runtime_active_0_17
+  BNE sprite_runtime_active_0_19
   LDA $D015
   AND #$FE
   STA $D015
-  JMP sprite_runtime_sync_done_0_20
-sprite_runtime_active_0_17:
+  JMP sprite_runtime_sync_done_0_22
+sprite_runtime_active_0_19:
   LDA $D015
   ORA #$01
   STA $D015
@@ -267,19 +279,19 @@ sprite_runtime_active_0_17:
   STA $D000
   LDA $C501
   AND #$01
-  BNE sprite_runtime_xhigh_0_18
+  BNE sprite_runtime_xhigh_0_20
   LDA $D010
   AND #$FE
   STA $D010
-  JMP sprite_runtime_xdone_0_19
-sprite_runtime_xhigh_0_18:
+  JMP sprite_runtime_xdone_0_21
+sprite_runtime_xhigh_0_20:
   LDA $D010
   ORA #$01
   STA $D010
-sprite_runtime_xdone_0_19:
+sprite_runtime_xdone_0_21:
   LDA $C502
   STA $D001
-sprite_runtime_sync_done_0_20:
+sprite_runtime_sync_done_0_22:
   RTS
 ; String pool
 str_screen_0:

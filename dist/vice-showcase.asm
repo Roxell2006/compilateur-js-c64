@@ -46,6 +46,8 @@ printat_loop_6:
   INX
   BNE printat_loop_6
 printat_done_7:
+  LDA #$05
+  STA $C001
   LDA #$00
   STA $C0FE
   SEI
@@ -63,8 +65,6 @@ printat_done_7:
   LDA #>irq_dispatch
   STA $0315
   CLI
-  LDA #$05
-  STA $C001
   JMP program_end
 ; Raster IRQ dispatcher
 irq_dispatch:

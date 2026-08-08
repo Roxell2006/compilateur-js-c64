@@ -5,13 +5,23 @@ on:
   pull_request:
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  release-check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: [18, 20, 22]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node }}
           cache: npm
-      - run: npm install
-      - run: npm test
+      - run: npm ci
+      - run: npm run release:check
+      - uses: actions/upload-artifact@v4
+        if: matrix.os == 'ubuntu-latest' && matrix.node == 22
+        with:
+          name: js-c64-release-candidate
+          path: dist/release/

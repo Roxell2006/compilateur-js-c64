@@ -3,4 +3,5 @@ export { c64, C64_CONSTANTS, getProgramState, resetRuntime } from "./c64.js";
 export { compileFile, compileInstructions, compileJsToC64Outputs, compileJsToBasicData } from "./compiler.js";
 export { createBasicSysStub } from "./basicStub.js";
 export { createPrg, createRawBinary, createBasicDataProgram } from "./prgWriter.js";
+export { createD64, d64SectorOffset, D64_SIZE } from "./d64Writer.js";
 export { loadMapAsset, normalizeMapAsset, expandMapAsset, loadSpriteAsset, normalizeSpriteAsset } from "./assets.js";

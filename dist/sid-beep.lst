@@ -2,7 +2,7 @@
 0812  20 D2 FF    JSR $FFD2
 0815  A2 00       LDX #$00
 0817        printat_loop_0:
-0817  BD 99 09    LDA str_screen_0,X
+0817  BD E4 09    LDA str_screen_0,X
 081A  F0 0B       BEQ printat_done_1
 081C  9D 00 04    STA $0400,X
 081F  A9 01       LDA #$01
@@ -12,7 +12,7 @@
 0827        printat_done_1:
 0827  A2 00       LDX #$00
 0829        printat_loop_2:
-0829  BD A4 09    LDA str_screen_1,X
+0829  BD EF 09    LDA str_screen_1,X
 082C  F0 0B       BEQ printat_done_3
 082E  9D 50 04    STA $0450,X
 0831  A9 01       LDA #$01
@@ -44,172 +44,209 @@
 086D  8D 13 D4    STA $D413
 0870  A9 A0       LDA #$A0
 0872  8D 14 D4    STA $D414
-0875  A9 00       LDA #$00
-0877  8D 63 C7    STA $C763
-087A  A9 00       LDA #$00
-087C  8D 64 C7    STA $C764
-087F  A9 01       LDA #$01
-0881  8D 65 C7    STA $C765
-0884  78          SEI
-0885  A9 01       LDA #$01
-0887  8D 1A D0    STA $D01A
-088A  A9 01       LDA #$01
-088C  8D 19 D0    STA $D019
-088F  A9 FA       LDA #$FA
-0891  8D 12 D0    STA $D012
-0894  AD 11 D0    LDA $D011
-0897  29 7F       AND #$7F
-0899  8D 11 D0    STA $D011
-089C  A9 AA       LDA #<sid_player_irq
-089E  8D 14 03    STA $0314
-08A1  A9 08       LDA #>sid_player_irq
-08A3  8D 15 03    STA $0315
-08A6  58          CLI
-08A7  4C 98 09    JMP program_end_after_sid_player
+0875  A9 3C       LDA #$3C
+0877  8D 6F C7    STA $C76F
+087A        sid_video_detect_low:
+087A  AD 11 D0    LDA $D011
+087D  30 FB       BMI sid_video_detect_low
+087F        sid_video_detect_high:
+087F  AD 11 D0    LDA $D011
+0882  10 FB       BPL sid_video_detect_high
+0884        sid_video_detect_scan:
+0884  AD 11 D0    LDA $D011
+0887  10 0F       BPL sid_video_detect_done
+0889  AD 12 D0    LDA $D012
+088C  C9 20       CMP #$20
+088E  B0 03       BCS sid_video_detect_pal
+0890  4C 84 08    JMP sid_video_detect_scan
+0893        sid_video_detect_pal:
+0893  A9 32       LDA #$32
+0895  8D 6F C7    STA $C76F
+0898        sid_video_detect_done:
+0898  A9 00       LDA #$00
+089A  8D 63 C7    STA $C763
+089D  A9 00       LDA #$00
+089F  8D 64 C7    STA $C764
+08A2  A9 00       LDA #$00
+08A4  8D 71 C7    STA $C771
+08A7  A9 0F       LDA #$0F
+08A9  8D 72 C7    STA $C772
+08AC  A9 00       LDA #$00
+08AE  8D 76 C7    STA $C776
+08B1  A9 01       LDA #$01
+08B3  8D 65 C7    STA $C765
+08B6  78          SEI
+08B7  A9 01       LDA #$01
+08B9  8D 1A D0    STA $D01A
+08BC  A9 01       LDA #$01
+08BE  8D 19 D0    STA $D019
+08C1  A9 FA       LDA #$FA
+08C3  8D 12 D0    STA $D012
+08C6  AD 11 D0    LDA $D011
+08C9  29 7F       AND #$7F
+08CB  8D 11 D0    STA $D011
+08CE  A9 DC       LDA #<sid_player_irq
+08D0  8D 14 03    STA $0314
+08D3  A9 08       LDA #>sid_player_irq
+08D5  8D 15 03    STA $0315
+08D8  58          CLI
+08D9  4C E3 09    JMP program_end_after_sid_player
             ; SID player IRQ
-08AA        sid_player_irq:
-08AA  48          PHA
-08AB  8A          TXA
-08AC  48          PHA
-08AD  98          TYA
-08AE  48          PHA
-08AF  AD 19 D0    LDA $D019
-08B2  29 01       AND #$01
-08B4  D0 08       BNE sid_player_vic_raster
-08B6  68          PLA
-08B7  A8          TAY
-08B8  68          PLA
-08B9  AA          TAX
-08BA  68          PLA
-08BB  4C 31 EA    JMP $EA31
-08BE        sid_player_vic_raster:
-08BE  A9 01       LDA #$01
-08C0  8D 19 D0    STA $D019
-08C3  AD 65 C7    LDA $C765
-08C6  F0 0B       BEQ sid_irq_done_jump_2
-08C8  AD 64 C7    LDA $C764
-08CB  F0 09       BEQ sid_irq_process_jump_2
-08CD  CE 64 C7    DEC $C764
-08D0  4C 83 09    JMP sid_irq_done_2
-08D3        sid_irq_done_jump_2:
-08D3  4C 83 09    JMP sid_irq_done_2
-08D6        sid_irq_process_jump_2:
-08D6  4C D9 08    JMP sid_irq_process_2
-08D9        sid_irq_process_2:
-08D9  AE 63 C7    LDX $C763
-08DC  E0 08       CPX #$08
-08DE  D0 03       BNE sid_irq_stop_continue_2
-08E0  4C 6C 09    JMP sid_irq_stop_2
-08E3        sid_irq_stop_continue_2:
-08E3  BD AB 09    LDA sid_song_irq_2_v1_action,X
-08E6  F0 1D       BEQ sid_irq_voice1_rest_2
-08E8  C9 01       CMP #$01
-08EA  F0 21       BEQ sid_irq_voice1_hold_2
-08EC  BD B3 09    LDA sid_song_irq_2_v1_lo,X
-08EF  8D 00 D4    STA $D400
-08F2  BD BB 09    LDA sid_song_irq_2_v1_hi,X
-08F5  8D 01 D4    STA $D401
-08F8  A9 40       LDA #$40
-08FA  8D 04 D4    STA $D404
-08FD  A9 41       LDA #$41
-08FF  8D 04 D4    STA $D404
-0902  4C 0D 09    JMP sid_irq_voice1_done_2
-0905        sid_irq_voice1_rest_2:
-0905  A9 40       LDA #$40
-0907  8D 04 D4    STA $D404
-090A  4C 0D 09    JMP sid_irq_voice1_done_2
-090D        sid_irq_voice1_hold_2:
+08DC        sid_player_irq:
+08DC  48          PHA
+08DD  8A          TXA
+08DE  48          PHA
+08DF  98          TYA
+08E0  48          PHA
+08E1  AD 19 D0    LDA $D019
+08E4  29 01       AND #$01
+08E6  D0 08       BNE sid_player_vic_raster
+08E8  68          PLA
+08E9  A8          TAY
+08EA  68          PLA
+08EB  AA          TAX
+08EC  68          PLA
+08ED  4C 31 EA    JMP $EA31
+08F0        sid_player_vic_raster:
+08F0  A9 01       LDA #$01
+08F2  8D 19 D0    STA $D019
+08F5  AD 65 C7    LDA $C765
+08F8  C9 01       CMP #$01
+08FA  D0 22       BNE sid_irq_done_jump_2
+08FC  AD 71 C7    LDA $C771
+08FF  18          CLC
+0900  69 32       ADC #$32
+0902  8D 71 C7    STA $C771
+0905  CD 6F C7    CMP $C76F
+0908  B0 03       BCS sid_irq_rate_continue_2
+090A  4C CE 09    JMP sid_irq_done_2
+090D        sid_irq_rate_continue_2:
+090D  ED 6F C7    SBC $C76F
+0910  8D 71 C7    STA $C771
+0913  AD 64 C7    LDA $C764
+0916  F0 09       BEQ sid_irq_process_jump_2
+0918  CE 64 C7    DEC $C764
+091B  4C CE 09    JMP sid_irq_done_2
+091E        sid_irq_done_jump_2:
+091E  4C CE 09    JMP sid_irq_done_2
+0921        sid_irq_process_jump_2:
+0921  4C 24 09    JMP sid_irq_process_2
+0924        sid_irq_process_2:
+0924  AE 63 C7    LDX $C763
+0927  E0 08       CPX #$08
+0929  D0 03       BNE sid_irq_stop_continue_2
+092B  4C B7 09    JMP sid_irq_stop_2
+092E        sid_irq_stop_continue_2:
+092E        sid_irq_loop_continue_2:
+092E  BD F6 09    LDA sid_song_irq_2_v1_action,X
+0931  F0 1D       BEQ sid_irq_voice1_rest_2
+0933  C9 01       CMP #$01
+0935  F0 21       BEQ sid_irq_voice1_hold_2
+0937  BD FE 09    LDA sid_song_irq_2_v1_lo,X
+093A  8D 00 D4    STA $D400
+093D  BD 06 0A    LDA sid_song_irq_2_v1_hi,X
+0940  8D 01 D4    STA $D401
+0943  A9 40       LDA #$40
+0945  8D 04 D4    STA $D404
+0948  A9 41       LDA #$41
+094A  8D 04 D4    STA $D404
+094D  4C 58 09    JMP sid_irq_voice1_done_2
+0950        sid_irq_voice1_rest_2:
+0950  A9 40       LDA #$40
+0952  8D 04 D4    STA $D404
+0955  4C 58 09    JMP sid_irq_voice1_done_2
+0958        sid_irq_voice1_hold_2:
             ; hold sid voice 1
-090D        sid_irq_voice1_done_2:
-090D  BD C3 09    LDA sid_song_irq_2_v2_action,X
-0910  F0 1D       BEQ sid_irq_voice2_rest_2
-0912  C9 01       CMP #$01
-0914  F0 21       BEQ sid_irq_voice2_hold_2
-0916  BD CB 09    LDA sid_song_irq_2_v2_lo,X
-0919  8D 07 D4    STA $D407
-091C  BD D3 09    LDA sid_song_irq_2_v2_hi,X
-091F  8D 08 D4    STA $D408
-0922  A9 10       LDA #$10
-0924  8D 0B D4    STA $D40B
-0927  A9 11       LDA #$11
-0929  8D 0B D4    STA $D40B
-092C  4C 37 09    JMP sid_irq_voice2_done_2
-092F        sid_irq_voice2_rest_2:
-092F  A9 10       LDA #$10
-0931  8D 0B D4    STA $D40B
-0934  4C 37 09    JMP sid_irq_voice2_done_2
-0937        sid_irq_voice2_hold_2:
+0958        sid_irq_voice1_done_2:
+0958  BD 0E 0A    LDA sid_song_irq_2_v2_action,X
+095B  F0 1D       BEQ sid_irq_voice2_rest_2
+095D  C9 01       CMP #$01
+095F  F0 21       BEQ sid_irq_voice2_hold_2
+0961  BD 16 0A    LDA sid_song_irq_2_v2_lo,X
+0964  8D 07 D4    STA $D407
+0967  BD 1E 0A    LDA sid_song_irq_2_v2_hi,X
+096A  8D 08 D4    STA $D408
+096D  A9 10       LDA #$10
+096F  8D 0B D4    STA $D40B
+0972  A9 11       LDA #$11
+0974  8D 0B D4    STA $D40B
+0977  4C 82 09    JMP sid_irq_voice2_done_2
+097A        sid_irq_voice2_rest_2:
+097A  A9 10       LDA #$10
+097C  8D 0B D4    STA $D40B
+097F  4C 82 09    JMP sid_irq_voice2_done_2
+0982        sid_irq_voice2_hold_2:
             ; hold sid voice 2
-0937        sid_irq_voice2_done_2:
-0937  BD DB 09    LDA sid_song_irq_2_v3_action,X
-093A  F0 1D       BEQ sid_irq_voice3_rest_2
-093C  C9 01       CMP #$01
-093E  F0 21       BEQ sid_irq_voice3_hold_2
-0940  BD E3 09    LDA sid_song_irq_2_v3_lo,X
-0943  8D 0E D4    STA $D40E
-0946  BD EB 09    LDA sid_song_irq_2_v3_hi,X
-0949  8D 0F D4    STA $D40F
-094C  A9 20       LDA #$20
-094E  8D 12 D4    STA $D412
-0951  A9 21       LDA #$21
-0953  8D 12 D4    STA $D412
-0956  4C 61 09    JMP sid_irq_voice3_done_2
-0959        sid_irq_voice3_rest_2:
-0959  A9 20       LDA #$20
-095B  8D 12 D4    STA $D412
-095E  4C 61 09    JMP sid_irq_voice3_done_2
-0961        sid_irq_voice3_hold_2:
+0982        sid_irq_voice2_done_2:
+0982  BD 26 0A    LDA sid_song_irq_2_v3_action,X
+0985  F0 1D       BEQ sid_irq_voice3_rest_2
+0987  C9 01       CMP #$01
+0989  F0 21       BEQ sid_irq_voice3_hold_2
+098B  BD 2E 0A    LDA sid_song_irq_2_v3_lo,X
+098E  8D 0E D4    STA $D40E
+0991  BD 36 0A    LDA sid_song_irq_2_v3_hi,X
+0994  8D 0F D4    STA $D40F
+0997  A9 20       LDA #$20
+0999  8D 12 D4    STA $D412
+099C  A9 21       LDA #$21
+099E  8D 12 D4    STA $D412
+09A1  4C AC 09    JMP sid_irq_voice3_done_2
+09A4        sid_irq_voice3_rest_2:
+09A4  A9 20       LDA #$20
+09A6  8D 12 D4    STA $D412
+09A9  4C AC 09    JMP sid_irq_voice3_done_2
+09AC        sid_irq_voice3_hold_2:
             ; hold sid voice 3
-0961        sid_irq_voice3_done_2:
-0961  EE 63 C7    INC $C763
-0964  A9 18       LDA #$18
-0966  8D 64 C7    STA $C764
-0969  4C 83 09    JMP sid_irq_done_2
-096C        sid_irq_stop_2:
-096C  A9 00       LDA #$00
-096E  8D 65 C7    STA $C765
-0971  A9 40       LDA #$40
-0973  8D 04 D4    STA $D404
-0976  A9 10       LDA #$10
-0978  8D 0B D4    STA $D40B
-097B  A9 20       LDA #$20
-097D  8D 12 D4    STA $D412
-0980  4C 83 09    JMP sid_irq_done_2
-0983        sid_irq_done_2:
-0983  A9 FA       LDA #$FA
-0985  8D 12 D0    STA $D012
-0988  AD 11 D0    LDA $D011
-098B  29 7F       AND #$7F
-098D  8D 11 D0    STA $D011
-0990  68          PLA
-0991  A8          TAY
-0992  68          PLA
-0993  AA          TAX
-0994  68          PLA
-0995  4C 81 EA    JMP $EA81
-0998        program_end_after_sid_player:
-0998  60          RTS
+09AC        sid_irq_voice3_done_2:
+09AC  EE 63 C7    INC $C763
+09AF  A9 17       LDA #$17
+09B1  8D 64 C7    STA $C764
+09B4  4C CE 09    JMP sid_irq_done_2
+09B7        sid_irq_stop_2:
+09B7  A9 00       LDA #$00
+09B9  8D 65 C7    STA $C765
+09BC  A9 40       LDA #$40
+09BE  8D 04 D4    STA $D404
+09C1  A9 10       LDA #$10
+09C3  8D 0B D4    STA $D40B
+09C6  A9 20       LDA #$20
+09C8  8D 12 D4    STA $D412
+09CB  4C CE 09    JMP sid_irq_done_2
+09CE        sid_irq_done_2:
+09CE  A9 FA       LDA #$FA
+09D0  8D 12 D0    STA $D012
+09D3  AD 11 D0    LDA $D011
+09D6  29 7F       AND #$7F
+09D8  8D 11 D0    STA $D011
+09DB  68          PLA
+09DC  A8          TAY
+09DD  68          PLA
+09DE  AA          TAX
+09DF  68          PLA
+09E0  4C 81 EA    JMP $EA81
+09E3        program_end_after_sid_player:
+09E3  60          RTS
             ; String pool
-0999        str_screen_0:
-0999  13 09 04 20 16 30 2E 36 2E 30 00 .byte $13, $09, $04, $20, $16, $30, $2E, $36, $2E, $30, $00
-09A4        str_screen_1:
-09A4  33 20 16 0F 09 18 00 .byte $33, $20, $16, $0F, $09, $18, $00
+09E4        str_screen_0:
+09E4  13 09 04 20 16 30 2E 36 2E 30 00 .byte $13, $09, $04, $20, $16, $30, $2E, $36, $2E, $30, $00
+09EF        str_screen_1:
+09EF  33 20 16 0F 09 18 00 .byte $33, $20, $16, $0F, $09, $18, $00
             ; User data
-09AB        sid_song_irq_2_v1_action:
-09AB  02 02 02 02 02 02 02 00 .byte $02, $02, $02, $02, $02, $02, $02, $00
-09B3        sid_song_irq_2_v1_lo:
-09B3  67 ED 13 CE 13 ED 67 00 .byte $67, $ED, $13, $CE, $13, $ED, $67, $00
-09BB        sid_song_irq_2_v1_hi:
-09BB  11 15 1A 22 1A 15 11 00 .byte $11, $15, $1A, $22, $1A, $15, $11, $00
-09C3        sid_song_irq_2_v2_action:
-09C3  02 01 02 01 02 01 02 01 .byte $02, $01, $02, $01, $02, $01, $02, $01
-09CB        sid_song_irq_2_v2_lo:
-09CB  B4 B4 85 85 7B 7B 5A 5A .byte $B4, $B4, $85, $85, $7B, $7B, $5A, $5A
-09D3        sid_song_irq_2_v2_hi:
-09D3  08 08 06 06 05 05 04 04 .byte $08, $08, $06, $06, $05, $05, $04, $04
-09DB        sid_song_irq_2_v3_action:
-09DB  02 00 02 00 02 00 02 00 .byte $02, $00, $02, $00, $02, $00, $02, $00
-09E3        sid_song_irq_2_v3_lo:
-09E3  CE 00 DA 00 26 00 DA 00 .byte $CE, $00, $DA, $00, $26, $00, $DA, $00
-09EB        sid_song_irq_2_v3_hi:
-09EB  22 00 2B 00 34 00 2B 00 .byte $22, $00, $2B, $00, $34, $00, $2B, $00
+09F6        sid_song_irq_2_v1_action:
+09F6  02 02 02 02 02 02 02 00 .byte $02, $02, $02, $02, $02, $02, $02, $00
+09FE        sid_song_irq_2_v1_lo:
+09FE  67 ED 13 CE 13 ED 67 00 .byte $67, $ED, $13, $CE, $13, $ED, $67, $00
+0A06        sid_song_irq_2_v1_hi:
+0A06  11 15 1A 22 1A 15 11 00 .byte $11, $15, $1A, $22, $1A, $15, $11, $00
+0A0E        sid_song_irq_2_v2_action:
+0A0E  02 01 02 01 02 01 02 01 .byte $02, $01, $02, $01, $02, $01, $02, $01
+0A16        sid_song_irq_2_v2_lo:
+0A16  B4 B4 85 85 7B 7B 5A 5A .byte $B4, $B4, $85, $85, $7B, $7B, $5A, $5A
+0A1E        sid_song_irq_2_v2_hi:
+0A1E  08 08 06 06 05 05 04 04 .byte $08, $08, $06, $06, $05, $05, $04, $04
+0A26        sid_song_irq_2_v3_action:
+0A26  02 00 02 00 02 00 02 00 .byte $02, $00, $02, $00, $02, $00, $02, $00
+0A2E        sid_song_irq_2_v3_lo:
+0A2E  CE 00 DA 00 26 00 DA 00 .byte $CE, $00, $DA, $00, $26, $00, $DA, $00
+0A36        sid_song_irq_2_v3_hi:
+0A36  22 00 2B 00 34 00 2B 00 .byte $22, $00, $2B, $00, $34, $00, $2B, $00

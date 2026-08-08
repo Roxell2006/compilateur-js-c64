@@ -46,25 +46,25 @@
 0869  E8          INX
 086A  D0 F0       BNE printat_loop_6
 086C        printat_done_7:
-086C  A9 00       LDA #$00
-086E  8D FE C0    STA $C0FE
-0871  78          SEI
-0872  A9 01       LDA #$01
-0874  8D 1A D0    STA $D01A
+086C  A9 05       LDA #$05
+086E  8D 01 C0    STA $C001
+0871  A9 00       LDA #$00
+0873  8D FE C0    STA $C0FE
+0876  78          SEI
 0877  A9 01       LDA #$01
-0879  8D 19 D0    STA $D019
-087C  A9 F5       LDA #$F5
-087E  8D 12 D0    STA $D012
-0881  AD 11 D0    LDA $D011
-0884  29 7F       AND #$7F
-0886  8D 11 D0    STA $D011
-0889  A9 9C       LDA #<irq_dispatch
-088B  8D 14 03    STA $0314
-088E  A9 08       LDA #>irq_dispatch
-0890  8D 15 03    STA $0315
-0893  58          CLI
-0894  A9 05       LDA #$05
-0896  8D 01 C0    STA $C001
+0879  8D 1A D0    STA $D01A
+087C  A9 01       LDA #$01
+087E  8D 19 D0    STA $D019
+0881  A9 F5       LDA #$F5
+0883  8D 12 D0    STA $D012
+0886  AD 11 D0    LDA $D011
+0889  29 7F       AND #$7F
+088B  8D 11 D0    STA $D011
+088E  A9 9C       LDA #<irq_dispatch
+0890  8D 14 03    STA $0314
+0893  A9 08       LDA #>irq_dispatch
+0895  8D 15 03    STA $0315
+0898  58          CLI
 0899  4C F2 08    JMP program_end
             ; Raster IRQ dispatcher
 089C        irq_dispatch:

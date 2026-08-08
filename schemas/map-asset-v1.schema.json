@@ -16,9 +16,10 @@
       ],
       "properties": {
         "mode": { "enum": ["hires", "multicolor"] },
+        "romCharacters": { "enum": [0, 64], "default": 64, "description": "Legacy override. By default, screen codes 0 to 63 are copied automatically from the C64 character ROM." },
         "characters": {
           "type": "array",
-          "minItems": 1,
+          "minItems": 0,
           "maxItems": 256,
           "items": {
             "type": "array",

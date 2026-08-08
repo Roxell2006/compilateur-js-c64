@@ -76,6 +76,21 @@ const INPUT_SAVE_DDRA = 0xc76d;
 const INPUT_SAVE_DDRB = 0xc76e;
 const GAME_VIDEO_HZ = 0xc76f;
 const GAME_RATE_ACCUMULATOR = 0xc770;
+const SID_PLAYER_RATE_ACCUMULATOR = 0xc771;
+const SID_PLAYER_VOLUME = 0xc772;
+const SID_FADE_TARGET = 0xc773;
+const SID_FADE_INTERVAL = 0xc774;
+const SID_FADE_COUNTER = 0xc775;
+const SID_FADE_ACTIVE = 0xc776;
+const ASSET_RLE_COUNT = 0xc777;
+const MAP_ACTIVE_ID = 0xc778;
+const MAP_PENDING_ID = 0xc779;
+const GAME_SCENE_CURRENT = 0xc77a;
+const GAME_SCENE_PENDING = 0xc77b;
+const GAME_SCENE_NONE = 0xff;
+const GAME_SCENE_IDS = Object.freeze({ title: 0, game: 1, pause: 2, gameOver: 3 });
+const DISK_LOAD_ERROR = 0xc77c;
+const GAME_RANDOM_STATE = 0xc77d;
 const KEYBOARD_CURRENT_BASE = 0xc780;
 const KEYBOARD_PREVIOUS_BASE = 0xc790;
 const MAX_KEYBOARD_ACTIONS = 16;
@@ -102,6 +117,10 @@ const SPRITE_MUX_FRAME_RASTER = 200;
 // 16-bit, so a level is no longer limited to a single 256-byte page.
 const MAP_RUNTIME_BASE = 0x8000;
 const MAP_RUNTIME_END = 0x9fff;
+// Disk levels reuse these small tables. They contain collision values and the
+// character/color cells needed by the renderer; only one level is active.
+const MAP_DISK_TABLE_BASE = 0x3800;
+const MAP_DISK_TABLE_END = 0x3fff;
 const COLLISION_TEMP_BASE = 0xc7a0;
 const VIC_SPRITE_COLLISION_SNAPSHOT = 0xc7b0;
 const VIC_BACKGROUND_COLLISION_SNAPSHOT = 0xc7b1;
@@ -142,7 +161,7 @@ const AUTO_VARIABLE_END = 0xc2ff;
 const RESERVED_RUNTIME_RANGES = Object.freeze([
   { start: c64.IRQ_STATE_INDEX, end: c64.IRQ_STATE_INDEX, name: "IRQ state" },
   { start: 0xc300, end: 0xc33f, name: "sprite animator" },
-  { start: 0xc738, end: GAME_RATE_ACCUMULATOR, name: "compiler runtime" },
+  { start: 0xc738, end: 0xc77f, name: "compiler runtime" },
   { start: KEYBOARD_CURRENT_BASE, end: KEYBOARD_PREVIOUS_BASE + MAX_KEYBOARD_ACTIONS - 1, name: "keyboard input runtime" },
   { start: SPRITE_RUNTIME_BASE, end: SPRITE_RUNTIME_BASE + SPRITE_RUNTIME_STRIDE * SPRITE_LOGICAL_COUNT - 1, name: "sprite gameplay runtime" },
   { start: SPRITE_LOGICAL_STATE_BASE, end: SPRITE_LOGICAL_STATE_BASE + SPRITE_LOGICAL_STATE_STRIDE * SPRITE_LOGICAL_COUNT - 1, name: "sprite logical state" },
@@ -165,7 +184,13 @@ const RUNTIME_RAM_LAYOUT = Object.freeze({
   sidPlayer: {
     stepIndex: SID_PLAYER_STEP_INDEX,
     tickCount: SID_PLAYER_TICK_COUNT,
-    playing: SID_PLAYER_PLAYING
+    playing: SID_PLAYER_PLAYING,
+    rateAccumulator: SID_PLAYER_RATE_ACCUMULATOR,
+    volume: SID_PLAYER_VOLUME,
+    fadeTarget: SID_FADE_TARGET,
+    fadeInterval: SID_FADE_INTERVAL,
+    fadeCounter: SID_FADE_COUNTER,
+    fadeActive: SID_FADE_ACTIVE
   },
   input: {
     joystick1: INPUT_JOYSTICK_1,
@@ -179,7 +204,9 @@ const RUNTIME_RAM_LAYOUT = Object.freeze({
     frameCounterLo: GAME_FRAME_COUNTER_LO,
     frameCounterHi: GAME_FRAME_COUNTER_HI,
     videoHz: GAME_VIDEO_HZ,
-    rateAccumulator: GAME_RATE_ACCUMULATOR
+    rateAccumulator: GAME_RATE_ACCUMULATOR,
+    sceneCurrent: GAME_SCENE_CURRENT,
+    scenePending: GAME_SCENE_PENDING
   },
   spriteAnimatorBase: 0xc300,
   hires: {
@@ -434,6 +461,64 @@ function normalizeSidSongEntry(entry) {
   throw new Error(`Unsupported SID song entry: ${JSON.stringify(entry)}`);
 }
 
+function expandSidSongEntries(source, context) {
+  if (source?.type === "sidPatternRepeat") {
+    ensurePositiveByte(source.count, "SID pattern repeat count");
+    const expanded = [];
+    for (let index = 0; index < source.count; index += 1) {
+      expanded.push(...expandSidSongEntries(source.pattern, context));
+    }
+    return expanded;
+  }
+  if (source?.type === "sidPattern") {
+    if (context.activePatterns.has(source)) {
+      throw new Error(`SID pattern ${source.name} recursively references itself`);
+    }
+    const previous = context.patterns.get(source.name);
+    if (previous && previous.pattern !== source) {
+      throw new Error(`Several different SID patterns use the name ${source.name}`);
+    }
+    const report = previous ?? { pattern: source, name: source.name, uses: 0, sourceEntries: source.entries.length };
+    report.uses += 1;
+    context.patterns.set(source.name, report);
+    context.activePatterns.add(source);
+    const expanded = expandSidSongEntries(source.entries, context);
+    context.activePatterns.delete(source);
+    return expanded;
+  }
+  if (Array.isArray(source)) {
+    return source.flatMap((entry) => expandSidSongEntries(entry, context));
+  }
+  return [normalizeSidSongEntry(source)];
+}
+
+function normalizeSidInstrument(instrument, voice) {
+  if (instrument === null || instrument === undefined) return null;
+  if (!instrument || typeof instrument !== "object" || Array.isArray(instrument)) {
+    throw new Error(`SID instrument for voice ${voice} must come from c64.sid.instrument()`);
+  }
+  const name = typeof instrument.name === "string" && instrument.name.trim()
+    ? instrument.name.trim()
+    : `voice-${voice}`;
+  const waveform = instrument.waveform ?? "triangle";
+  const control = sidWaveformToControl(waveform);
+  const attackDecay = instrument.attackDecay ?? 0x11;
+  const sustainRelease = instrument.sustainRelease ?? 0x88;
+  ensureByte(attackDecay, `SID instrument ${name} attackDecay`);
+  ensureByte(sustainRelease, `SID instrument ${name} sustainRelease`);
+  const pulseWidth = instrument.pulseWidth;
+  if (pulseWidth !== undefined) ensureSidPulseWidth(pulseWidth);
+  return {
+    type: "sidInstrument",
+    name,
+    waveform: String(waveform),
+    control,
+    pulseWidth: pulseWidth ?? null,
+    attackDecay,
+    sustainRelease
+  };
+}
+
 function buildSidSongSteps(songDefinition) {
   if (!songDefinition || typeof songDefinition !== "object") {
     throw new Error("c64.sid.playSong() expects a song object");
@@ -441,18 +526,21 @@ function buildSidSongSteps(songDefinition) {
 
   const tempo = songDefinition.tempo ?? 6;
   ensurePositiveByte(tempo, "SID song tempo");
+  const loop = songDefinition.loop === true;
   if (!Array.isArray(songDefinition.voices) || songDefinition.voices.length !== 3) {
     throw new Error("c64.sid.playSong() expects exactly 3 voices");
   }
 
-  const voices = songDefinition.voices.map((voiceEntries) => {
-    if (!Array.isArray(voiceEntries)) {
-      throw new Error("Each SID song voice must be an array");
-    }
+  const rawInstruments = songDefinition.instruments ?? [null, null, null];
+  if (!Array.isArray(rawInstruments) || rawInstruments.length !== 3) {
+    throw new Error("c64.sid.playSong() instruments must contain exactly 3 entries");
+  }
+  const instruments = rawInstruments.map((instrument, index) => normalizeSidInstrument(instrument, index + 1));
+  const patternContext = { patterns: new Map(), activePatterns: new Set() };
 
+  const voices = songDefinition.voices.map((voiceEntries) => {
     const steps = [];
-    for (const rawEntry of voiceEntries) {
-      const entry = normalizeSidSongEntry(rawEntry);
+    for (const entry of expandSidSongEntries(voiceEntries, patternContext)) {
       ensurePositiveByte(entry.duration, "SID song entry duration");
       const raw = sidNoteNameToRaw(entry.note);
       if (raw === null) {
@@ -478,7 +566,7 @@ function buildSidSongSteps(songDefinition) {
     throw new Error("c64.sid.playSong() currently supports up to 255 expanded steps");
   }
 
-  const expandedVoices = voices.map((voice) => {
+  let expandedVoices = voices.map((voice) => {
     const padded = voice.slice();
     while (padded.length < length) {
       padded.push({ action: 0, raw: 0 });
@@ -486,11 +574,43 @@ function buildSidSongSteps(songDefinition) {
     return {
       actionBytes: padded.map((step) => step.action & 0xff),
       freqLoBytes: padded.map((step) => step.raw & 0xff),
-      freqHiBytes: padded.map((step) => (step.raw >> 8) & 0xff)
+      freqHiBytes: padded.map((step) => (step.raw >> 8) & 0xff),
+      hasNotes: padded.some((step) => step.action === 2)
     };
   });
 
-  return { tempo, length, voices: expandedVoices };
+  let storedLength = length;
+  if (loop && length > 1) {
+    for (let period = 1; period < length; period += 1) {
+      if (length % period !== 0) continue;
+      const repeatsExactly = expandedVoices.every((voice) => (
+        voice.actionBytes.every((value, index) => value === voice.actionBytes[index % period])
+        && voice.freqLoBytes.every((value, index) => value === voice.freqLoBytes[index % period])
+        && voice.freqHiBytes.every((value, index) => value === voice.freqHiBytes[index % period])
+      ));
+      if (!repeatsExactly) continue;
+      storedLength = period;
+      expandedVoices = expandedVoices.map((voice) => ({
+        ...voice,
+        actionBytes: voice.actionBytes.slice(0, period),
+        freqLoBytes: voice.freqLoBytes.slice(0, period),
+        freqHiBytes: voice.freqHiBytes.slice(0, period)
+      }));
+      break;
+    }
+  }
+
+  const patterns = [...patternContext.patterns.values()].map(({ pattern, ...report }) => report);
+  return {
+    tempo,
+    length: storedLength,
+    expandedLength: length,
+    compactedRepeatSteps: length - storedLength,
+    loop,
+    voices: expandedVoices,
+    instruments,
+    patterns
+  };
 }
 
 function sidFrequencyToRaw(value) {
@@ -701,56 +821,64 @@ function emitSidRest(asm, compileState, voice, duration = 0) {
   emitSidDelay(asm, compileState, duration);
 }
 
+function sidEffectVoice(compileState) {
+  return compileState.sid.player.sfxVoice ?? 1;
+}
+
 function emitSidBeep(asm, compileState) {
+  const voice = sidEffectVoice(compileState);
   emitSidVolume(asm, compileState, 15);
-  emitSidVoiceWaveform(asm, compileState, 1, "pulse");
-  emitSidVoicePulseWidth(asm, 1, 0x0800);
-  emitSidVoiceAttackDecay(asm, 1, 0x11);
-  emitSidVoiceSustainRelease(asm, 1, 0xf0);
-  emitSidNote(asm, compileState, 1, "C5", 10);
+  emitSidVoiceWaveform(asm, compileState, voice, "pulse");
+  emitSidVoicePulseWidth(asm, voice, 0x0800);
+  emitSidVoiceAttackDecay(asm, voice, 0x11);
+  emitSidVoiceSustainRelease(asm, voice, 0xf0);
+  emitSidNote(asm, compileState, voice, "C5", 10);
 }
 
 function emitSidClick(asm, compileState) {
+  const voice = sidEffectVoice(compileState);
   emitSidVolume(asm, compileState, 15);
-  compileState.sid.voiceControls[0] = 0x11;
-  if (compileState.optimization.sidClickCount > 1) {
+  compileState.sid.voiceControls[voice - 1] = 0x11;
+  if (compileState.optimization.mode !== "speed" && compileState.optimization.sidClickCount > 1) {
     // Calls keep their volume write inline because the filter-mode bits in
     // $D418 can differ at each call site.
     compileState.sharedRoutines.sidClick = true;
     asm.jsr(abs("runtime_sid_click"));
     return;
   }
-  emitSidClickBody(asm);
+  emitSidClickBody(asm, voice);
 }
 
-function emitSidClickBody(asm) {
-  emitStoreImmediate(asm, sidVoiceBase(1) + 4, 0x00);
-  emitStoreImmediate(asm, sidVoiceBase(1) + 4, 0x10);
-  emitStoreImmediate(asm, sidVoiceBase(1) + 5, 0x00);
-  emitStoreImmediate(asm, sidVoiceBase(1) + 6, 0x00);
-  emitStoreImmediate(asm, sidVoiceBase(1), 0x39);
-  emitStoreImmediate(asm, sidVoiceBase(1) + 1, 0x8b);
-  emitStoreImmediate(asm, sidVoiceBase(1) + 4, 0x11);
+function emitSidClickBody(asm, voice) {
+  const base = sidVoiceBase(voice);
+  emitStoreImmediate(asm, base + 4, 0x00);
+  emitStoreImmediate(asm, base + 4, 0x10);
+  emitStoreImmediate(asm, base + 5, 0x00);
+  emitStoreImmediate(asm, base + 6, 0x00);
+  emitStoreImmediate(asm, base, 0x39);
+  emitStoreImmediate(asm, base + 1, 0x8b);
+  emitStoreImmediate(asm, base + 4, 0x11);
 }
 
 function emitSharedSidClickRoutine(asm, state) {
   if (!state.sharedRoutines.sidClick) return;
   asm.comment("Shared non-blocking SID click");
   asm.label("runtime_sid_click");
-  emitSidClickBody(asm);
+  emitSidClickBody(asm, sidEffectVoice(state));
   asm.rts();
 }
 
 function emitSidNoise(asm, compileState, duration = 12) {
+  const voice = sidEffectVoice(compileState);
   ensureSidDuration(duration);
   emitSidVolume(asm, compileState, 15);
-  emitSidVoiceWaveform(asm, compileState, 1, "noise");
-  emitSidVoiceAttackDecay(asm, 1, 0x24);
-  emitSidVoiceSustainRelease(asm, 1, 0xf4);
-  emitSidVoiceFrequency(asm, 1, 0x1800);
-  emitSidVoiceGate(asm, compileState, 1, true);
+  emitSidVoiceWaveform(asm, compileState, voice, "noise");
+  emitSidVoiceAttackDecay(asm, voice, 0x24);
+  emitSidVoiceSustainRelease(asm, voice, 0xf4);
+  emitSidVoiceFrequency(asm, voice, 0x1800);
+  emitSidVoiceGate(asm, compileState, voice, true);
   emitSidDelay(asm, compileState, duration);
-  emitSidVoiceGate(asm, compileState, 1, false);
+  emitSidVoiceGate(asm, compileState, voice, false);
   emitSidReleaseDelay(asm, compileState, duration);
 }
 
@@ -759,21 +887,23 @@ function emitSidExplosion(asm, compileState) {
 }
 
 function emitSidLaser(asm, compileState) {
+  const voice = sidEffectVoice(compileState);
   emitSidVolume(asm, compileState, 15);
-  emitSidVoiceWaveform(asm, compileState, 1, "saw");
-  emitSidVoiceAttackDecay(asm, 1, 0x01);
-  emitSidVoiceSustainRelease(asm, 1, 0x82);
-  emitSidNote(asm, compileState, 1, "C6", 6);
-  emitSidNote(asm, compileState, 1, "G5", 8);
+  emitSidVoiceWaveform(asm, compileState, voice, "saw");
+  emitSidVoiceAttackDecay(asm, voice, 0x01);
+  emitSidVoiceSustainRelease(asm, voice, 0x82);
+  emitSidNote(asm, compileState, voice, "C6", 6);
+  emitSidNote(asm, compileState, voice, "G5", 8);
 }
 
 function emitSidPickup(asm, compileState) {
+  const voice = sidEffectVoice(compileState);
   emitSidVolume(asm, compileState, 15);
-  emitSidVoiceWaveform(asm, compileState, 1, "triangle");
-  emitSidVoiceAttackDecay(asm, 1, 0x11);
-  emitSidVoiceSustainRelease(asm, 1, 0xb2);
-  emitSidNote(asm, compileState, 1, "C5", 5);
-  emitSidNote(asm, compileState, 1, "G5", 5);
+  emitSidVoiceWaveform(asm, compileState, voice, "triangle");
+  emitSidVoiceAttackDecay(asm, voice, 0x11);
+  emitSidVoiceSustainRelease(asm, voice, 0xb2);
+  emitSidNote(asm, compileState, voice, "C5", 5);
+  emitSidNote(asm, compileState, voice, "G5", 5);
 }
 
 function emitSidSongPlayer(asm, compileState, songDefinition) {
@@ -854,12 +984,54 @@ function configureSidSongPlayer(compileState, songDefinition) {
   compileState.sid.player.installRequested = true;
 }
 
+function sidMusicVoices(compileState) {
+  return [1, 2, 3].filter((voice) => voice !== compileState.sid.player.sfxVoice);
+}
+
 function emitSidPlayerStop(asm, compileState) {
   emitStoreImmediate(asm, SID_PLAYER_PLAYING, 0x00);
-  for (let voice = 1; voice <= 3; voice += 1) {
+  emitStoreImmediate(asm, SID_PLAYER_STEP_INDEX, 0x00);
+  emitStoreImmediate(asm, SID_PLAYER_TICK_COUNT, 0x00);
+  for (const voice of sidMusicVoices(compileState)) {
     const control = compileState.sid.voiceControls[voice - 1] & 0xfe;
     emitStoreImmediate(asm, sidVoiceBase(voice) + 4, control);
   }
+}
+
+function emitSidPlayerPause(asm, compileState) {
+  const doneLabel = `sid_pause_done_${compileState.loopCounter++}`;
+  asm.lda(abs(SID_PLAYER_PLAYING));
+  asm.cmp(imm(0x01));
+  asm.bne(rel(doneLabel));
+  emitStoreImmediate(asm, SID_PLAYER_PLAYING, 0x02);
+  for (const voice of sidMusicVoices(compileState)) {
+    const control = compileState.sid.voiceControls[voice - 1] & 0xfe;
+    emitStoreImmediate(asm, sidVoiceBase(voice) + 4, control);
+  }
+  asm.label(doneLabel);
+}
+
+function emitSidPlayerResume(asm, compileState) {
+  const doneLabel = `sid_resume_done_${compileState.loopCounter++}`;
+  asm.lda(abs(SID_PLAYER_PLAYING));
+  asm.cmp(imm(0x02));
+  asm.bne(rel(doneLabel));
+  emitStoreImmediate(asm, SID_PLAYER_TICK_COUNT, 0x00);
+  emitStoreImmediate(asm, SID_PLAYER_PLAYING, 0x01);
+  asm.label(doneLabel);
+}
+
+function emitSidPlayerFade(asm, compileState, targetVolume, stepEvery = 4) {
+  if (!compileState.sid.player.installRequested || !compileState.sid.player.song) {
+    throw new Error("c64.sid.fadeSong() needs a configured playSong()");
+  }
+  ensureByte(targetVolume, "SID fade target volume");
+  if (targetVolume > 15) throw new Error("SID fade target volume must be between 0 and 15");
+  ensurePositiveByte(stepEvery, "SID fade stepEvery");
+  emitStoreImmediate(asm, SID_FADE_TARGET, targetVolume);
+  emitStoreImmediate(asm, SID_FADE_INTERVAL, stepEvery - 1);
+  emitStoreImmediate(asm, SID_FADE_COUNTER, 0x00);
+  emitStoreImmediate(asm, SID_FADE_ACTIVE, 0x01);
 }
 
 function emitSidPlayerInitState(asm, state) {
@@ -869,7 +1041,18 @@ function emitSidPlayerInitState(asm, state) {
 
   emitStoreImmediate(asm, SID_PLAYER_STEP_INDEX, 0x00);
   emitStoreImmediate(asm, SID_PLAYER_TICK_COUNT, 0x00);
+  emitStoreImmediate(asm, SID_PLAYER_RATE_ACCUMULATOR, 0x00);
+  emitStoreImmediate(asm, SID_PLAYER_VOLUME, state.sid.filterModeVol & 0x0f);
+  emitStoreImmediate(asm, SID_FADE_ACTIVE, 0x00);
   emitStoreImmediate(asm, SID_PLAYER_PLAYING, 0x01);
+  for (const voice of sidMusicVoices(state)) {
+    const instrument = state.sid.player.song.instruments[voice - 1];
+    if (!instrument) continue;
+    emitSidSetControl(asm, state, voice, instrument.control & 0xfe);
+    if (instrument.pulseWidth !== null) emitSidVoicePulseWidth(asm, voice, instrument.pulseWidth);
+    emitSidVoiceAttackDecay(asm, voice, instrument.attackDecay);
+    emitSidVoiceSustainRelease(asm, voice, instrument.sustainRelease);
+  }
 }
 
 function createSidPlayerRuntime(state, prefix) {
@@ -879,6 +1062,7 @@ function createSidPlayerRuntime(state, prefix) {
   }
 
   const songId = state.stringCounter++;
+  const musicVoices = sidMusicVoices(state);
   const voiceDoneLabels = [1, 2, 3].map((voice) => `${prefix}_voice${voice}_done_${songId}`);
   const voiceRestLabels = [1, 2, 3].map((voice) => `${prefix}_voice${voice}_rest_${songId}`);
   const voiceHoldLabels = [1, 2, 3].map((voice) => `${prefix}_voice${voice}_hold_${songId}`);
@@ -893,12 +1077,28 @@ function createSidPlayerRuntime(state, prefix) {
 
   const dataPrefix = prefix.startsWith("sid_") ? prefix.slice(4) : prefix;
   const labelBase = `sid_song_${dataPrefix}_${songId}`;
-  const voiceLabels = song.voices.map((voice, index) => ({
-    action: `${labelBase}_v${index + 1}_action`,
-    lo: `${labelBase}_v${index + 1}_lo`,
-    hi: `${labelBase}_v${index + 1}_hi`,
-    bytes: voice
-  }));
+  const tablePool = new Map();
+  let pooledVoiceTableBytes = 0;
+  const voiceLabels = song.voices.map((voice, index) => {
+    if (!musicVoices.includes(index + 1)) return null;
+    const signature = `${voice.actionBytes.join(",")}|${voice.freqLoBytes.join(",")}|${voice.freqHiBytes.join(",")}`;
+    const pooled = tablePool.get(signature);
+    if (pooled) {
+      pooledVoiceTableBytes += song.length * 3;
+      return { ...pooled, bytes: null, pooledFromVoice: pooled.voice };
+    }
+    const labels = {
+      voice: index + 1,
+      action: `${labelBase}_v${index + 1}_action`,
+      lo: `${labelBase}_v${index + 1}_lo`,
+      hi: `${labelBase}_v${index + 1}_hi`,
+      bytes: voice,
+      pooledFromVoice: null
+    };
+    tablePool.set(signature, labels);
+    return labels;
+  });
+  song.pooledVoiceTableBytes = Math.max(song.pooledVoiceTableBytes ?? 0, pooledVoiceTableBytes);
 
   return {
     song,
@@ -909,25 +1109,80 @@ function createSidPlayerRuntime(state, prefix) {
     doneJumpLabel: `${prefix}_done_jump_${songId}`,
     processJumpLabel: `${prefix}_process_jump_${songId}`,
     stopContinueLabel: `${prefix}_stop_continue_${songId}`,
+    loopContinueLabel: `${prefix}_loop_continue_${songId}`,
+    rateContinueLabel: `${prefix}_rate_continue_${songId}`,
+    fadeDoneLabel: `${prefix}_fade_done_${songId}`,
+    fadeStepLabel: `${prefix}_fade_step_${songId}`,
+    fadeIncreaseLabel: `${prefix}_fade_increase_${songId}`,
+    fadeWriteLabel: `${prefix}_fade_write_${songId}`,
+    fadeCompleteLabel: `${prefix}_fade_complete_${songId}`,
     voiceDoneLabels,
     voiceRestLabels,
     voiceHoldLabels,
     baseControls,
-    voiceLabels
+    voiceLabels,
+    musicVoices,
+    fadeUsed: state.sid.player.fadeUsed
   };
 }
 
 function registerSidPlayerData(state, runtime) {
-  for (const labels of runtime.voiceLabels) {
+  for (const labels of runtime.voiceLabels.filter((entry) => entry?.bytes)) {
     registerData(state, labels.action, labels.bytes.actionBytes);
     registerData(state, labels.lo, labels.bytes.freqLoBytes);
     registerData(state, labels.hi, labels.bytes.freqHiBytes);
   }
 }
 
+function emitSidFadeCore(asm, runtime) {
+  if (!runtime.fadeUsed) return;
+  asm.lda(abs(SID_FADE_ACTIVE));
+  asm.beq(rel(runtime.fadeDoneLabel));
+  asm.lda(abs(SID_FADE_COUNTER));
+  asm.beq(rel(runtime.fadeStepLabel));
+  asm.dec(abs(SID_FADE_COUNTER));
+  asm.jmp(abs(runtime.fadeDoneLabel));
+  asm.label(runtime.fadeStepLabel);
+  asm.lda(abs(SID_FADE_INTERVAL));
+  asm.sta(abs(SID_FADE_COUNTER));
+  asm.lda(abs(SID_PLAYER_VOLUME));
+  asm.cmp(abs(SID_FADE_TARGET));
+  asm.beq(rel(runtime.fadeCompleteLabel));
+  asm.bcc(rel(runtime.fadeIncreaseLabel));
+  asm.dec(abs(SID_PLAYER_VOLUME));
+  asm.jmp(abs(runtime.fadeWriteLabel));
+  asm.label(runtime.fadeIncreaseLabel);
+  asm.inc(abs(SID_PLAYER_VOLUME));
+  asm.label(runtime.fadeWriteLabel);
+  asm.lda(abs(c64.SID_FILTER_MODE_VOL));
+  asm.and(imm(0xf0));
+  asm.ora(abs(SID_PLAYER_VOLUME));
+  asm.sta(abs(c64.SID_FILTER_MODE_VOL));
+  asm.lda(abs(SID_PLAYER_VOLUME));
+  asm.cmp(abs(SID_FADE_TARGET));
+  asm.bne(rel(runtime.fadeDoneLabel));
+  asm.label(runtime.fadeCompleteLabel);
+  emitStoreImmediate(asm, SID_FADE_ACTIVE, 0x00);
+  asm.label(runtime.fadeDoneLabel);
+}
+
 function emitSidPlayerCore(asm, runtime) {
   asm.lda(abs(SID_PLAYER_PLAYING));
-  asm.beq(rel(runtime.doneJumpLabel));
+  asm.cmp(imm(0x01));
+  asm.bne(rel(runtime.doneJumpLabel));
+  // The music engine advances at a logical 50 Hz on both PAL and NTSC.
+  // On a 60 Hz machine this accumulator skips exactly one IRQ out of six.
+  asm.lda(abs(SID_PLAYER_RATE_ACCUMULATOR));
+  asm.clc();
+  asm.adc(imm(50));
+  asm.sta(abs(SID_PLAYER_RATE_ACCUMULATOR));
+  asm.cmp(abs(GAME_VIDEO_HZ));
+  asm.bcs(rel(runtime.rateContinueLabel));
+  asm.jmp(abs(runtime.doneLabel));
+  asm.label(runtime.rateContinueLabel);
+  asm.sbc(abs(GAME_VIDEO_HZ));
+  asm.sta(abs(SID_PLAYER_RATE_ACCUMULATOR));
+  emitSidFadeCore(asm, runtime);
   asm.lda(abs(SID_PLAYER_TICK_COUNT));
   asm.beq(rel(runtime.processJumpLabel));
   asm.dec(abs(SID_PLAYER_TICK_COUNT));
@@ -941,10 +1196,17 @@ function emitSidPlayerCore(asm, runtime) {
   asm.ldx(abs(SID_PLAYER_STEP_INDEX));
   asm.cpx(imm(runtime.song.length));
   asm.bne(rel(runtime.stopContinueLabel));
-  asm.jmp(abs(runtime.stopLabel));
+  if (runtime.song.loop) {
+    asm.ldx(imm(0x00));
+    asm.stx(abs(SID_PLAYER_STEP_INDEX));
+    asm.jmp(abs(runtime.loopContinueLabel));
+  } else {
+    asm.jmp(abs(runtime.stopLabel));
+  }
   asm.label(runtime.stopContinueLabel);
+  asm.label(runtime.loopContinueLabel);
 
-  for (let voice = 1; voice <= 3; voice += 1) {
+  for (const voice of runtime.musicVoices) {
     const base = sidVoiceBase(voice);
     const labels = runtime.voiceLabels[voice - 1];
     asm.lda(absx(labels.action));
@@ -969,12 +1231,12 @@ function emitSidPlayerCore(asm, runtime) {
   }
 
   asm.inc(abs(SID_PLAYER_STEP_INDEX));
-  emitStoreImmediate(asm, SID_PLAYER_TICK_COUNT, runtime.song.tempo);
+  emitStoreImmediate(asm, SID_PLAYER_TICK_COUNT, runtime.song.tempo - 1);
   asm.jmp(abs(runtime.doneLabel));
 
   asm.label(runtime.stopLabel);
   emitStoreImmediate(asm, SID_PLAYER_PLAYING, 0x00);
-  for (let voice = 1; voice <= 3; voice += 1) {
+  for (const voice of runtime.musicVoices) {
     emitStoreImmediate(asm, sidVoiceBase(voice) + 4, runtime.baseControls[voice - 1]);
   }
 }
@@ -2365,9 +2627,14 @@ function emitSpriteDataAsset(asm, compileState, index, dataSource, explicitAddre
       compileState.spriteState[index].dataLength = length;
       return { targetAddress, length, blockIndex: Math.floor(targetAddress / 64) };
     }
-    const label = `sprite_data_${index}_${compileState.spriteDataCounter++}`;
-    registerData(compileState, label, bytes);
-    emitCopyDataTo(asm, compileState, targetAddress, label, bytes.length);
+    if (compileState.disk.enabled) {
+      const descriptor = registerDiskAsset(compileState, "sprite", targetAddress, bytes, `sprite-${index}`);
+      emitDiskLoadCall(asm, descriptor);
+    } else {
+      const label = `sprite_data_${index}_${compileState.spriteDataCounter++}`;
+      registerData(compileState, label, bytes);
+      emitCopyDataTo(asm, compileState, targetAddress, label, bytes.length);
+    }
     length = bytes.length;
     if (explicitAddress === undefined) {
       // Immutable sprite constants with identical bytes share one VIC-II block.
@@ -2388,12 +2655,88 @@ function emitSpriteDataAsset(asm, compileState, index, dataSource, explicitAddre
   return { targetAddress, length, blockIndex: Math.floor(targetAddress / 64) };
 }
 
+function encodeRleBytes(bytes) {
+  const encoded = [];
+  for (let index = 0; index < bytes.length;) {
+    const value = bytes[index];
+    let count = 1;
+    while (index + count < bytes.length && bytes[index + count] === value && count < 255) count += 1;
+    encoded.push(count, value);
+    index += count;
+  }
+  return encoded;
+}
+
+function assetTransferCost(rawLength, encodedLength) {
+  const rawLoaderBytes = rawLength === 256 ? 11 : 13;
+  const rleLoaderBytes = 28;
+  return {
+    rawLoaderBytes,
+    rleLoaderBytes,
+    rawProgramBytes: rawLength + rawLoaderBytes,
+    rleProgramBytes: encodedLength + rleLoaderBytes,
+    rawCyclesEstimate: 2 + rawLength * 14,
+    rleCyclesEstimate: 4 + rawLength * 16 + (encodedLength / 2) * 18
+  };
+}
+
+function shouldUseAssetRle(mode, netSavedBytes) {
+  if (mode === "speed") return false;
+  if (mode === "size") return netSavedBytes > 0;
+  return netSavedBytes >= 8;
+}
+
+function emitRleChunkToRam(asm, compileState, destination, encoded, prefix) {
+  const poolKey = `${encoded.length}:${encoded.join(",")}`;
+  let label = compileState.assets.bytePool.get(poolKey);
+  if (!label) {
+    label = `asset_rle_${compileState.assets.counter++}`;
+    registerData(compileState, label, encoded);
+    compileState.assets.bytePool.set(poolKey, label);
+  }
+  const loopLabel = `${prefix}_rle_${compileState.assets.counter++}`;
+  const repeatLabel = `${loopLabel}_repeat`;
+  asm.ldx(imm(0));
+  asm.ldy(imm(0));
+  asm.label(loopLabel);
+  asm.lda(absx(label));
+  asm.sta(abs(ASSET_RLE_COUNT));
+  asm.inx();
+  asm.lda(absx(label));
+  asm.inx();
+  asm.label(repeatLabel);
+  asm.sta(absy(destination));
+  asm.iny();
+  asm.dec(abs(ASSET_RLE_COUNT));
+  asm.bne(rel(repeatLabel));
+  asm.cpx(imm(encoded.length));
+  asm.bne(rel(loopLabel));
+}
+
 function emitEmbeddedBytesToRam(asm, compileState, destination, bytes, prefix) {
   ensureWord(destination, `${prefix} destination`);
   ensureWord(destination + bytes.length - 1, `${prefix} end destination`);
   let offset = 0;
   while (offset < bytes.length) {
     const chunk = bytes.slice(offset, offset + 256);
+    const encoded = encodeRleBytes(chunk);
+    const costs = assetTransferCost(chunk.length, encoded.length);
+    const netSavedBytes = costs.rawProgramBytes - costs.rleProgramBytes;
+    const compressed = encoded.length <= 255
+      && shouldUseAssetRle(compileState.optimization.mode, netSavedBytes);
+    compileState.optimization.rleCandidates.push({
+      kind: prefix === "asset_charset" ? "charset" : "map",
+      rawBytes: chunk.length,
+      encodedBytes: encoded.length,
+      netSavedBytes,
+      compressed,
+      ...costs
+    });
+    if (compressed) {
+      emitRleChunkToRam(asm, compileState, destination + offset, encoded, prefix);
+      offset += chunk.length;
+      continue;
+    }
     const poolKey = `${chunk.length}:${chunk.join(",")}`;
     let label = compileState.assets.bytePool.get(poolKey);
     if (!label) {
@@ -2432,13 +2775,88 @@ function buildCharsetLayout(screenBase, charsetAddress) {
   };
 }
 
-function emitCharsetUse(asm, compileState, charset, options) {
-  if (!charset || charset.type !== "charsetAsset" || charset.bytes?.length !== 2048) {
-    throw new Error("charsetUse needs a validated 2048-byte charset asset");
-  }
-  const address = options?.address ?? 0x3000;
+function diskAssetPrefix(kind) {
+  if (kind === "map") return "LEVEL";
+  if (kind === "charset") return "CHARSET";
+  if (kind === "tables") return "TABLES";
+  if (kind === "sprite") return "SPRITE";
+  return "ASSET";
+}
+
+function registerDiskAsset(compileState, kind, address, bytes, sourcePath = "<inline>") {
+  if (!compileState.disk.enabled) return null;
+  ensureWord(address, `${kind} disk load address`);
+  const normalized = Array.from(bytes, (value) => value & 0xff);
+  const signature = `${kind}:${address}:${normalized.length}:${normalized.join(",")}`;
+  const pooled = compileState.disk.assetPool.get(signature);
+  if (pooled) return pooled;
+  const index = compileState.disk.files.length;
+  const kindIndex = compileState.disk.nameCounters.get(kind) ?? 0;
+  compileState.disk.nameCounters.set(kind, kindIndex + 1);
+  const name = `${diskAssetPrefix(kind)}${kindIndex.toString(36).toUpperCase()}`.slice(0, 16);
+  const fileNameBytes = [...name].map((char) => char.charCodeAt(0));
+  const filenameLabel = `disk_filename_${index}`;
+  registerData(compileState, filenameLabel, fileNameBytes);
+  const descriptor = {
+    name,
+    kind,
+    address,
+    bytes: normalized.length,
+    sourcePath,
+    filenameLabel,
+    filenameLength: fileNameBytes.length,
+    data: Uint8Array.from([address & 0xff, (address >> 8) & 0xff, ...normalized])
+  };
+  compileState.disk.files.push(descriptor);
+  compileState.disk.assetPool.set(signature, descriptor);
+  compileState.disk.loaderNeeded = true;
+  return descriptor;
+}
+
+function emitDiskLoadCall(asm, descriptor) {
+  asm.lda(imm(descriptor.filenameLength));
+  asm.ldx(immLo(descriptor.filenameLabel));
+  asm.ldy(immHi(descriptor.filenameLabel));
+  asm.jsr(abs("runtime_disk_load_usr"));
+}
+
+function emitDiskLoaderRoutine(asm, state) {
+  if (!state.disk.loaderNeeded) return;
+  asm.comment("Load one load-address PRG data module through the C64 KERNAL");
+  asm.label("runtime_disk_load_usr");
+  asm.jsr(abs(c64.KERNAL_SETNAM));
+  asm.lda(imm(1));
+  asm.ldx(imm(state.disk.device));
+  asm.ldy(imm(1));
+  asm.jsr(abs(c64.KERNAL_SETLFS));
+  asm.php();
+  asm.sei();
+  asm.lda(imm(0));
+  asm.ldx(imm(0));
+  asm.ldy(imm(0));
+  asm.jsr(abs(c64.KERNAL_LOAD));
+  asm.bcs(rel("runtime_disk_load_error"));
+  emitStoreImmediate(asm, DISK_LOAD_ERROR, 0);
+  asm.plp();
+  asm.rts();
+  asm.label("runtime_disk_load_error");
+  asm.sta(abs(DISK_LOAD_ERROR));
+  emitStoreImmediate(asm, c64.VIC_BORDER_COLOR, c64.COLOR_RED);
+  emitStoreImmediate(asm, c64.VIC_BACKGROUND_COLOR, c64.COLOR_BLACK);
+  // Switch back to the ROM charset so the failure stays readable even when a
+  // custom level charset was active. Screen codes spell "DISK ERROR".
+  asm.lda(abs(c64.VIC_MEMORY_POINTERS)); asm.and(imm(0xf1)); asm.ora(imm(0x04)); asm.sta(abs(c64.VIC_MEMORY_POINTERS));
+  asm.lda(abs(c64.VIC_CONTROL_2)); asm.and(imm(0xef)); asm.sta(abs(c64.VIC_CONTROL_2));
+  [4, 9, 19, 11, 32, 5, 18, 18, 15, 18].forEach((screenCode, index) => {
+    emitStoreImmediate(asm, state.screenBase + index, screenCode);
+    emitStoreImmediate(asm, state.colorBase + index, c64.COLOR_WHITE);
+  });
+  asm.plp();
+  asm.rts();
+}
+
+function emitCharsetVicConfiguration(asm, compileState, charset, options, address) {
   const layout = buildCharsetLayout(compileState.screenBase, address);
-  emitEmbeddedBytesToRam(asm, compileState, address, charset.bytes, "asset_charset");
   asm.lda(abs(c64.CIA2_PRA)); asm.and(imm(0xfc)); asm.ora(imm(layout.ciaBankBits)); asm.sta(abs(c64.CIA2_PRA));
   asm.lda(abs(c64.VIC_MEMORY_POINTERS)); asm.and(imm(0xf1)); asm.ora(imm(layout.d018CharsetBits)); asm.sta(abs(c64.VIC_MEMORY_POINTERS));
   asm.lda(abs(c64.VIC_CONTROL_2));
@@ -2455,7 +2873,70 @@ function emitCharsetUse(asm, compileState, charset, options) {
   } else {
     asm.and(imm(0xef)); asm.sta(abs(c64.VIC_CONTROL_2));
   }
-  compileState.assets.report.push({ type: "charset", mode: charset.mode, address, endAddress: address + charset.bytes.length - 1, bytes: charset.bytes.length, characters: charset.characterCount });
+}
+
+function charsetPayload(charset) {
+  if (charset.romCharacters === 64) {
+    return {
+      addressOffset: 64 * 8,
+      bytes: charset.storedBytes,
+      romBytes: 64 * 8,
+      romCopyCyclesEstimate: 5920
+    };
+  }
+  return { addressOffset: 0, bytes: charset.bytes, romBytes: 0, romCopyCyclesEstimate: 0 };
+}
+
+function emitCharacterRomCopy(asm, compileState, address, charset) {
+  if (charset.romCharacters !== 64) return;
+  const loop = `charset_rom_copy_${compileState.loopCounter++}`;
+  // $01 bit 2 selects I/O (1) or character ROM (0) at $D000-$DFFF.
+  // Preserve both the CPU port and the previous interrupt state so this helper
+  // is also safe during a level activation between two frames.
+  asm.php(); asm.sei();
+  asm.lda(zp(0x01)); asm.pha(); asm.and(imm(0xfb)); asm.sta(zp(0x01));
+  asm.ldx(imm(0));
+  asm.label(loop);
+  asm.lda(absx(0xd000)); asm.sta(absx(address));
+  asm.lda(absx(0xd100)); asm.sta(absx(address + 0x100));
+  asm.inx(); asm.bne(rel(loop));
+  asm.pla(); asm.sta(zp(0x01)); asm.plp();
+}
+
+function emitInlineCharsetInstall(asm, compileState, address, charset) {
+  const payload = charsetPayload(charset);
+  emitCharacterRomCopy(asm, compileState, address, charset);
+  if (payload.bytes.length > 0) {
+    emitEmbeddedBytesToRam(asm, compileState, address + payload.addressOffset, payload.bytes, "asset_charset");
+  }
+}
+
+function registerDiskCharset(compileState, address, charset, sourcePath) {
+  const payload = charsetPayload(charset);
+  if (payload.bytes.length === 0) return null;
+  return registerDiskAsset(compileState, "charset", address + payload.addressOffset, payload.bytes, sourcePath);
+}
+
+function emitCharsetUse(asm, compileState, charset, options) {
+  if (!charset || charset.type !== "charsetAsset" || charset.bytes?.length !== 2048) {
+    throw new Error("charsetUse needs a validated 2048-byte charset asset");
+  }
+  const address = options?.address ?? 0x3000;
+  if (compileState.disk.enabled) {
+    emitCharacterRomCopy(asm, compileState, address, charset);
+    const descriptor = registerDiskCharset(compileState, address, charset, charset.sourcePath);
+    if (descriptor) emitDiskLoadCall(asm, descriptor);
+  } else {
+    emitInlineCharsetInstall(asm, compileState, address, charset);
+  }
+  emitCharsetVicConfiguration(asm, compileState, charset, options, address);
+  const payload = charsetPayload(charset);
+  compileState.assets.report.push({
+    type: "charset", mode: charset.mode, address, endAddress: address + charset.bytes.length - 1,
+    bytes: charset.bytes.length, storedBytes: payload.bytes.length, romCopiedBytes: payload.romBytes,
+    romCopyCyclesEstimate: payload.romCopyCyclesEstimate,
+    characters: charset.characterCount, storage: compileState.disk.enabled ? "disk" : "inline"
+  });
 }
 
 function mapAssetKey(asset) {
@@ -2465,6 +2946,8 @@ function mapAssetKey(asset) {
     height: asset.map.height,
     data: asset.map.data,
     charsetMode: asset.charset.mode,
+    charsetRomCharacters: asset.charset.romCharacters,
+    charsetBytes: asset.charset.bytes,
     tileWidth: asset.tileWidth,
     tileHeight: asset.tileHeight,
     tiles: asset.tiles.map((tile) => ({ chars: tile.chars, colors: tile.colors, collision: tile.collision }))
@@ -2478,10 +2961,12 @@ function emitMapRegister(asm, compileState, asset) {
   const existing = compileState.assets.mapTables.get(key);
   if (existing) return existing;
   const id = compileState.assets.counter++;
-  const runtimeAddress = compileState.assets.nextMapAddress;
+  const runtimeAddress = compileState.disk.enabled ? MAP_RUNTIME_BASE : compileState.assets.nextMapAddress;
   const runtimeEnd = runtimeAddress + asset.map.data.length - 1;
-  if (runtimeEnd > MAP_RUNTIME_END) throw new Error("dynamic map RAM is full ($8000-$9FFF); total loaded map cells must stay at or below 8192");
-  compileState.assets.nextMapAddress = runtimeEnd + 1;
+  if (runtimeEnd > MAP_RUNTIME_END) throw new Error(compileState.disk.enabled
+    ? "a disk-backed active map must stay at or below 8192 cells"
+    : "dynamic map RAM is full ($8000-$9FFF); total loaded map cells must stay at or below 8192");
+  if (!compileState.disk.enabled) compileState.assets.nextMapAddress = runtimeEnd + 1;
   const info = {
     id,
     key,
@@ -2494,16 +2979,78 @@ function emitMapRegister(asm, compileState, asset) {
     viewportNeeded: false,
     entityCollisionNeeded: false,
     fullDrawConfigured: false,
+    activationRequested: false,
+    activationRoutineNeeded: compileState.assets.activationUsed || compileState.disk.enabled,
+    mapDiskAsset: null,
+    charsetDiskAsset: null,
+    tablesDiskAsset: null,
+    diskSpriteDependencies: new Map(),
+    activationDraw: false,
     draw: null,
     viewport: null,
     horizontalScroller: null
   };
-  registerData(compileState, info.collisionLabel, asset.tiles.map((tile) => tile.collision));
-  registerData(compileState, info.charsLabel, asset.tiles.flatMap((tile) => tile.chars));
-  registerData(compileState, info.colorsLabel, asset.tiles.flatMap((tile) => tile.colors));
-  emitEmbeddedBytesToRam(asm, compileState, runtimeAddress, asset.map.data, "asset_map_initial");
+  const collisionBytes = asset.tiles.map((tile) => tile.collision);
+  const characterBytes = asset.tiles.flatMap((tile) => tile.chars);
+  const colorBytes = asset.tiles.flatMap((tile) => tile.colors);
+  if (compileState.disk.enabled) {
+    const tableBytes = [...collisionBytes, ...characterBytes, ...colorBytes];
+    if (MAP_DISK_TABLE_BASE + tableBytes.length - 1 > MAP_DISK_TABLE_END) {
+      throw new Error("disk-backed level tile/collision tables exceed the shared $3800-$3FFF slot");
+    }
+    info.collisionLabel = MAP_DISK_TABLE_BASE;
+    info.charsLabel = MAP_DISK_TABLE_BASE + collisionBytes.length;
+    info.colorsLabel = info.charsLabel + characterBytes.length;
+    info.mapDiskAsset = registerDiskAsset(compileState, "map", runtimeAddress, asset.map.data, asset.sourcePath);
+    info.charsetDiskAsset = registerDiskCharset(compileState, 0x3000, asset.charset, asset.sourcePath);
+    info.tablesDiskAsset = registerDiskAsset(compileState, "tables", MAP_DISK_TABLE_BASE, tableBytes, asset.sourcePath);
+    compileState.assets.report.push({
+      type: "charset",
+      mode: asset.charset.mode,
+      address: 0x3000,
+      endAddress: 0x37ff,
+      bytes: 2048,
+      storedBytes: charsetPayload(asset.charset).bytes.length,
+      romCopiedBytes: charsetPayload(asset.charset).romBytes,
+      romCopyCyclesEstimate: charsetPayload(asset.charset).romCopyCyclesEstimate,
+      characters: asset.charset.characterCount,
+      storage: "disk-level"
+    });
+    compileState.assets.report.push({
+      type: "map-level-tables",
+      sourcePath: asset.sourcePath,
+      address: MAP_DISK_TABLE_BASE,
+      endAddress: MAP_DISK_TABLE_BASE + tableBytes.length - 1,
+      bytes: tableBytes.length,
+      contents: ["tile-collision", "tile-characters", "tile-colors"],
+      storage: "disk-level"
+    });
+  } else {
+    registerData(compileState, info.collisionLabel, collisionBytes);
+    registerData(compileState, info.charsLabel, characterBytes);
+    registerData(compileState, info.colorsLabel, colorBytes);
+  }
   compileState.assets.mapTables.set(key, info);
-  compileState.assets.report.push({ type: "map-runtime", sourcePath: asset.sourcePath, address: runtimeAddress, endAddress: runtimeEnd, bytes: asset.map.data.length, indexBits: 16, objects: asset.map.objects?.length ?? 0 });
+  if (compileState.disk.enabled) {
+    // The first level is loaded only when mapAsset.activate() requests it.
+  } else if (info.activationRoutineNeeded) {
+    asm.jsr(abs(`runtime_map_activate_${id}`));
+  } else {
+    emitEmbeddedBytesToRam(asm, compileState, runtimeAddress, asset.map.data, "asset_map_initial");
+  }
+  compileState.assets.report.push({
+    type: "map-runtime",
+    sourcePath: asset.sourcePath,
+    address: runtimeAddress,
+    endAddress: runtimeEnd,
+    bytes: asset.map.data.length,
+    indexBits: 16,
+    objects: asset.map.objects?.length ?? 0,
+    activation: compileState.disk.enabled ? "disk-on-demand" : (info.activationRoutineNeeded ? "embedded-resettable" : "eager-once"),
+    activeMapContract: info.activationRoutineNeeded,
+    storage: compileState.disk.enabled ? "disk" : "inline",
+    sharedMapRamSlot: compileState.disk.enabled
+  });
   return info;
 }
 
@@ -2511,6 +3058,65 @@ function requireDynamicMap(compileState, asset) {
   const info = compileState.assets.mapTables.get(mapAssetKey(asset));
   if (!info) throw new Error("map asset is not registered; create it with c64.assets.loadMap() or c64.assets.defineMap() before use");
   return info;
+}
+
+function emitMapActivateRequest(asm, compileState, asset, options = {}) {
+  const info = requireDynamicMap(compileState, asset);
+  if (info.id >= GAME_SCENE_NONE) throw new Error("map activation supports at most 255 registered asset ids");
+  info.activationRequested = true;
+  compileState.assets.activationUsed = true;
+  if (options?.draw) {
+    const drawOptions = options.draw === true ? {} : options.draw;
+    if (!drawOptions || typeof drawOptions !== "object" || Array.isArray(drawOptions)) {
+      throw new Error("mapAsset.activate({ draw }) expects true or { x, y }");
+    }
+    configureMapDraw(compileState, info, drawOptions);
+    info.activationDraw = true;
+  }
+  for (const sprite of options?.sprites ?? []) {
+    if (!sprite || sprite.type !== "spriteAsset" || !sprite.framesRef) {
+      throw new Error("mapAsset.activate({ sprites }) expects sprite assets returned by c64.assets.loadSprite()");
+    }
+    if (sprite.resident !== false) continue;
+    const frameAsset = compileState.spriteFrameAssets.get(sprite.framesRef.name);
+    if (!frameAsset) throw new Error(`Sprite frames are not registered: ${sprite.id}`);
+    if (compileState.disk.enabled && !frameAsset.diskDescriptor) {
+      throw new Error(`Non-resident sprite ${sprite.id} has no disk asset`);
+    }
+    if (frameAsset.diskDescriptor) info.diskSpriteDependencies.set(frameAsset.diskDescriptor.name, frameAsset.diskDescriptor);
+  }
+  emitStoreImmediate(asm, MAP_PENDING_ID, info.id);
+}
+
+function emitPendingMapActivation(asm, state) {
+  if (!state.assets.activationUsed) return;
+  const doneLabel = `map_activation_done_${state.loopCounter++}`;
+  const clearLabel = `map_activation_clear_${state.loopCounter++}`;
+  const requestedLabel = `map_activation_requested_${state.loopCounter++}`;
+  asm.lda(abs(MAP_PENDING_ID));
+  asm.cmp(imm(GAME_SCENE_NONE));
+  asm.bne(rel(requestedLabel));
+  asm.jmp(abs(doneLabel));
+  asm.label(requestedLabel);
+  asm.cmp(abs(MAP_ACTIVE_ID));
+  asm.beq(rel(clearLabel));
+  for (const info of state.assets.mapTables.values()) {
+    const nextLabel = `map_activation_next_${info.id}_${state.loopCounter++}`;
+    asm.lda(abs(MAP_PENDING_ID));
+    asm.cmp(imm(info.id));
+    asm.bne(rel(nextLabel));
+    asm.jsr(abs(`runtime_map_activate_${info.id}`));
+    if (state.disk.enabled) {
+      asm.lda(abs(DISK_LOAD_ERROR));
+      asm.bne(rel(clearLabel));
+    }
+    emitStoreImmediate(asm, MAP_ACTIVE_ID, info.id);
+    asm.jmp(abs(clearLabel));
+    asm.label(nextLabel);
+  }
+  asm.label(clearLabel);
+  emitStoreImmediate(asm, MAP_PENDING_ID, GAME_SCENE_NONE);
+  asm.label(doneLabel);
 }
 
 function emitMapCoordinatesOrJumpInvalid(asm, compileState, asset, x, y, invalidLabel, id) {
@@ -4086,6 +4692,38 @@ function emitMapRoutines(asm, state) {
     if (entity.collisionNeeded) emitMapEntityCollisionRoutine(asm, state, entity);
   }
   for (const info of state.assets.mapTables.values()) {
+    if (info.activationRoutineNeeded) {
+      asm.comment(`Map ${info.id}: restore its embedded cells into runtime RAM`);
+      asm.label(`runtime_map_activate_${info.id}`);
+      if (state.disk.enabled) {
+        emitDiskLoadCall(asm, info.mapDiskAsset);
+        asm.lda(abs(DISK_LOAD_ERROR));
+        asm.bne(rel(`runtime_map_activate_${info.id}_done`));
+        emitDiskLoadCall(asm, info.tablesDiskAsset);
+        asm.lda(abs(DISK_LOAD_ERROR));
+        asm.bne(rel(`runtime_map_activate_${info.id}_done`));
+        emitCharacterRomCopy(asm, state, 0x3000, info.asset.charset);
+        if (info.charsetDiskAsset) {
+          emitDiskLoadCall(asm, info.charsetDiskAsset);
+          asm.lda(abs(DISK_LOAD_ERROR));
+          asm.bne(rel(`runtime_map_activate_${info.id}_done`));
+        }
+        for (const descriptor of info.diskSpriteDependencies.values()) {
+          emitDiskLoadCall(asm, descriptor);
+          asm.lda(abs(DISK_LOAD_ERROR));
+          asm.bne(rel(`runtime_map_activate_${info.id}_done`));
+        }
+        emitCharsetVicConfiguration(asm, state, info.asset.charset, {}, 0x3000);
+        if (info.activationDraw) asm.jsr(abs(`runtime_map_redraw_${info.id}`));
+        asm.label(`runtime_map_activate_${info.id}_done`);
+      } else {
+        emitEmbeddedBytesToRam(asm, state, info.runtimeAddress, info.asset.map.data, "asset_map_initial");
+        emitInlineCharsetInstall(asm, state, 0x3000, info.asset.charset);
+        emitCharsetVicConfiguration(asm, state, info.asset.charset, {}, 0x3000);
+        if (info.activationDraw) asm.jsr(abs(`runtime_map_redraw_${info.id}`));
+      }
+      asm.rts();
+    }
     if (info.entityCollisionNeeded) emitMapEntityPointCollisionRoutine(asm, info);
     if (info.rendererNeeded) {
       if (!info.draw) throw new Error("dynamic map renderer is missing c64.map.draw() screen configuration");
@@ -4208,7 +4846,7 @@ function emitSpriteRuntimeSync(asm, compileState, spriteRef) {
   // state. The compact raster renderer copies them to the eight VIC-II slots.
   if (compileState.multiplexer.enabled) return;
   const callCount = compileState.optimization.spriteSyncCallCounts.get(spriteRef.index) ?? 1;
-  if (callCount > 1) {
+  if (compileState.optimization.mode !== "speed" && callCount > 1) {
     compileState.sharedRoutines.spriteSyncIndexes.add(spriteRef.index);
     asm.jsr(abs(`runtime_sprite_sync_${spriteRef.index}`));
     return;
@@ -4346,21 +4984,42 @@ function emitSpriteRuntimeMovement(asm, compileState, spriteRef, runtime) {
   asm.label(inactiveLabel);
 }
 
-function emitSpriteFrames(asm, compileState, frameRef, frames, explicitAddress) {
+function emitSpriteFrames(asm, compileState, frameRef, frames, rawOptions = {}) {
+  // Older recorded instructions stored the address directly in args[2].
+  const options = typeof rawOptions === "number" ? { address: rawOptions } : (rawOptions ?? {});
+  const explicitAddress = options.address;
+  const resident = options.resident !== false;
   if (compileState.spriteFrameAssets.has(frameRef.name)) throw new Error(`Sprite frames already defined: ${frameRef.name}`);
   if (frames.length === 0) throw new Error("sprite.frames() needs at least one frame");
   const address = explicitAddress ?? compileState.nextSpriteFrameAddress;
   if (address % 64 !== 0) throw new Error("sprite frame address must be aligned to 64 bytes");
   if (address < 0x2000 || address + frames.length * 64 > 0x4000) throw new Error("sprite frames must fit in VIC bank 0 between $2000 and $3FFF");
-  frames.forEach((frame, frameIndex) => {
+  if (compileState.disk.enabled && address + frames.length * 64 > 0x3000) {
+    throw new Error("disk sprite frames must fit in the resident/reloadable $2000-$2FFF slot; $3000-$3FFF is reserved for the active level charset and tables");
+  }
+  const normalizedFrames = frames.map((frame) => {
     if (frame.length > 63) throw new Error("a sprite frame can contain at most 63 bytes");
-    const bytes = [...frame.map((value) => value & 0xff), ...new Array(63 - frame.length).fill(0)];
-    const label = `sprite_frames_${frameRef.name}_${frameIndex}`;
-    registerData(compileState, label, bytes);
-    emitCopyDataTo(asm, compileState, address + frameIndex * 64, label, 63);
-    emitStoreImmediate(asm, address + frameIndex * 64 + 63, 0);
+    return [...frame.map((value) => value & 0xff), ...new Array(63 - frame.length).fill(0), 0];
   });
-  compileState.spriteFrameAssets.set(frameRef.name, { address, count: frames.length, firstBlock: address / 64 });
+  let descriptor = null;
+  if (compileState.disk.enabled) {
+    descriptor = registerDiskAsset(compileState, "sprite", address, normalizedFrames.flat(), frameRef.name);
+    if (resident) emitDiskLoadCall(asm, descriptor);
+  } else {
+    normalizedFrames.forEach((bytes, frameIndex) => {
+      const label = `sprite_frames_${frameRef.name}_${frameIndex}`;
+      registerData(compileState, label, bytes.slice(0, 63));
+      emitCopyDataTo(asm, compileState, address + frameIndex * 64, label, 63);
+      emitStoreImmediate(asm, address + frameIndex * 64 + 63, 0);
+    });
+  }
+  compileState.spriteFrameAssets.set(frameRef.name, {
+    address,
+    count: frames.length,
+    firstBlock: address / 64,
+    resident,
+    diskDescriptor: compileState.disk.enabled ? descriptor : null
+  });
   compileState.nextSpriteFrameAddress = Math.max(compileState.nextSpriteFrameAddress, address + frames.length * 64);
 }
 
@@ -4467,7 +5126,7 @@ function emitSpriteAabbOrJumpFalse(asm, compileState, pair, falseLabel) {
   emitBytePlusImmediateToWord(asm, av.y.address, ah.offsetY + ah.height, aBottom);
   emitBytePlusImmediateToWord(asm, bv.y.address, bh.offsetY, bTop);
   emitBytePlusImmediateToWord(asm, bv.y.address, bh.offsetY + bh.height, bBottom);
-  if (compileState.game.spriteAabbCount > 1) {
+  if (compileState.optimization.mode !== "speed" && compileState.game.spriteAabbCount > 1) {
     compileState.sharedRoutines.spriteAabbCompare = true;
     const passLabel = `sprite_aabb_pass_${compileState.loopCounter++}`;
     asm.jsr(abs("runtime_sprite_aabb_compare"));
@@ -4955,7 +5614,9 @@ function createInstructionCompileState(baseState) {
       player: {
         installRequested: baseState.sid.player.installRequested,
         line: baseState.sid.player.line,
-        song: baseState.sid.player.song
+        song: baseState.sid.player.song,
+        sfxVoice: baseState.sid.player.sfxVoice,
+        fadeUsed: baseState.sid.player.fadeUsed
       }
     }
   };
@@ -4970,10 +5631,15 @@ const MULTIPLEX_CONFLICTING_LEGACY_OPS = new Set([
 function collectBalancedOptimizationStats(instructionGroups) {
   const stats = {
     sidClickCount: 0,
+    sidEffectCount: 0,
+    sidFadeCount: 0,
     spriteSyncCallCounts: new Map(),
     usesSpriteMultiplexer: false,
     usesLegacySpriteApi: false,
-    usesVerticalMapScroll: false
+    usesVerticalMapScroll: false,
+    usesMapActivation: false,
+    usesGameScenes: false,
+    usesRng: false
   };
   const addSpriteSync = (instruction) => {
     const spriteRef = instruction.args[0];
@@ -4983,6 +5649,13 @@ function collectBalancedOptimizationStats(instructionGroups) {
   const visit = (instructions) => {
     for (const instruction of instructions ?? []) {
       if (instruction.op === "sidClick") stats.sidClickCount += 1;
+      if (["sidBeep", "sidNoise", "sidClick", "sidExplosion", "sidLaser", "sidPickup"].includes(instruction.op)) {
+        stats.sidEffectCount += 1;
+      }
+      if (instruction.op === "sidFadeSong") stats.sidFadeCount += 1;
+      if (instruction.op === "mapActivate") stats.usesMapActivation = true;
+      if (["randomSeed", "randomByte", "randomRange"].includes(instruction.op)) stats.usesRng = true;
+      if (["gameScene", "gameSceneStart", "gameSceneGo"].includes(instruction.op)) stats.usesGameScenes = true;
       if (instruction.op === "mapVerticalScrollerMove") stats.usesVerticalMapScroll = true;
       if (instruction.op === "mapScrollerFollow" && ["y", "both"].includes(instruction.args[2]?.axis)) {
         stats.usesVerticalMapScroll = true;
@@ -4991,8 +5664,15 @@ function collectBalancedOptimizationStats(instructionGroups) {
       if (["spriteCreateRuntime", "spriteRuntimeSync", "spriteRuntimeUpdate"].includes(instruction.op)) addSpriteSync(instruction);
       if (instruction.op === "spriteCreateRuntime" && instruction.args[0]?.index >= 8) stats.usesSpriteMultiplexer = true;
       if (["gameInit", "gameFrame"].includes(instruction.op)) visit(instruction.args[0]);
+      if (instruction.op === "gameScene") {
+        visit(instruction.args[1]?.enter);
+        visit(instruction.args[1]?.update);
+        visit(instruction.args[1]?.exit);
+      }
       if (["gameEvery", "controlRepeat", "controlWhile", "controlRoutine"].includes(instruction.op)) visit(instruction.args[1]);
       if (instruction.op === "controlIf") {
+        if (instruction.args[0]?.operator === "mapActive") stats.usesMapActivation = true;
+        if (instruction.args[0]?.operator === "gameScene") stats.usesGameScenes = true;
         visit(instruction.args[1]);
         visit(instruction.args[2]);
       }
@@ -5000,6 +5680,14 @@ function collectBalancedOptimizationStats(instructionGroups) {
   };
   for (const group of instructionGroups) visit(group);
   return stats;
+}
+
+function normalizeOptimizationMode(value = "balanced") {
+  const mode = String(value ?? "balanced").toLowerCase();
+  if (!["size", "speed", "balanced"].includes(mode)) {
+    throw new Error("optimization mode must be size, speed or balanced");
+  }
+  return mode;
 }
 
 function emitSpriteMultiplexerStateInit(asm, state) {
@@ -5030,10 +5718,12 @@ function syncInstructionCompileState(baseState, localState) {
     voiceControls: [...localState.sid.voiceControls],
     filterModeVol: localState.sid.filterModeVol,
     filterResonanceRoute: localState.sid.filterResonanceRoute,
-    player: {
-      installRequested: localState.sid.player.installRequested,
-      line: localState.sid.player.line,
-      song: localState.sid.player.song
+      player: {
+        installRequested: localState.sid.player.installRequested,
+        line: localState.sid.player.line,
+        song: localState.sid.player.song,
+        sfxVoice: localState.sid.player.sfxVoice,
+        fadeUsed: localState.sid.player.fadeUsed
     }
   };
 }
@@ -5330,6 +6020,28 @@ function emitConditionOrJump(asm, compileState, runtimeCondition, falseLabel) {
   const id = compileState.loopCounter++;
   const passLabel = `condition_pass_${id}`;
 
+  if (runtimeCondition.operator === "mapActive") {
+    const info = requireDynamicMap(compileState, runtimeCondition.left);
+    asm.lda(abs(MAP_ACTIVE_ID));
+    asm.cmp(imm(info.id));
+    asm.beq(rel(passLabel));
+    asm.jmp(abs(falseLabel));
+    asm.label(passLabel);
+    return;
+  }
+
+  if (runtimeCondition.operator === "gameScene") {
+    const sceneId = GAME_SCENE_IDS[runtimeCondition.left];
+    if (sceneId === undefined) throw new Error(`Unknown game scene: ${runtimeCondition.left}`);
+    compileState.game.referencedScenes.add(runtimeCondition.left);
+    asm.lda(abs(GAME_SCENE_CURRENT));
+    asm.cmp(imm(sceneId));
+    asm.beq(rel(passLabel));
+    asm.jmp(abs(falseLabel));
+    asm.label(passLabel);
+    return;
+  }
+
   if (runtimeCondition.operator === "spriteAabb") {
     emitSpriteAabbOrJumpFalse(asm, compileState, runtimeCondition.left, falseLabel);
     return;
@@ -5511,6 +6223,104 @@ function emitControlWhile(asm, compileState, runtimeCondition, instructions, max
   asm.label(doneLabel);
 }
 
+function validateGameCounter(compileState, counter) {
+  if (!counter || counter.type !== "gameCounterRef" || !Array.isArray(counter.digitRefs)) {
+    throw new Error("invalid game counter reference");
+  }
+  const registered = compileState.game.counters.get(counter.name);
+  if (!registered || registered.digits !== counter.digits) {
+    throw new Error(`game counter ${counter.name} is not registered`);
+  }
+  return counter.digitRefs.map((ref) => resolveRuntimeByteAddress(compileState, ref, `counter ${counter.name} digit`));
+}
+
+function counterLiteral(counter, value, label) {
+  const maximum = (10 ** counter.digits) - 1;
+  if (!Number.isInteger(value) || value < 0 || value > maximum) throw new Error(`${label} must be between 0 and ${maximum}`);
+  return String(value).padStart(counter.digits, "0").split("").map(Number);
+}
+
+function emitGameCounterSet(asm, compileState, counter, value) {
+  const addresses = validateGameCounter(compileState, counter);
+  const digits = counterLiteral(counter, value, `counter ${counter.name} value`);
+  addresses.forEach((address, index) => emitStoreImmediate(asm, address, digits[index]));
+}
+
+function emitGameCounterMath(asm, compileState, counter, value, subtract) {
+  const addresses = validateGameCounter(compileState, counter);
+  const digits = counterLiteral(counter, value, `counter ${counter.name} delta`);
+  const id = compileState.loopCounter++;
+  subtract ? asm.sec() : asm.clc();
+  for (let index = addresses.length - 1; index >= 0; index -= 1) {
+    const carryLabel = `game_counter_${subtract ? "borrow" : "carry"}_${id}_${index}`;
+    const nextLabel = `game_counter_next_${id}_${index}`;
+    asm.lda(abs(addresses[index]));
+    if (subtract) {
+      asm.sbc(imm(digits[index]));
+      asm.bcc(rel(carryLabel));
+      asm.sta(abs(addresses[index]));
+      asm.sec();
+      asm.jmp(abs(nextLabel));
+      asm.label(carryLabel);
+      asm.adc(imm(10));
+      asm.sta(abs(addresses[index]));
+      asm.clc();
+    } else {
+      asm.adc(imm(digits[index]));
+      asm.cmp(imm(10));
+      asm.bcs(rel(carryLabel));
+      asm.sta(abs(addresses[index]));
+      asm.clc();
+      asm.jmp(abs(nextLabel));
+      asm.label(carryLabel);
+      asm.sbc(imm(10));
+      asm.sta(abs(addresses[index]));
+      asm.sec();
+    }
+    asm.label(nextLabel);
+  }
+}
+
+function emitGameCounterDraw(asm, compileState, counter, x, y, color) {
+  const addresses = validateGameCounter(compileState, counter);
+  ensureByte(x, "counter screen x"); ensureByte(y, "counter screen y"); ensureByte(color, "counter color");
+  if (x + addresses.length > 40 || y >= 25 || color > 15) throw new Error("game counter must fit inside the 40x25 screen and use a C64 color");
+  addresses.forEach((address, index) => {
+    asm.lda(abs(address)); asm.clc(); asm.adc(imm(48)); asm.sta(abs(compileState.screenBase + y * 40 + x + index));
+    emitStoreImmediate(asm, compileState.colorBase + y * 40 + x + index, color);
+  });
+}
+
+function emitRandomByteToA(asm, compileState) {
+  const noFeedback = `game_random_no_feedback_${compileState.loopCounter++}`;
+  asm.lda(abs(GAME_RANDOM_STATE));
+  asm.lsr(acc());
+  asm.bcc(rel(noFeedback));
+  asm.eor(imm(0xb8));
+  asm.label(noFeedback);
+  asm.sta(abs(GAME_RANDOM_STATE));
+}
+
+function emitRandomRange(asm, compileState, target, maximum) {
+  if (!Number.isInteger(maximum) || maximum < 1 || maximum > 256) throw new Error("random range maximum must be between 1 and 256");
+  emitRandomByteToA(asm, compileState);
+  if (maximum < 256) {
+    if ((maximum & (maximum - 1)) === 0) {
+      asm.and(imm(maximum - 1));
+    } else {
+      const reduce = `game_random_reduce_${compileState.loopCounter++}`;
+      const done = `game_random_done_${compileState.loopCounter++}`;
+      asm.label(reduce);
+      asm.cmp(imm(maximum));
+      asm.bcc(rel(done));
+      asm.sbc(imm(maximum));
+      asm.jmp(abs(reduce));
+      asm.label(done);
+    }
+  }
+  asm.sta(abs(resolveRuntimeByteAddress(compileState, target, "random target")));
+}
+
 function safeRoutineLabel(name) {
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) {
     throw new Error(`Invalid routine name: ${name}`);
@@ -5525,7 +6335,8 @@ const GAME_FRAME_COMPILE_TIME_ONLY_OPS = new Set([
   "spriteMoveX", "spriteMoveY", "spriteMoveToX", "spriteMoveToY",
   "spriteAnimateTo", "spriteStop", "spriteStopX", "spriteStopY",
   "irqInstall", "irqChainToKernal", "irqDisableKernalTimer", "irqEnableKernalTimer",
-  "gameFrame", "gameInit", "controlRoutine",
+  "gameFrame", "gameInit", "gameScene", "gameSceneStart", "controlRoutine",
+  "gamePoolRegister", "gameCounterRegister",
   "spriteCreateRuntime", "spriteRuntimeData", "spriteRuntimeColor", "spriteRuntimeFlag",
   "spriteFrames", "spriteUseFrames", "spriteSequence", "spriteRuntimeBounds", "mapEntityCreate", "spriteAssetRegister"
 ]);
@@ -5561,6 +6372,43 @@ function prepareGameFrameInstructions(instructions, compileState) {
       prepareGameFrameInstructions(instruction.args[1], compileState);
     }
   }
+}
+
+function gameSceneId(name) {
+  const id = GAME_SCENE_IDS[name];
+  if (id === undefined) throw new Error(`game scene must be one of: ${Object.keys(GAME_SCENE_IDS).join(", ")}`);
+  return id;
+}
+
+function collectReferencedGameScenes(instructions, compileState) {
+  for (const instruction of instructions) {
+    if (instruction.op === "gameSceneGo") compileState.game.referencedScenes.add(instruction.args[0]);
+    if (instruction.op === "controlIf") {
+      if (instruction.args[0]?.operator === "gameScene") compileState.game.referencedScenes.add(instruction.args[0].left);
+      collectReferencedGameScenes(instruction.args[1], compileState);
+      collectReferencedGameScenes(instruction.args[2], compileState);
+    }
+    if (["gameEvery", "controlRepeat", "controlWhile"].includes(instruction.op)) {
+      collectReferencedGameScenes(instruction.args[1], compileState);
+    }
+  }
+}
+
+function registerGameScene(compileState, name, handlers) {
+  gameSceneId(name);
+  if (compileState.game.scenes.has(name)) throw new Error(`Game scene ${name} is already declared`);
+  const normalized = {
+    name,
+    id: gameSceneId(name),
+    enter: handlers.enter ?? [],
+    update: handlers.update ?? [],
+    exit: handlers.exit ?? []
+  };
+  for (const instructions of [normalized.enter, normalized.update, normalized.exit]) {
+    collectReferencedGameScenes(instructions, compileState);
+    prepareGameFrameInstructions(instructions, compileState);
+  }
+  compileState.game.scenes.set(name, normalized);
 }
 
 function compileHighLevelInstruction(asm, instruction, compileState) {
@@ -5648,6 +6496,9 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
       break;
     case "mapRegister":
       emitMapRegister(asm, compileState, instruction.args[0]);
+      break;
+    case "mapActivate":
+      emitMapActivateRequest(asm, compileState, instruction.args[0], instruction.args[1]);
       break;
     case "mapDraw":
       emitMapDraw(asm, compileState, instruction.args[0], instruction.args[1]);
@@ -5785,6 +6636,17 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
       compileState.sid.player.installRequested = true;
       compileState.sid.player.line = instruction.args[0];
       break;
+    case "sidReserveSfxVoice":
+      throw new Error("c64.sid.reserveSfxVoice() must be declared at the top level");
+    case "sidPauseSong":
+      emitSidPlayerPause(asm, compileState);
+      break;
+    case "sidResumeSong":
+      emitSidPlayerResume(asm, compileState);
+      break;
+    case "sidFadeSong":
+      emitSidPlayerFade(asm, compileState, instruction.args[0], instruction.args[1]);
+      break;
     case "sidStopSong":
       emitSidPlayerStop(asm, compileState);
       break;
@@ -5903,6 +6765,59 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
     case "gameInit":
       for (const nestedInstruction of instruction.args[0]) compileHighLevelInstruction(asm, nestedInstruction, compileState);
       break;
+    case "gameScene":
+      registerGameScene(compileState, instruction.args[0], instruction.args[1]);
+      break;
+    case "gameSceneStart":
+      if (compileState.game.sceneStart) throw new Error("c64.game.start() can only be declared once");
+      if (compileState.game.frame && !compileState.game.frame.sceneManaged) {
+        throw new Error("c64.game.start() cannot be combined with c64.game.frame(); scene updates already provide the frame loop");
+      }
+      gameSceneId(instruction.args[0]);
+      compileState.game.sceneStart = { name: instruction.args[0], options: instruction.args[1] };
+      compileState.game.frame = { instructions: [], options: instruction.args[1], sceneManaged: true };
+      break;
+    case "gameSceneGo": {
+      const name = instruction.args[0];
+      emitStoreImmediate(asm, GAME_SCENE_PENDING, gameSceneId(name));
+      compileState.game.referencedScenes.add(name);
+      break;
+    }
+    case "gamePoolRegister": {
+      const [name, size] = instruction.args;
+      if (compileState.game.fixedPools.has(name)) throw new Error(`fixed pool ${name} is already declared`);
+      ensurePositiveByte(size, `fixed pool ${name} size`);
+      compileState.game.fixedPools.set(name, size);
+      break;
+    }
+    case "gameCounterRegister": {
+      const counter = instruction.args[0];
+      if (compileState.game.counters.has(counter.name)) throw new Error(`game counter ${counter.name} is already declared`);
+      compileState.game.counters.set(counter.name, counter);
+      break;
+    }
+    case "gameCounterSet":
+      emitGameCounterSet(asm, compileState, instruction.args[0], instruction.args[1]);
+      break;
+    case "gameCounterAdd":
+      emitGameCounterMath(asm, compileState, instruction.args[0], instruction.args[1], false);
+      break;
+    case "gameCounterSub":
+      emitGameCounterMath(asm, compileState, instruction.args[0], instruction.args[1], true);
+      break;
+    case "gameCounterDraw":
+      emitGameCounterDraw(asm, compileState, instruction.args[0], instruction.args[1], instruction.args[2], instruction.args[3]);
+      break;
+    case "randomSeed":
+      emitStoreImmediate(asm, GAME_RANDOM_STATE, instruction.args[0]);
+      break;
+    case "randomByte":
+      emitRandomByteToA(asm, compileState);
+      asm.sta(abs(resolveRuntimeByteAddress(compileState, instruction.args[0], "random target")));
+      break;
+    case "randomRange":
+      emitRandomRange(asm, compileState, instruction.args[0], instruction.args[1]);
+      break;
     case "gameEvery": {
       const counterAddress = instruction.runtimeCounterAddress;
       if (counterAddress === undefined) throw new Error("c64.game.every() must be declared inside c64.game.frame()");
@@ -5937,7 +6852,9 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
     }
     case "gameFrame":
       if (compileState.game.frame) {
-        throw new Error("Only one c64.game.frame() loop can be declared");
+        throw new Error(compileState.game.frame.sceneManaged
+          ? "c64.game.frame() cannot be combined with c64.game.start(); scene updates already provide the frame loop"
+          : "Only one c64.game.frame() loop can be declared");
       }
       compileState.game.frame = {
         instructions: instruction.args[0],
@@ -5968,7 +6885,9 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
         multicolor2: asset.multicolor2,
         origin: { ...asset.origin },
         hitbox: { ...asset.hitbox },
-        bytes: asset.frames.length * 64
+        bytes: asset.frames.length * 64,
+        resident: asset.resident !== false,
+        diskLoadPolicy: compileState.disk.enabled ? (asset.resident === false ? "with-level" : "startup") : "inline"
       });
       break;
     }
@@ -6335,47 +7254,15 @@ function emitRasterHandlers(asm, state) {
   });
 }
 
-function emitGameFrameLoop(asm, state) {
-  const frame = state.game.frame;
-  if (!frame) {
-    return;
-  }
-  // Multiplexed games update logical state late in the visible frame. Sorting
-  // follows, but VIC registers are not touched until the next raster wrap.
-  const scrollingFrameLine = [...state.assets.scrollers.values()][0]?.recommendedFrameRasterLine;
-  const rasterLine = state.multiplexer.enabled
-    ? SPRITE_MUX_FRAME_RASTER
-    : (frame.options?.rasterLine ?? scrollingFrameLine ?? 240);
-  const hz = frame.options?.hz ?? 50;
-  ensureByte(rasterLine, "game frame raster line");
-  if (hz !== 50 && hz !== "video") {
-    throw new Error("c64.game.frame() supports hz: 50 or hz: \"video\"");
-  }
-
-  asm.comment("Deterministic game frame loop");
-  emitStoreImmediate(asm, GAME_FRAME_COUNTER_LO, 0);
-  emitStoreImmediate(asm, GAME_FRAME_COUNTER_HI, 0);
-  emitStoreImmediate(asm, GAME_RATE_ACCUMULATOR, 0);
+function emitVideoStandardDetection(asm, prefix = "game_video") {
   emitStoreImmediate(asm, GAME_VIDEO_HZ, 60);
-  for (const task of state.game.everyTasks) emitStoreImmediate(asm, task.runtimeCounterAddress, 0);
-  for (const port of state.input.joystickPorts) {
-    const addresses = joystickSnapshotAddresses(port);
-    emitStoreImmediate(asm, addresses.current, 0xff);
-    emitStoreImmediate(asm, addresses.previous, 0xff);
-  }
-  for (const keyCode of state.input.keyboardKeys) {
-    const addresses = keyboardSnapshotAddresses(state, keyCode);
-    emitStoreImmediate(asm, addresses.current, 1);
-    emitStoreImmediate(asm, addresses.previous, 1);
-  }
-
-  // Detect whether the VIC-II reaches raster lines above 287. PAL does, while
-  // NTSC leaves the high-raster phase before $D012 reaches $20.
-  const detectLowLabel = "game_video_detect_low";
-  const detectHighLabel = "game_video_detect_high";
-  const detectScanLabel = "game_video_detect_scan";
-  const detectPalLabel = "game_video_detect_pal";
-  const detectDoneLabel = "game_video_detect_done";
+  // PAL reaches raster lines above 287; NTSC leaves the high-raster phase
+  // before the low byte reaches $20.
+  const detectLowLabel = `${prefix}_detect_low`;
+  const detectHighLabel = `${prefix}_detect_high`;
+  const detectScanLabel = `${prefix}_detect_scan`;
+  const detectPalLabel = `${prefix}_detect_pal`;
+  const detectDoneLabel = `${prefix}_detect_done`;
   asm.label(detectLowLabel);
   asm.lda(abs(c64.VIC_CONTROL_1));
   asm.bmi(rel(detectLowLabel));
@@ -6392,6 +7279,110 @@ function emitGameFrameLoop(asm, state) {
   asm.label(detectPalLabel);
   emitStoreImmediate(asm, GAME_VIDEO_HZ, 50);
   asm.label(detectDoneLabel);
+}
+
+function validateGameScenes(state) {
+  if (!state.game.frame?.sceneManaged) return;
+  const startName = state.game.sceneStart?.name;
+  if (!startName) throw new Error("c64.game.start() needs a starting scene");
+  if (!state.game.scenes.has(startName)) throw new Error(`Starting game scene ${startName} is not declared`);
+  for (const name of state.game.referencedScenes) {
+    if (!state.game.scenes.has(name)) throw new Error(`Game scene ${name} is referenced but not declared`);
+  }
+}
+
+function emitGameSceneApplyTransitionRoutine(asm) {
+  asm.comment("Apply at most one requested scene transition between frames");
+  asm.label("game_scene_apply_transition");
+  asm.lda(abs(GAME_SCENE_PENDING));
+  asm.cmp(imm(GAME_SCENE_NONE));
+  asm.bne(rel("game_scene_transition_requested"));
+  asm.rts();
+  asm.label("game_scene_transition_requested");
+  asm.cmp(abs(GAME_SCENE_CURRENT));
+  asm.bne(rel("game_scene_transition_changed"));
+  emitStoreImmediate(asm, GAME_SCENE_PENDING, GAME_SCENE_NONE);
+  asm.rts();
+  asm.label("game_scene_transition_changed");
+  asm.pha();
+  emitStoreImmediate(asm, GAME_SCENE_PENDING, GAME_SCENE_NONE);
+  asm.jsr(abs("game_scene_exit_dispatch"));
+  asm.pla();
+  asm.sta(abs(GAME_SCENE_CURRENT));
+  asm.jsr(abs("game_scene_enter_dispatch"));
+  asm.rts();
+}
+
+function emitGameSceneDispatchRoutine(asm, state, phase) {
+  const dispatchLabel = `game_scene_${phase}_dispatch`;
+  asm.label(dispatchLabel);
+  for (const scene of state.game.scenes.values()) {
+    const nextLabel = `${dispatchLabel}_next_${scene.id}`;
+    asm.lda(abs(GAME_SCENE_CURRENT));
+    asm.cmp(imm(scene.id));
+    asm.bne(rel(nextLabel));
+    if (scene[phase].length > 0) asm.jsr(abs(`game_scene_${scene.name}_${phase}`));
+    asm.rts();
+    asm.label(nextLabel);
+  }
+  asm.rts();
+}
+
+function emitGameSceneRoutines(asm, state) {
+  if (!state.game.frame?.sceneManaged) return;
+  emitGameSceneApplyTransitionRoutine(asm);
+  for (const phase of ["enter", "update", "exit"]) emitGameSceneDispatchRoutine(asm, state, phase);
+  for (const scene of state.game.scenes.values()) {
+    for (const phase of ["enter", "update", "exit"]) {
+      if (scene[phase].length === 0) continue;
+      asm.comment(`Scene ${scene.name}: ${phase}`);
+      asm.label(`game_scene_${scene.name}_${phase}`);
+      for (const instruction of scene[phase]) compileHighLevelInstruction(asm, instruction, state);
+      asm.rts();
+    }
+  }
+}
+
+function emitGameFrameLoop(asm, state) {
+  const frame = state.game.frame;
+  if (!frame) {
+    return;
+  }
+  validateGameScenes(state);
+  // Multiplexed games update logical state late in the visible frame. Sorting
+  // follows, but VIC registers are not touched until the next raster wrap.
+  const scrollingFrameLine = [...state.assets.scrollers.values()][0]?.recommendedFrameRasterLine;
+  const rasterLine = state.multiplexer.enabled
+    ? SPRITE_MUX_FRAME_RASTER
+    : (frame.options?.rasterLine ?? scrollingFrameLine ?? 240);
+  const hz = frame.options?.hz ?? 50;
+  ensureByte(rasterLine, "game frame raster line");
+  if (hz !== 50 && hz !== "video") {
+    throw new Error("c64.game.frame() supports hz: 50 or hz: \"video\"");
+  }
+
+  asm.comment("Deterministic game frame loop");
+  emitStoreImmediate(asm, GAME_FRAME_COUNTER_LO, 0);
+  emitStoreImmediate(asm, GAME_FRAME_COUNTER_HI, 0);
+  emitStoreImmediate(asm, GAME_RATE_ACCUMULATOR, 0);
+  for (const task of state.game.everyTasks) emitStoreImmediate(asm, task.runtimeCounterAddress, 0);
+  for (const port of state.input.joystickPorts) {
+    const addresses = joystickSnapshotAddresses(port);
+    emitStoreImmediate(asm, addresses.current, 0xff);
+    emitStoreImmediate(asm, addresses.previous, 0xff);
+  }
+  for (const keyCode of state.input.keyboardKeys) {
+    const addresses = keyboardSnapshotAddresses(state, keyCode);
+    emitStoreImmediate(asm, addresses.current, 1);
+    emitStoreImmediate(asm, addresses.previous, 1);
+  }
+
+  emitVideoStandardDetection(asm);
+  if (frame.sceneManaged) {
+    emitStoreImmediate(asm, GAME_SCENE_CURRENT, gameSceneId(state.game.sceneStart.name));
+    emitStoreImmediate(asm, GAME_SCENE_PENDING, GAME_SCENE_NONE);
+    asm.jsr(abs("game_scene_enter_dispatch"));
+  }
 
   const loopLabel = "game_frame_loop";
   const waitLeaveLabel = "game_frame_wait_leave";
@@ -6496,9 +7487,14 @@ function emitGameFrameLoop(asm, state) {
   asm.inc(abs(GAME_FRAME_COUNTER_HI));
   asm.label(counterDoneLabel);
 
-  for (const instruction of frame.instructions) {
-    compileHighLevelInstruction(asm, instruction, state);
+  if (frame.sceneManaged) {
+    asm.jsr(abs("game_scene_update_dispatch"));
+    asm.jsr(abs("game_scene_apply_transition"));
+  } else {
+    for (const instruction of frame.instructions) compileHighLevelInstruction(asm, instruction, state);
   }
+
+  emitPendingMapActivation(asm, state);
 
   if (state.multiplexer.enabled) {
     asm.jsr(abs("runtime_sprite_mux_render"));
@@ -6569,8 +7565,21 @@ function buildDetailedMemoryReport(state, codeStart, finalBytes) {
     if (isCompilerSpriteVariable(name, variable.address, variable.size)) continue;
     add(`variable ${name}`, variable.address, variable.address + variable.size - 1, "variable");
   }
-  for (const info of state.assets.mapTables.values()) add(`map ${info.id}`, info.runtimeAddress, info.runtimeAddress + info.asset.map.data.length - 1, "map", { sourcePath: info.asset.sourcePath });
-  for (const entry of state.assets.report.filter(item => item.type === "charset")) add("charset", entry.address, entry.endAddress, "charset", { mode: entry.mode });
+  if (state.disk.enabled && state.assets.mapTables.size > 0) {
+    const largestMap = Math.max(...[...state.assets.mapTables.values()].map((info) => info.asset.map.data.length));
+    add("active disk map slot", MAP_RUNTIME_BASE, MAP_RUNTIME_BASE + largestMap - 1, "map", { shared: true });
+    const largestTables = Math.max(...[...state.assets.mapTables.values()].map((info) => info.tablesDiskAsset?.bytes ?? 0));
+    if (largestTables > 0) add("active disk level tables", MAP_DISK_TABLE_BASE, MAP_DISK_TABLE_BASE + largestTables - 1, "map", { shared: true });
+  } else {
+    for (const info of state.assets.mapTables.values()) add(`map ${info.id}`, info.runtimeAddress, info.runtimeAddress + info.asset.map.data.length - 1, "map", { sourcePath: info.asset.sourcePath });
+  }
+  const seenCharsets = new Set();
+  for (const entry of state.assets.report.filter(item => item.type === "charset")) {
+    const key = `${entry.address}:${entry.endAddress}`;
+    if (seenCharsets.has(key)) continue;
+    seenCharsets.add(key);
+    add("charset", entry.address, entry.endAddress, "charset", { mode: entry.mode });
+  }
   for (const entry of state.assets.report.filter(item => item.type === "map-scroll-blank-charset")) {
     add("map scroll blank charset", entry.address, entry.endAddress, "charset");
   }
@@ -6694,6 +7703,205 @@ function appendGameplayBudgetReports(state) {
   }
 }
 
+function appendGameContractReport(state) {
+  if (state.game.scenes.size === 0 && !state.assets.activationUsed && state.game.fixedPools.size === 0 && state.game.counters.size === 0 && !state.optimization.usesRng) return;
+  state.assets.report.push({
+    type: "game-runtime",
+    scenes: [...state.game.scenes.keys()],
+    startScene: state.game.sceneStart?.name ?? null,
+    transitionPolicy: state.game.scenes.size > 0 ? "one-request-between-frames" : null,
+    activeMapContract: state.assets.activationUsed,
+    mapActivationPolicy: state.assets.activationUsed ? "deferred-after-frame-or-before-first-frame" : null,
+    registeredMaps: state.assets.mapTables.size,
+    sharedMapRamSlot: state.disk.enabled,
+    deterministicRng: state.optimization.usesRng,
+    fixedPools: [...state.game.fixedPools].map(([name, size]) => ({ name, size })),
+    counters: [...state.game.counters.values()].map((counter) => ({ name: counter.name, digits: counter.digits, storage: "unpacked-bcd" }))
+  });
+}
+
+function appendDiskAssetReport(state, programBytes) {
+  if (!state.disk.enabled) return;
+  const maps = [...state.assets.mapTables.values()];
+  const levelDependencies = maps.map((info) => ({
+    mapId: info.id,
+    sourcePath: info.asset.sourcePath,
+    files: [info.mapDiskAsset, info.tablesDiskAsset, info.charsetDiskAsset, ...info.diskSpriteDependencies.values()]
+      .filter(Boolean)
+      .map((descriptor) => descriptor.name)
+  }));
+  state.assets.report.push({
+    type: "disk-assets",
+    device: state.disk.device,
+    mainProgramStorage: "prg",
+    assetFileType: "prg-data-module",
+    files: state.disk.files.map(({ name, kind, address, bytes, sourcePath }) => ({ name, kind, address, bytes, sourcePath })),
+    levelDependencies,
+    mainProgramBytes: programBytes,
+    assetBytes: state.disk.files.reduce((sum, file) => sum + file.bytes, 0),
+    sharedMapRamSlot: maps.length > 0,
+    activeMapSlotAddress: maps.length > 0 ? MAP_RUNTIME_BASE : null,
+    largestMapBytes: maps.length > 0 ? Math.max(...maps.map((info) => info.asset.map.data.length)) : 0
+  });
+  if (maps.length > 0 && !maps.some((info) => info.activationRequested)) {
+    state.assets.report.push({
+      type: "warning",
+      code: "DISK_MAP_NOT_ACTIVATED",
+      message: "Disk-backed maps are declared but no mapAsset.activate() call is present; the active map slot will remain empty."
+    });
+  }
+  const usedLevelSprites = new Set(maps.flatMap((info) => [...info.diskSpriteDependencies.keys()]));
+  for (const frameAsset of state.spriteFrameAssets.values()) {
+    if (!frameAsset.resident && frameAsset.diskDescriptor && !usedLevelSprites.has(frameAsset.diskDescriptor.name)) {
+      state.assets.report.push({
+        type: "warning",
+        code: "DISK_SPRITE_NOT_ACTIVATED",
+        message: `Non-resident sprite ${frameAsset.diskDescriptor.sourcePath} is never listed in mapAsset.activate({ sprites: [...] }).`
+      });
+    }
+  }
+}
+
+function appendSidAudioReport(state) {
+  const song = state.sid.player.song;
+  const effectCalls = state.optimization.sidEffectCount;
+  const reservedSfxVoice = state.sid.player.sfxVoice;
+  if (!song && effectCalls === 0 && reservedSfxVoice === null) return;
+
+  const musicVoices = song ? sidMusicVoices(state) : [];
+  const omittedVoiceBytes = song && reservedSfxVoice !== null ? song.length * 3 : 0;
+  const report = {
+    type: "sid-audio",
+    player: Boolean(song),
+    tempo: song?.tempo ?? null,
+    expandedSteps: song?.expandedLength ?? null,
+    storedSteps: song?.length ?? null,
+    logicalTickRateHz: song ? 50 : null,
+    videoStandardCompensation: song ? "automatic-pal-ntsc" : null,
+    loop: song?.loop ?? false,
+    musicVoices,
+    reservedSfxVoice,
+    effectCalls,
+    fadeCalls: state.optimization.sidFadeCount,
+    patterns: song?.patterns.map((pattern) => ({
+      name: pattern.name,
+      uses: pattern.uses,
+      sourceEntries: pattern.sourceEntries
+    })) ?? [],
+    instruments: song?.instruments.map((instrument, index) => (
+      instrument ? { voice: index + 1, name: instrument.name, waveform: instrument.waveform } : null
+    )).filter(Boolean) ?? [],
+    omittedReservedVoiceBytes: omittedVoiceBytes,
+    compactedRepeatTableBytes: song ? song.compactedRepeatSteps * 3 * musicVoices.length : 0,
+    pooledIdenticalVoiceTableBytes: song?.pooledVoiceTableBytes ?? 0,
+    priorityPolicy: reservedSfxVoice === null ? "shared-voice-warning" : "reserved-sfx-voice"
+  };
+  state.assets.report.push(report);
+
+  if (song && reservedSfxVoice !== null && song.voices[reservedSfxVoice - 1].hasNotes) {
+    state.assets.report.push({
+      type: "warning",
+      code: "SID_RESERVED_VOICE_MUSIC_DATA",
+      message: `SID voice ${reservedSfxVoice} is reserved for effects; its music notes are omitted from the PRG. Use rests on that song voice.`,
+      details: report
+    });
+  } else if (song && effectCalls > 0 && reservedSfxVoice === null && song.voices[0].hasNotes) {
+    state.assets.report.push({
+      type: "warning",
+      code: "SID_VOICE_CONFLICT",
+      message: "Music and sound effects both modify SID voice 1. Call c64.sid.reserveSfxVoice(1..3) before playSong().",
+      details: report
+    });
+  }
+}
+
+function appendOptimizationReport(state, finalBytes) {
+  const candidates = state.optimization.rleCandidates;
+  const profileFor = (mode) => {
+    let assetProgramBytesEstimate = 0;
+    let startupCyclesEstimate = 0;
+    let compressedChunks = 0;
+    for (const candidate of candidates) {
+      const useRle = candidate.encodedBytes <= 255
+        && shouldUseAssetRle(mode, candidate.netSavedBytes);
+      assetProgramBytesEstimate += useRle ? candidate.rleProgramBytes : candidate.rawProgramBytes;
+      startupCyclesEstimate += useRle ? candidate.rleCyclesEstimate : candidate.rawCyclesEstimate;
+      if (useRle) compressedChunks += 1;
+    }
+    return {
+      mode,
+      assetProgramBytesEstimate,
+      startupCyclesEstimate: Math.round(startupCyclesEstimate),
+      compressedChunks,
+      runtimeStrategy: mode === "speed" ? "inline-hot-paths" : "shared-repeated-routines"
+    };
+  };
+  const profiles = ["size", "balanced", "speed"].map(profileFor);
+  const selectedProfile = profiles.find((profile) => profile.mode === state.optimization.mode);
+  for (const profile of profiles) {
+    profile.estimatedProgramBytes = finalBytes.length
+      + profile.assetProgramBytesEstimate
+      - selectedProfile.assetProgramBytesEstimate;
+    if (profile.mode === state.optimization.mode) profile.programBytes = finalBytes.length;
+  }
+
+  const omittedRoutines = [];
+  if (!state.sid.player.installRequested) omittedRoutines.push("sid-player");
+  if (state.optimization.sidFadeCount === 0) omittedRoutines.push("sid-fade");
+  if (!state.spriteAnimator.installRequested) omittedRoutines.push("sprite-animator");
+  if (!state.multiplexer.enabled) omittedRoutines.push("sprite-multiplexer");
+  if (state.assets.mapTables.size === 0) omittedRoutines.push("map-runtime");
+  if (!state.assets.activationUsed) omittedRoutines.push("map-activation");
+  if (state.game.scenes.size === 0) omittedRoutines.push("game-scenes");
+  if (!state.hires.runtimeNeeded) omittedRoutines.push("hires-runtime");
+
+  const logicalSpriteCount = state.spriteRuntime.filter(Boolean).length;
+  const muxSortComparisonsWorstCase = state.multiplexer.enabled
+    ? (logicalSpriteCount * Math.max(0, logicalSpriteCount - 1)) / 2
+    : 0;
+  // Conservative, documented estimates for the generated insertion sort and
+  // VIC-II channel projection. They make the optional multiplexer cost visible
+  // in build reports without changing its deterministic runtime.
+  const multiplexerProfile = {
+    enabled: state.multiplexer.enabled,
+    logicalSprites: logicalSpriteCount,
+    sortComparisonsWorstCase: muxSortComparisonsWorstCase,
+    sortCyclesEstimate: state.multiplexer.enabled ? muxSortComparisonsWorstCase * 34 : 0,
+    projectionCyclesEstimate: state.multiplexer.enabled ? logicalSpriteCount * 96 : 0,
+    totalCyclesEstimate: state.multiplexer.enabled
+      ? muxSortComparisonsWorstCase * 34 + logicalSpriteCount * 96
+      : 0
+  };
+
+  state.assets.report.push({
+    type: "optimization-summary",
+    mode: state.optimization.mode,
+    programBytes: finalBytes.length,
+    profiles,
+    rle: {
+      candidates: candidates.length,
+      compressedChunks: candidates.filter((candidate) => candidate.compressed).length,
+      rawBytes: candidates.reduce((sum, candidate) => sum + candidate.rawBytes, 0),
+      storedBytes: candidates.reduce((sum, candidate) => sum + (candidate.compressed ? candidate.encodedBytes : candidate.rawBytes), 0),
+      estimatedNetSavedBytes: candidates.filter((candidate) => candidate.compressed)
+        .reduce((sum, candidate) => sum + candidate.netSavedBytes, 0)
+    },
+    sharedRoutines: {
+      sidClick: state.sharedRoutines.sidClick,
+      spriteSync: state.sharedRoutines.spriteSyncIndexes.size,
+      spriteAabb: state.sharedRoutines.spriteAabbCompare
+    },
+    omittedRoutines,
+    audio: {
+      compactedRepeatTableBytes: state.sid.player.song
+        ? state.sid.player.song.compactedRepeatSteps * 3 * sidMusicVoices(state).length
+        : 0,
+      pooledIdenticalVoiceTableBytes: state.sid.player.song?.pooledVoiceTableBytes ?? 0
+    },
+    multiplexer: multiplexerProfile
+  });
+}
+
 function sanitizeInlineSource(source) {
   // compileJsToC64Outputs() accepts a code string. We allow a simple
   // `import { c64 } ...` line, then strip it because the runtime already
@@ -6736,13 +7944,24 @@ export function compileInstructions(instructions, options = {}) {
   const programConfigs = instructions.filter((instruction) => instruction.op === "programConfig");
   if (programConfigs.length > 1) throw new Error("c64.program.start() can only be declared once");
   const programConfig = programConfigs[0]?.args[0] ?? {};
+  const sidReservations = instructions.filter((instruction) => instruction.op === "sidReserveSfxVoice");
+  if (sidReservations.length > 1) throw new Error("c64.sid.reserveSfxVoice() can only be declared once");
+  const reservedSfxVoice = sidReservations[0]?.args[0] ?? null;
+  if (reservedSfxVoice !== null) ensureSidVoice(reservedSfxVoice);
   const codeStart = options.codeStart ?? programConfig.codeStart ?? DEFAULT_CODE_START;
   const sysAddress = options.sysAddress ?? programConfig.sysAddress ?? (programConfig.codeStart ?? DEFAULT_SYS_ADDRESS);
+  const optimizationMode = normalizeOptimizationMode(options.opt);
+  const assetStorage = options.assets ?? "inline";
+  if (!["inline", "disk"].includes(assetStorage)) throw new Error("asset storage must be inline or disk");
+  const diskDevice = options.device ?? 8;
+  if (!Number.isInteger(diskDevice) || diskDevice < 4 || diskDevice > 30) throw new Error("disk device must be between 4 and 30");
   const asm = new Assembler6502(codeStart);
   const optimization = collectBalancedOptimizationStats([
     instructions,
     ...(options.irqHandlers ?? []).map((handler) => handler.instructions)
   ]);
+  optimization.mode = optimizationMode;
+  optimization.rleCandidates = [];
   // compileState is the compiler's working memory. It tracks the current text
   // color, string/data pools, user variables, sprite state and optional IRQs.
   const state = {
@@ -6758,7 +7977,7 @@ export function compileInstructions(instructions, options = {}) {
     spriteRuntime: Array.from({ length: SPRITE_LOGICAL_COUNT }, () => null),
     spriteFrameAssets: new Map(),
     spriteDataAssets: new Map(),
-    nextSpriteFrameAddress: 0x3000,
+    nextSpriteFrameAddress: assetStorage === "disk" ? 0x2000 : 0x3000,
     sharedRoutines: {
       sidClick: false,
       spriteSyncIndexes: new Set(),
@@ -6772,7 +7991,16 @@ export function compileInstructions(instructions, options = {}) {
       entities: new Map(),
       spriteAssets: new Map(),
       bytePool: new Map(),
-      nextMapAddress: MAP_RUNTIME_BASE
+      nextMapAddress: MAP_RUNTIME_BASE,
+      activationUsed: optimization.usesMapActivation || assetStorage === "disk"
+    },
+    disk: {
+      enabled: assetStorage === "disk",
+      device: diskDevice,
+      files: [],
+      assetPool: new Map(),
+      nameCounters: new Map(),
+      loaderNeeded: false
     },
     optimization,
     multiplexer: {
@@ -6792,10 +8020,15 @@ export function compileInstructions(instructions, options = {}) {
     },
     game: {
       frame: null,
+      scenes: new Map(),
+      sceneStart: null,
+      referencedScenes: new Set(),
       everyTasks: [],
       usesVicSpriteCollision: false,
       usesVicBackgroundCollision: false,
-      spriteAabbCount: 0
+      spriteAabbCount: 0,
+      fixedPools: new Map(),
+      counters: new Map()
     },
     hires: {
       screenBase: c64.HIRES_SCREEN_RAM,
@@ -6816,7 +8049,9 @@ export function compileInstructions(instructions, options = {}) {
       player: {
         installRequested: false,
         line: 250,
-        song: null
+        song: null,
+        sfxVoice: reservedSfxVoice,
+        fadeUsed: optimization.sidFadeCount > 0
       }
     },
     irq: {
@@ -6832,9 +8067,20 @@ export function compileInstructions(instructions, options = {}) {
   };
 
   emitSpriteMultiplexerStateInit(asm, state);
+  if (optimization.usesMapActivation || state.disk.enabled) {
+    emitStoreImmediate(asm, MAP_ACTIVE_ID, GAME_SCENE_NONE);
+    emitStoreImmediate(asm, MAP_PENDING_ID, GAME_SCENE_NONE);
+  }
+  if (state.disk.enabled) emitStoreImmediate(asm, DISK_LOAD_ERROR, 0);
+  if (optimization.usesGameScenes) {
+    emitStoreImmediate(asm, GAME_SCENE_CURRENT, GAME_SCENE_NONE);
+    emitStoreImmediate(asm, GAME_SCENE_PENDING, GAME_SCENE_NONE);
+  }
+  if (optimization.usesRng) emitStoreImmediate(asm, GAME_RANDOM_STATE, 0xa5);
 
   for (const instruction of instructions) {
     if (instruction.op === "programConfig") continue;
+    if (instruction.op === "sidReserveSfxVoice") continue;
     if (instruction.op === "irqInstall") {
       state.irq.installRequested = true;
       continue;
@@ -6856,6 +8102,15 @@ export function compileInstructions(instructions, options = {}) {
     }
 
     compileHighLevelInstruction(asm, instruction, state);
+  }
+
+  // An activation requested by c64.game.init() is completed before IRQs and
+  // the first visible frame start. Requests made by a frame are handled again
+  // at the safe transition point at the end of that frame.
+  emitPendingMapActivation(asm, state);
+
+  if (state.sid.player.installRequested && !state.game.frame) {
+    emitVideoStandardDetection(asm, "sid_video");
   }
 
   if (state.irq.installRequested || state.irq.autoInstallRequested) {
@@ -6917,8 +8172,10 @@ export function compileInstructions(instructions, options = {}) {
   } else {
     asm.rts();
   }
+  emitGameSceneRoutines(asm, state);
   emitBalancedSharedRoutines(asm, state);
   emitMapRoutines(asm, state);
+  emitDiskLoaderRoutine(asm, state);
   emitHiresRoutines(asm, state);
   // Strings and user data are emitted after code, then referenced by labels.
   emitStringPool(asm, state);
@@ -6926,13 +8183,21 @@ export function compileInstructions(instructions, options = {}) {
 
   const finalBytes = Uint8Array.from(Array.from(asm.toBytes()));
   appendGameplayBudgetReports(state);
+  appendGameContractReport(state);
+  appendDiskAssetReport(state, finalBytes.length);
+  appendSidAudioReport(state);
+  appendOptimizationReport(state, finalBytes);
   const memoryLayout = buildDetailedMemoryReport(state, codeStart, finalBytes);
   state.assets.report.push(memoryLayout);
   if (memoryLayout.conflicts.length) {
     const conflict = memoryLayout.conflicts[0];
     throw new Error(`memory overlap between ${conflict.first} and ${conflict.second} at $${conflict.start.toString(16).toUpperCase()}-$${conflict.end.toString(16).toUpperCase()}`);
   }
-  return { ...buildCompileResult(finalBytes, asm, codeStart, sysAddress), assetReport: state.assets.report };
+  return {
+    ...buildCompileResult(finalBytes, asm, codeStart, sysAddress),
+    assetReport: state.assets.report,
+    diskFiles: state.disk.files.map((file) => ({ ...file, data: Uint8Array.from(file.data) }))
+  };
 }
 
 export async function compileFile(inputFile, options = {}) {
