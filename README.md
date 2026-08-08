@@ -1,6 +1,6 @@
 # js-c64
 
-[![CI](https://github.com/yourname/js-c64/actions/workflows/ci.yml/badge.svg)](https://github.com/yourname/js-c64/actions/workflows/ci.yml)
+[![CI](https://github.com/Roxell2006/compilateur-js-c64/actions/workflows/ci.yml/badge.svg)](https://github.com/Roxell2006/compilateur-js-c64/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/js-c64.svg)](https://www.npmjs.com/package/js-c64)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
@@ -28,6 +28,7 @@ c64js build examples/hello.js -o hello.asm --format asm
 c64js build examples/hello.js -o hello.bas --format data
 c64js build examples/hello.js -o hello.bas --format data --sys 49152
 c64js build examples/raster-bars.js -o raster-bars.prg
+c64js build examples/multilevel-d64.js -o multilevel.d64
 ```
 
 The generated `.prg` uses a BASIC stub with `10 SYS 2064` and starts machine code at `$0810`.
@@ -252,6 +253,112 @@ logical updates per second on PAL and NTSC; `{ hz: "video" }` follows the native
 video rate (50 PAL, 60 NTSC). Frame tasks must always be bounded.
 See [examples/game-loop-input.js](./examples/game-loop-input.js).
 
+### v1.0 fixed game scenes and level activation
+
+The stable v1.0 game API provides four deliberately fixed scenes: `title`,
+`game`, `pause` and `gameOver`. `c64.game.start()` creates the only frame loop,
+so it must not be combined with `c64.game.frame()`.
+
+```js
+c64.game.scene("title", {
+  enter: () => c64.printCentered(12, "FIRE TO START"),
+  update: () => c64.control.if(joystick.firePressed(), () => c64.game.go("game"))
+});
+
+c64.game.scene("game", {
+  update: () => player.update()
+});
+
+c64.game.start("title", { hz: 50 });
+```
+
+Each scene accepts optional `enter`, `update` and `exit` callbacks. `go()` only
+stores one pending transition; the generated engine applies it after the current
+frame and calls exit/enter in a deterministic order. Use `c64.game.is(name)` for
+a runtime scene condition. See [examples/game-scenes.js](./examples/game-scenes.js).
+
+A map asset now exposes `activate()` and `isActive()`. Embedded builds restore
+the original map cells and charset when activation is applied. An activation requested by
+`game.init()` completes before the first frame; one requested during gameplay is
+processed at the safe end-of-frame boundary. `activate({ draw: true })` also
+redraws the complete map after it has loaded.
+
+### v1.0 counters, deterministic random and fixed pools
+
+Scores and lives use unpacked decimal digits. Updating or drawing them never
+performs a binary-to-decimal division in the frame loop:
+
+```js
+const score = c64.game.score({ digits: 5, initial: 0 });
+const lives = c64.game.lives({ initial: 3 });
+
+score.add(100);
+score.draw(2, 0, { color: c64.COLOR_YELLOW });
+lives.dec();
+lives.draw(35, 0);
+```
+
+Gameplay randomness is reproducible from a non-zero seed. `range(target, 10)`
+writes a value from 0 through 9 into a byte variable:
+
+```js
+const roll = c64.var.byte("roll", { initial: 0 });
+c64.random.seed(42);
+c64.random.range(roll, 10);
+```
+
+Use `c64.pool.fixed()` for a compile-time bounded collection. Its factory runs
+once during compilation; the generated program receives exactly that many
+variables, enemies or projectiles and never allocates runtime memory:
+
+```js
+const bullets = c64.pool.fixed("bullets", 8, (index) => ({
+  active: c64.var.bool(`bullet${index}Active`, false),
+  x: c64.var.word(`bullet${index}X`, { initial: 0 })
+}));
+
+bullets.forEach((bullet) => bullet.active.set(false));
+```
+
+### D64 builds and disk-backed levels
+
+The same source can produce a standalone PRG or a multi-file 1541 disk image:
+
+```bash
+c64js build examples/multilevel-d64.js -o dist/multilevel.d64
+c64js build examples/multilevel-d64.js -o dist/multilevel.asm --format asm --assets disk
+c64js build examples/multilevel-d64.js -o dist/multilevel.prg --assets inline
+```
+
+`.d64` selects disk assets automatically. The image contains one bootable PRG
+and load-address PRG data modules for maps, charsets, tile/collision tables and
+sprite pixels. Only the first PRG is executable; the other entries use the PRG
+directory type because the C64 KERNAL `LOAD` routine filters out USR entries.
+`--device 9`, `--disk-name "MY GAME"` and `--program-name "START"`
+override the beginner-friendly defaults. Use `--report report.json` to inspect
+every filename, RAM address, dependency and allocated disk block.
+
+Disk maps share `$8000-$9FFF`; their active tile tables share `$3800-$3FFF`.
+The loader uses the KERNAL `SETNAM`, `SETLFS` and `LOAD` routines only at a safe
+level boundary. A missing file stops the transition, restores the interrupt
+state, turns the border red and displays `DISK ERROR` using the ROM charset.
+
+Sprite assets are resident by default. Mark level-only graphics and list them
+when activating that level:
+
+```js
+const enemy = c64.assets.loadSprite("assets/enemy.json", {
+  address: 0x2200,
+  resident: false
+});
+
+level2.activate({ draw: true, sprites: [enemy] });
+```
+
+Several non-resident sprite assets may deliberately use the same aligned
+address so their data modules replace one another. The complete example is
+[examples/multilevel-d64.js](./examples/multilevel-d64.js).
+
 ### v0.8 sprites, animation and collisions
 
 Multiple 64-byte frames can be shared by sprites and arranged into named
@@ -287,8 +394,28 @@ shared 6502 subroutines when sharing is smaller than inline code. Reusing the
 identical sprite pixels also share one VIC-II data block. Passing an explicit
 `dataAddress` keeps a private writable block instead. These optimizations
 require no change to normal user JavaScript. On `breakout-mini`, they reduce the PRG from 4,644 to
-3,335 bytes (about 28%) while retaining the logical state needed for 16 sprites. A shared `JSR`/`RTS` costs 12 additional CPU cycles per
+3,361 bytes (about 28%) while retaining the logical state needed for 16 sprites. A shared `JSR`/`RTS` costs 12 additional CPU cycles per
 call, which is the intended balanced tradeoff between speed and size.
+
+The v0.11 optimizer can be selected from the command line:
+
+```powershell
+node .\src\cli.js build .\examples\platformer-mini.js -o .\dist\platformer-mini.prg --opt balanced --report .\dist\platformer-mini.report.json
+```
+
+- `balanced` is the default: it shares repeated routines and accepts RLE only
+  when the complete compressed block saves at least eight bytes;
+- `size` accepts every positive net saving after counting the RLE decoder;
+- `speed` keeps map/charset initialization uncompressed and inlines repeated
+  SID click, sprite synchronization and AABB hot paths.
+
+RLE selection is made independently for each map or charset block, so an asset
+that would grow remains raw. The JSON `optimization-summary` reports actual
+bytes for the selected mode, comparative estimates, initialization cycles,
+shared and omitted routines, audio-table savings and multiplexer cycle budgets.
+The non-selected sizes are estimates because pooled data can be shared across
+assets; compile a final release once with each mode when a byte-exact comparison
+matters.
 
 ### v0.8.2 virtual sprites 8..15
 
@@ -359,8 +486,11 @@ Current v0.9 foundation includes:
 - JSON loading relative to the compiled JavaScript file;
 - inline assets through `c64.assets.defineMap()`;
 - lossless hires 8x8 and multicolor 4x8 charset data, padded to the VIC-II 2 KB format;
+- every custom charset automatically copies screen codes 0–63 from the C64
+  character ROM into RAM; assets contain only custom glyphs, so those 512
+  bytes are absent from Studio exports, PRGs and D64 modules;
 - studio projects preserve the original screen-code positions for A-Z, space,
-  common punctuation and 0-9; custom glyphs start at code 65 (`Shift+A`);
+  common punctuation and 0-9; custom glyphs start at code 64;
 - configurable metatiles from 1x1 to 8x8 characters;
 - per-cell colors and a separate logical collision value per tile;
 - compile-time validation of dimensions, byte values and tile references;
@@ -619,7 +749,7 @@ instead of padding the file with zeroes up to `$4000`. See
 
 ### SID audio API
 
-Current `v0.6.0` layer includes:
+The SID layer now includes the completed `v0.11.0` game-audio foundation:
 
 - `c64.sid.volume(value)`
 - `c64.sid.filter(mode, cutoff, resonance)`
@@ -632,8 +762,14 @@ Current `v0.6.0` layer includes:
 - `c64.sid.note(voice, noteName, duration = 0)`
 - `c64.sid.freq(voice, hzOrRawValue)`
 - `c64.sid.rest(voice, duration = 0)`
+- `c64.sid.pattern(name, entries)`
+- `c64.sid.instrument(name, options)`
 - `c64.sid.playSong(songDefinition)`
+- `c64.sid.reserveSfxVoice(voice)`
 - `c64.sid.installPlayer(line = 250)`
+- `c64.sid.pauseSong()`
+- `c64.sid.resumeSong()`
+- `c64.sid.fadeSong(targetVolume, stepEvery = 4)`
 - `c64.sid.stopSong()`
 - `c64.sid.beep()`
 - `c64.sid.click()` (non-blocking envelope retrigger, safe inside the game loop)
@@ -675,21 +811,49 @@ Current notes:
 - `cutoff` must be between `0` and `2047`
 - `resonance` must be between `0` and `15`
 - `playSong()` is now a non-blocking 3-voice IRQ player with a shared tempo
+- `tempo` uses a logical 50 Hz clock on both PAL and NTSC machines
+- `loop: true` restarts the song without stopping its voices
+- `reserveSfxVoice(1..3)` gives effects priority on one voice and removes that
+  voice's unused music tables from the PRG
+- `pauseSong()` and `resumeSong()` preserve the current song position
+- `pattern()` returns a reusable phrase; use `pattern.repeat(count)` without
+  copying note arrays in user code
+- `instrument()` groups waveform, pulse width and ADSR settings and can be
+  assigned through `playSong({ instruments: [lead, bass, null] })`
+- `fadeSong(targetVolume, stepEvery)` changes one volume level every requested
+  logical tick inside the IRQ, without blocking the game loop
 - `playSong()` can coexist with raster IRQ effects and the sprite animator
 - one-shot effects like `beep()` or `laser()` are still simple immediate helpers, while `playSong()` is the background music layer
+- the `sid-audio` build report describes voice ownership, timing and saved bytes;
+  `SID_VOICE_CONFLICT` warns when music and effects still share voice 1
+- identical expanded tables used by several music voices are stored only once
+- an exactly repeated loop stores only its smallest common musical period; the
+  `sid-audio` report keeps both expanded and stored step counts
 
 Song example:
 
 ```js
+const lead = c64.sid.instrument("lead", {
+  waveform: "pulse", pulseWidth: 0x0800,
+  attackDecay: 0x11, sustainRelease: 0x98
+});
+const riff = c64.sid.pattern("riff", ["C4", "E4", "G4", "C5"]);
+
+c64.sid.reserveSfxVoice(3);
 c64.sid.playSong({
   tempo: 8,
+  loop: true,
+  instruments: [lead, null, null],
   voices: [
-    ["C4", "E4", "G4", "C5"],
+    riff.repeat(2),
     [{ note: "C3", duration: 2 }, { note: "G2", duration: 2 }],
-    ["R", "C5", "R", "G4"]
+    [{ rest: true, duration: 8 }]
   ]
 });
 ```
+
+See [examples/sid-game-audio.js](./examples/sid-game-audio.js) for joystick
+pause/resume controls and a non-blocking effect on the reserved voice.
 
 Music plus raster example:
 
@@ -860,7 +1024,14 @@ the keyboard, clock and `READY.` prompt continue to work normally.
 npm install
 npm test
 npm run build:demos
+npm run release:check
 ```
+
+`release:check` runs the full test suite, builds every example and the
+multi-level D64, enforces the four game budgets in `release-budgets.json`, packs
+the exact NPM tarball, installs it in an empty project and executes the installed
+`npx c64js`. CI performs the same release gate on Windows and Linux with Node
+18, 20 and 22. Generated release evidence is written to `dist/release/validation.json`.
 
 ## Security Considerations
 
@@ -872,11 +1043,13 @@ Do not compile untrusted `.js` DSL files without sandboxing them yourself first.
 
 This is not a full JavaScript compiler. It is a JavaScript DSL executed by Node.js that emits 6502 machine code.
 
-Known limits in `0.1.0`:
+Known limits in `1.0.0`:
 
 - high-level operations are intentionally small and direct
 - `peek()` is mainly useful together with `poke()` or custom low-level assembly flows
 - IRQ helpers focus on raster setup and dispatch, not full interrupt framework abstraction
-- sprite AABB collisions are rectangle-based; generic pixel-perfect collision and tilemap collision are not part of v0.8
+- sprite AABB collisions are rectangle-based; tile collisions use map collision values and behaviors rather than pixel-perfect masks
 - screen text conversion is intentionally simple
 - hires bitmap support is currently focused on the standard monochrome `320x200` mode with per-cell `8x8` color limits
+- disk level loading is intentionally blocking and uses the stock KERNAL loader; a fastloader is outside the 1.0 scope
+- pools, scenes and the logical sprite count are deliberately bounded at compile time; there is no heap or garbage collector on the C64

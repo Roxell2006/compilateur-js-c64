@@ -312,6 +312,47 @@ Cette version est ideale si votre but est simplement :
 - ou l'afficher dans votre propre interface
 
 
+2.10 CHOISIR L'OPTIMISATION ET CREER UN RAPPORT
+-----------------------------------------------
+
+Sans option particuliere, js-c64 utilise le mode balanced. C'est le meilleur
+choix general pour un jeu :
+
+node .\src\cli.js build .\examples\platformer-mini.js -o .\dist\platformer-mini.prg
+
+Vous pouvez choisir explicitement un des trois modes :
+
+node .\src\cli.js build .\examples\platformer-mini.js -o .\dist\platformer-mini.prg --opt balanced
+node .\src\cli.js build .\examples\platformer-mini.js -o .\dist\platformer-mini-size.prg --opt size
+node .\src\cli.js build .\examples\platformer-mini.js -o .\dist\platformer-mini-speed.prg --opt speed
+
+- balanced partage le code repete et garde une marge avant d'utiliser RLE
+- size cherche le plus petit PRG possible
+- speed evite la decompression des maps/charsets au demarrage et copie certains
+  petits morceaux de code directement dans la boucle, ce qui peut agrandir le PRG
+
+La compression RLE est automatique. Le compilateur compte aussi la taille du
+decompresseur. Il laisse donc une map ou un charset en donnees normales si RLE
+rendrait le programme plus grand.
+
+Pour comprendre le choix du compilateur, ajoutez --report :
+
+node .\src\cli.js build .\examples\platformer-mini.js -o .\dist\platformer-mini.prg --opt balanced --report .\dist\platformer-mini.report.json
+
+Le fichier JSON contient notamment optimization-summary :
+
+- programBytes : taille reelle du code machine choisi
+- profiles : comparaison estimee des modes size, balanced et speed
+- rle : nombre de blocs compresses et octets economises
+- sharedRoutines : code repete partage
+- omittedRoutines : fonctions absentes car le jeu ne les utilise pas
+- audio et multiplexer : economies musicales et budget des sprites virtuels
+
+Les tailles des deux modes non compiles sont des estimations rapides. Pour une
+comparaison exacte, compilez votre jeu trois fois avec trois noms de sortie,
+comme dans les commandes ci-dessus. Le JavaScript du jeu ne doit pas changer.
+
+
 3. STRUCTURE MINIMALE D'UN FICHIER
 ----------------------------------
 
@@ -1111,6 +1152,7 @@ import { c64 } from "js-c64";
 
 c64.sid.playSong({
   tempo: 18,
+  loop: true,
   voices: [
     ["C4", "E4", "G4", "C5"],
     ["C3", "R", "G2", "R"],
@@ -1120,7 +1162,9 @@ c64.sid.playSong({
 
 Ici :
 
-- tempo regle la vitesse generale
+- tempo regle la vitesse generale sur une horloge logique de 50 Hz. La vitesse
+  reste donc la meme sur un C64 PAL et un C64 NTSC
+- loop: true recommence automatiquement la musique
 - voices contient 3 tableaux
 - chaque tableau correspond a une voix SID
 - "R" veut dire silence
@@ -1153,7 +1197,107 @@ import { c64 } from "js-c64";
 c64.sid.stopSong();
 
 
-7.1.16 Bruitages prets a l'emploi
+7.1.16 RESERVER UNE VOIX AUX BRUITAGES, PAUSE ET REPRISE (V0.11)
+----------------------------------------------------------------
+
+Le SID ne possede que trois voix. Sans regle particuliere, la musique et un
+bruitage peuvent modifier la voix 1 au meme moment. Le compilateur affiche alors
+l'avertissement SID_VOICE_CONFLICT.
+
+La solution recommandee pour un jeu est de reserver une voix avant la musique :
+
+c64.sid.reserveSfxVoice(3);
+
+c64.sid.playSong({
+  tempo: 5,
+  loop: true,
+  voices: [
+    ["C4", "E4", "G4", "E4"],
+    ["C3", "R", "G2", "R"],
+    [{ rest: true, duration: 4 }]
+  ]
+});
+
+Ici, les voix 1 et 2 appartiennent a la musique. La voix 3 est prioritaire pour
+les bruitages beep(), click(), noise(), explosion(), laser() et pickup(). Le
+lecteur musical ne touche jamais a cette voix. Il ne stocke meme pas ses trois
+tables de musique dans le PRG, ce qui economise de la place.
+
+Le tableau musical de la voix reservee doit contenir seulement des silences.
+Sinon le build affiche SID_RESERVED_VOICE_MUSIC_DATA et ignore les notes de
+cette voix.
+
+Pour mettre uniquement la musique en pause, sans perdre sa position :
+
+c64.sid.pauseSong();
+
+Pour continuer :
+
+c64.sid.resumeSong();
+
+stopSong() est different : il arrete la musique et remet sa position au debut.
+Le rapport de build sid-audio indique les voix musicales, la voix reservee, le
+nombre d'effets, la compensation PAL/NTSC et les octets economises.
+
+Exemple jouable : examples/sid-game-audio.js
+
+
+7.1.17 INSTRUMENTS, PATTERNS ET FADE NON BLOQUANT (V0.11)
+---------------------------------------------------------
+
+Un instrument rassemble les reglages que vous deviez auparavant repeter pour
+chaque voix :
+
+const lead = c64.sid.instrument("lead", {
+  waveform: "pulse",
+  pulseWidth: 0x0800,
+  attackDecay: 0x11,
+  sustainRelease: 0x98
+});
+
+Un pattern est une petite phrase musicale reutilisable :
+
+const riff = c64.sid.pattern("riff", [
+  "C4", "E4", "G4", { note: "C5", duration: 2 }
+]);
+
+repeat(2) joue la phrase deux fois sans recopier son tableau dans le fichier JS :
+
+c64.sid.playSong({
+  tempo: 5,
+  loop: true,
+  instruments: [lead, null, null],
+  voices: [
+    riff.repeat(2),
+    [{ rest: true, duration: 10 }],
+    [{ rest: true, duration: 10 }]
+  ]
+});
+
+Chaque tableau instruments correspond a la voix de meme numero. null signifie
+que vous gardez les reglages faits manuellement avec c64.sid.voice(). Les
+patterns peuvent aussi etre places dans un tableau avec des notes ou d'autres
+patterns.
+
+Pour diminuer progressivement le volume jusqu'a zero :
+
+c64.sid.fadeSong(0, 3);
+
+Le premier nombre est le volume cible entre 0 et 15. Le second indique le nombre
+de ticks entre deux pas de volume. Avec 3, le volume change de 1 toutes les 3/50
+de seconde. Le fade tourne dans l'IRQ et ne bloque jamais la boucle de jeu.
+
+Pour remonter ensuite au volume 12 :
+
+c64.sid.fadeSong(12, 3);
+
+Le runtime du fade n'est ajoute au PRG que si fadeSong() est utilise. Le
+compilateur mutualise aussi les tables de deux voix dont les notes developpees
+sont exactement identiques. Le rapport sid-audio indique les patterns,
+instruments, appels de fade et octets de tables mutualises.
+
+
+7.1.18 Bruitages prets a l'emploi
 ---------------------------------
 
 Fonctions disponibles :
@@ -1173,7 +1317,7 @@ c64.sid.beep();
 c64.sid.laser();
 
 
-7.1.17 Exemple complet : musique + raster
+7.1.19 Exemple complet : musique + raster
 -----------------------------------------
 
 Exemple :
@@ -1304,6 +1448,184 @@ sprites peut etre regroupee dans c64.game.init().
 Exemple complet :
 
 examples/game-loop-input.js
+
+
+7.2.1 SCENES DE JEU ET ACTIVATION D'UN NIVEAU (DEBUT V1.0)
+----------------------------------------------------------
+
+Pour un jeu avec un titre, une pause et un game over, vous pouvez laisser le
+compilateur construire la boucle principale :
+
+c64.game.scene("title", {
+  enter() {
+    c64.clearScreen();
+    c64.printCentered(12, "FIRE POUR JOUER");
+  },
+  update() {
+    c64.control.if(joystick.firePressed(), () => c64.game.go("game"));
+  }
+});
+
+c64.game.scene("game", {
+  update() {
+    player.update();
+  }
+});
+
+c64.game.start("title", { hz: 50 });
+
+Les quatre noms disponibles sont exactement :
+
+- title
+- game
+- pause
+- gameOver
+
+Chaque scene peut avoir trois blocs facultatifs :
+
+- enter est execute une fois quand on entre dans la scene
+- update est execute une fois par frame tant que la scene est active
+- exit est execute une fois avant de quitter la scene
+
+c64.game.go("pause") demande un changement. Le moteur attend la fin de la
+frame, appelle exit, change de scene puis appelle enter. Une seule transition
+peut etre en attente, ce qui garde un temps d'execution borne.
+
+N'utilisez pas c64.game.frame() dans le meme programme que c64.game.start().
+Les scenes fournissent deja l'unique boucle de frame.
+
+Pour preparer un niveau charge depuis une map :
+
+const level1 = c64.assets.loadMap("assets/level1.json");
+
+c64.game.init(() => level1.activate());
+
+Pour savoir au runtime si cette map est active :
+
+c64.control.if(level1.isActive(), () => {
+  c64.borderColor(c64.COLOR_GREEN);
+});
+
+Dans un PRG autonome, activate() remet les cellules et le charset de la map dans
+leur etat original. Si l'appel est fait dans le jeu, cette reinitialisation est
+effectuee apres la frame. Dans un build D64, les maps partagent une seule zone
+RAM et activate() charge les fichiers du niveau depuis la disquette.
+
+Exemple complet : examples/game-scenes.js
+
+
+7.2.2 SCORE, VIES, HASARD ET POOLS FIXES (V1.0)
+------------------------------------------------
+
+Pour afficher un score sans faire une conversion nombre-vers-texte couteuse a
+chaque frame, utilisez un compteur decimal :
+
+const score = c64.game.score({ digits: 5, initial: 0 });
+const lives = c64.game.lives({ initial: 3 });
+
+score.add(100);
+score.draw(2, 0, { color: c64.COLOR_YELLOW });
+lives.dec();
+lives.draw(35, 0);
+
+digits est le nombre de chiffres reserves, de 1 a 5. Le compteur reboucle a zero
+quand sa valeur maximale est depassee. Les fonctions disponibles sont set,
+add, sub, inc, dec et draw. En interne, chaque chiffre est deja stocke sous
+forme decimale : draw n'effectue donc aucune division dans la boucle de jeu.
+
+Pour obtenir un hasard reproductible :
+
+const roll = c64.var.byte("roll", { initial: 0 });
+c64.random.seed(42);
+c64.random.range(roll, 10);
+
+roll recevra une valeur de 0 a 9. Une meme seed non nulle produit toujours la
+meme suite, ce qui facilite les tests. c64.random.byte(roll) produit une valeur
+de 0 a 255. La seed doit etre comprise entre 1 et 255.
+
+Un pool fixe permet de preparer un nombre maximum de projectiles ou d'ennemis :
+
+const bullets = c64.pool.fixed("bullets", 8, (index) => ({
+  active: c64.var.bool("bullet" + index + "Active", false),
+  x: c64.var.word("bullet" + index + "X", { initial: 0 })
+}));
+
+bullets.forEach((bullet) => bullet.active.set(false));
+
+La fonction de creation est executee par Node.js pendant la compilation. Il y
+aura exactement 8 entrees dans le programme C64 : aucune allocation dynamique,
+aucun ramasse-miettes et aucune surprise de memoire pendant le jeu.
+
+
+7.2.3 CREER UNE DISQUETTE D64 AVEC PLUSIEURS NIVEAUX
+-----------------------------------------------------
+
+Pour un petit programme, le PRG autonome reste le choix le plus simple. Pour un
+jeu avec plusieurs maps et beaucoup de sprites, le format D64 garde le programme
+principal compact et place les gros assets dans des modules PRG de donnees sur la
+disquette.
+
+Depuis le dossier de js-c64 :
+
+node .\src\cli.js build .\examples\multilevel-d64.js -o .\dist\multilevel.d64
+
+L'extension .d64 suffit. Le compilateur active automatiquement le mode assets
+disque, cree le PRG principal, le repertoire, la BAM et tous les modules de
+donnees.
+
+Pour choisir un autre nom ou un autre lecteur :
+
+node .\src\cli.js build .\examples\multilevel-d64.js -o .\dist\jeu.d64 --disk-name "MON JEU" --program-name "START" --device 8
+
+- --disk-name est le nom affiche par le repertoire de la disquette
+- --program-name est le nom du PRG principal
+- --device vaut normalement 8; utilisez 9 seulement si votre lecteur est 9
+- chaque nom Commodore est limite a 16 caracteres
+
+Pour obtenir aussi un rapport lisible :
+
+node .\src\cli.js build .\examples\multilevel-d64.js -o .\dist\jeu.d64 --report .\dist\jeu-report.json
+
+Le rapport indique les fichiers de chaque niveau, leur adresse RAM, leur taille,
+leurs blocs 1541 et l'espace libre.
+
+Dans le code JavaScript, chargez d'abord les definitions :
+
+const level1 = c64.assets.loadMap("assets/level1.json");
+const enemy = c64.assets.loadSprite("assets/enemy.json", {
+  address: 0x2200,
+  resident: false
+});
+
+Puis activez le niveau a un endroit sur, par exemple dans enter() :
+
+level1.activate({ draw: true, sprites: [enemy] });
+
+- draw: true charge puis redessine toute la map
+- resident: true, valeur par defaut, charge un sprite une seule fois au demarrage
+- resident: false reserve le sprite a un niveau
+- sprites: [enemy] indique les sprites non residents a charger avec cette map
+
+Les maps partagent la zone $8000-$9FFF. Les tables de tuiles/collisions
+partagent $3800-$3FFF. Les sprites propres aux niveaux peuvent partager une meme
+adresse alignee sur 64 octets, par exemple $2200 : charger le niveau suivant
+remplace alors simplement leurs pixels.
+
+Un fichier .asm, .lst ou .bas peut decrire exactement le runtime disque :
+
+node .\src\cli.js build .\examples\multilevel-d64.js -o .\dist\multilevel.asm --format asm --assets disk
+
+Attention : ce runtime a encore besoin des modules de donnees. Ils apparaissent
+comme PRG dans le repertoire parce que la routine KERNAL LOAD refuse les entrees
+USR. Seul le premier PRG, nomme MULTILEVEL par defaut, est un programme a lancer.
+Le fichier D64 est la
+sortie directement utilisable dans VICE. Pour un PRG totalement autonome :
+
+node .\src\cli.js build .\examples\multilevel-d64.js -o .\dist\multilevel.prg --assets inline
+
+Dans VICE, montez la disquette puis utilisez LOAD"*",8,1 et RUN. Si un fichier
+de donnees manque, le changement de niveau est annule, la bordure devient rouge et le
+message DISK ERROR apparait.
 
 
 7.3 SPRITES DE JEU, ANIMATIONS ET COLLISIONS (V0.8.0)
@@ -1524,6 +1846,24 @@ c64.charset.use() verifie automatiquement que :
 - le charset et la memoire ecran sont dans la meme banque VIC-II ;
 - chaque caractere contient exactement 8 octets ;
 - le charset ne contient pas plus de 256 caracteres.
+
+Les 64 premiers caractères originaux sont toujours conservés automatiquement.
+Il ne faut pas les écrire dans le JSON : la liste characters contient uniquement
+les caractères personnalisés.
+
+"charset": {
+  "mode": "hires",
+  "characters": [
+    [255, 129, 129, 129, 129, 129, 129, 255]
+  ]
+}
+
+Au démarrage, le code généré masque brièvement les registres d'E/S à $D000,
+lit les 512 octets de la ROM de caractères puis les copie dans le charset RAM.
+Le premier caractère personnalisé de cet exemple reçoit automatiquement le code
+écran 64. Le Studio n'exporte ni les 64 glyphes système, ni un réglage spécial :
+le compilateur reconnaît tout charset personnalisé et effectue cette copie pour
+tous les programmes. Les anciens assets avec "romCharacters": 64 restent lus.
 
 Une tile peut contenir plusieurs caracteres. Avec tileWidth: 2 et tileHeight: 2,
 chaque case de map dessine un bloc de 2 x 2 caracteres. Les couleurs sont

@@ -53,66 +53,155 @@ copydata_28c0_sprite_frames_platformerCoin_0_63_3:
   LDA #$00
   STA $28FF
   LDX #$00
-asset_map_initial_copy_2:
-  LDA asset_bytes_1,X
-  STA $8000,X
+  LDY #$00
+asset_map_initial_rle_2:
+  LDA asset_rle_1,X
+  STA $C777
   INX
-  BNE asset_map_initial_copy_2
+  LDA asset_rle_1,X
+  INX
+asset_map_initial_rle_2_repeat:
+  STA $8000,Y
+  INY
+  DEC $C777
+  BNE asset_map_initial_rle_2_repeat
+  CPX #$04
+  BNE asset_map_initial_rle_2
   LDX #$00
-asset_map_initial_copy_4:
-  LDA asset_bytes_3,X
-  STA $8100,X
+  LDY #$00
+asset_map_initial_rle_4:
+  LDA asset_rle_3,X
+  STA $C777
   INX
-  BNE asset_map_initial_copy_4
+  LDA asset_rle_3,X
+  INX
+asset_map_initial_rle_4_repeat:
+  STA $8100,Y
+  INY
+  DEC $C777
+  BNE asset_map_initial_rle_4_repeat
+  CPX #$06
+  BNE asset_map_initial_rle_4
   LDX #$00
-asset_map_initial_copy_6:
-  LDA asset_bytes_5,X
-  STA $8200,X
+  LDY #$00
+asset_map_initial_rle_6:
+  LDA asset_rle_5,X
+  STA $C777
   INX
-  BNE asset_map_initial_copy_6
+  LDA asset_rle_5,X
+  INX
+asset_map_initial_rle_6_repeat:
+  STA $8200,Y
+  INY
+  DEC $C777
+  BNE asset_map_initial_rle_6_repeat
+  CPX #$0A
+  BNE asset_map_initial_rle_6
   LDX #$00
-asset_map_initial_copy_8:
-  LDA asset_bytes_7,X
-  STA $8300,X
+  LDY #$00
+asset_map_initial_rle_8:
+  LDA asset_rle_7,X
+  STA $C777
   INX
-  BNE asset_map_initial_copy_8
+  LDA asset_rle_7,X
+  INX
+asset_map_initial_rle_8_repeat:
+  STA $8300,Y
+  INY
+  DEC $C777
+  BNE asset_map_initial_rle_8_repeat
+  CPX #$0E
+  BNE asset_map_initial_rle_8
   LDX #$00
-asset_map_initial_copy_10:
-  LDA asset_bytes_9,X
-  STA $8400,X
+  LDY #$00
+asset_map_initial_rle_10:
+  LDA asset_rle_9,X
+  STA $C777
   INX
-  BNE asset_map_initial_copy_10
+  LDA asset_rle_9,X
+  INX
+asset_map_initial_rle_10_repeat:
+  STA $8400,Y
+  INY
+  DEC $C777
+  BNE asset_map_initial_rle_10_repeat
+  CPX #$12
+  BNE asset_map_initial_rle_10
   LDX #$00
-asset_map_initial_copy_12:
-  LDA asset_bytes_11,X
-  STA $8500,X
+  LDY #$00
+asset_map_initial_rle_12:
+  LDA asset_rle_11,X
+  STA $C777
   INX
-  BNE asset_map_initial_copy_12
+  LDA asset_rle_11,X
+  INX
+asset_map_initial_rle_12_repeat:
+  STA $8500,Y
+  INY
+  DEC $C777
+  BNE asset_map_initial_rle_12_repeat
+  CPX #$1E
+  BNE asset_map_initial_rle_12
   LDX #$00
-asset_map_initial_copy_14:
-  LDA asset_bytes_13,X
-  STA $8600,X
+  LDY #$00
+asset_map_initial_rle_14:
+  LDA asset_rle_13,X
+  STA $C777
   INX
-  BNE asset_map_initial_copy_14
+  LDA asset_rle_13,X
+  INX
+asset_map_initial_rle_14_repeat:
+  STA $8600,Y
+  INY
+  DEC $C777
+  BNE asset_map_initial_rle_14_repeat
+  CPX #$16
+  BNE asset_map_initial_rle_14
   LDX #$00
-asset_map_initial_copy_15:
-  LDA asset_bytes_1,X
-  STA $8700,X
+  LDY #$00
+asset_map_initial_rle_15:
+  LDA asset_rle_1,X
+  STA $C777
   INX
-  BNE asset_map_initial_copy_15
+  LDA asset_rle_1,X
+  INX
+asset_map_initial_rle_15_repeat:
+  STA $8700,Y
+  INY
+  DEC $C777
+  BNE asset_map_initial_rle_15_repeat
+  CPX #$04
+  BNE asset_map_initial_rle_15
   LDX #$00
-asset_map_initial_copy_16:
-  LDA asset_bytes_1,X
-  STA $8800,X
+  LDY #$00
+asset_map_initial_rle_16:
+  LDA asset_rle_1,X
+  STA $C777
   INX
-  BNE asset_map_initial_copy_16
+  LDA asset_rle_1,X
+  INX
+asset_map_initial_rle_16_repeat:
+  STA $8800,Y
+  INY
+  DEC $C777
+  BNE asset_map_initial_rle_16_repeat
+  CPX #$04
+  BNE asset_map_initial_rle_16
   LDX #$00
-asset_map_initial_copy_18:
-  LDA asset_bytes_17,X
-  STA $8900,X
+  LDY #$00
+asset_map_initial_rle_18:
+  LDA asset_rle_17,X
+  STA $C777
   INX
-  CPX #$60
-  BNE asset_map_initial_copy_18
+  LDA asset_rle_17,X
+  INX
+asset_map_initial_rle_18_repeat:
+  STA $8900,Y
+  INY
+  DEC $C777
+  BNE asset_map_initial_rle_18_repeat
+  CPX #$02
+  BNE asset_map_initial_rle_18
   LDA #$00
   STA $C100
   LDA #$00
@@ -498,12 +587,12 @@ program_end:
   STA $C76B
   LDA #$00
   STA $C770
-  LDA #$3C
-  STA $C76F
   LDA #$FF
   STA $C767
   LDA #$FF
   STA $C769
+  LDA #$3C
+  STA $C76F
 game_video_detect_low:
   LDA $D011
   BMI game_video_detect_low
@@ -605,7 +694,7 @@ control_if_end_19:
   CLC
   ADC #$01
   STA $C108
-  JSR runtime_map_entity_move_0
+  JSR runtime_map_entity_move_1
   LDA $C403
   BNE sprite_anim_active_0_24
   JMP sprite_anim_done_0_23
@@ -907,18 +996,18 @@ control_if_end_43:
   STA $C7BE
   LDA $C7C5
   CMP $C7BE
-  BEQ map_camera_follow_x_0_0_65_0_positive_compare_high_equal
-  BCC map_camera_follow_x_0_0_65_0_positive_compare_false
-  JMP map_camera_follow_x_0_0_65_0_move_positive
-map_camera_follow_x_0_0_65_0_positive_compare_high_equal:
+  BEQ map_camera_follow_x_1_1_65_0_positive_compare_high_equal
+  BCC map_camera_follow_x_1_1_65_0_positive_compare_false
+  JMP map_camera_follow_x_1_1_65_0_move_positive
+map_camera_follow_x_1_1_65_0_positive_compare_high_equal:
   LDA $C7C4
   CMP $C7BD
-  BEQ map_camera_follow_x_0_0_65_0_positive_compare_false
-  BCC map_camera_follow_x_0_0_65_0_positive_compare_false
-  JMP map_camera_follow_x_0_0_65_0_move_positive
-map_camera_follow_x_0_0_65_0_positive_compare_false:
-  JMP map_camera_follow_x_0_0_65_0_check_negative
-map_camera_follow_x_0_0_65_0_check_negative:
+  BEQ map_camera_follow_x_1_1_65_0_positive_compare_false
+  BCC map_camera_follow_x_1_1_65_0_positive_compare_false
+  JMP map_camera_follow_x_1_1_65_0_move_positive
+map_camera_follow_x_1_1_65_0_positive_compare_false:
+  JMP map_camera_follow_x_1_1_65_0_check_negative
+map_camera_follow_x_1_1_65_0_check_negative:
   CLC
   LDA $C133
   ADC #$68
@@ -928,18 +1017,18 @@ map_camera_follow_x_0_0_65_0_check_negative:
   STA $C7BE
   LDA $C7BE
   CMP $C7C5
-  BEQ map_camera_follow_x_0_0_65_0_negative_compare_high_equal
-  BCC map_camera_follow_x_0_0_65_0_negative_compare_false
-  JMP map_camera_follow_x_0_0_65_0_move_negative
-map_camera_follow_x_0_0_65_0_negative_compare_high_equal:
+  BEQ map_camera_follow_x_1_1_65_0_negative_compare_high_equal
+  BCC map_camera_follow_x_1_1_65_0_negative_compare_false
+  JMP map_camera_follow_x_1_1_65_0_move_negative
+map_camera_follow_x_1_1_65_0_negative_compare_high_equal:
   LDA $C7BD
   CMP $C7C4
-  BEQ map_camera_follow_x_0_0_65_0_negative_compare_false
-  BCC map_camera_follow_x_0_0_65_0_negative_compare_false
-  JMP map_camera_follow_x_0_0_65_0_move_negative
-map_camera_follow_x_0_0_65_0_negative_compare_false:
-  JMP map_camera_follow_x_0_0_65_0_done
-map_camera_follow_x_0_0_65_0_move_positive:
+  BEQ map_camera_follow_x_1_1_65_0_negative_compare_false
+  BCC map_camera_follow_x_1_1_65_0_negative_compare_false
+  JMP map_camera_follow_x_1_1_65_0_move_negative
+map_camera_follow_x_1_1_65_0_negative_compare_false:
+  JMP map_camera_follow_x_1_1_65_0_done
+map_camera_follow_x_1_1_65_0_move_positive:
   LDA $C12D
   CMP #$2C
   BEQ map_scroll_done_66
@@ -959,8 +1048,8 @@ map_scroll_moved_66:
   INC $C134
 map_scroll_pixel_x_inc_66_done:
 map_scroll_done_66:
-  JMP map_camera_follow_x_0_0_65_0_done
-map_camera_follow_x_0_0_65_0_move_negative:
+  JMP map_camera_follow_x_1_1_65_0_done
+map_camera_follow_x_1_1_65_0_move_negative:
   LDA $C12D
   BNE map_scroll_can_move_67
   LDA $C12E
@@ -984,7 +1073,7 @@ map_scroll_moved_67:
 map_scroll_pixel_x_dec_67_low:
   DEC $C133
 map_scroll_done_67:
-map_camera_follow_x_0_0_65_0_done:
+map_camera_follow_x_1_1_65_0_done:
   CLC
   LDA $C103
   ADC #$0C
@@ -1001,18 +1090,18 @@ map_camera_follow_x_0_0_65_0_done:
   STA $C7BE
   LDA $C7C5
   CMP $C7BE
-  BEQ map_camera_follow_x_0_0_68_1_positive_compare_high_equal
-  BCC map_camera_follow_x_0_0_68_1_positive_compare_false
-  JMP map_camera_follow_x_0_0_68_1_move_positive
-map_camera_follow_x_0_0_68_1_positive_compare_high_equal:
+  BEQ map_camera_follow_x_1_1_68_1_positive_compare_high_equal
+  BCC map_camera_follow_x_1_1_68_1_positive_compare_false
+  JMP map_camera_follow_x_1_1_68_1_move_positive
+map_camera_follow_x_1_1_68_1_positive_compare_high_equal:
   LDA $C7C4
   CMP $C7BD
-  BEQ map_camera_follow_x_0_0_68_1_positive_compare_false
-  BCC map_camera_follow_x_0_0_68_1_positive_compare_false
-  JMP map_camera_follow_x_0_0_68_1_move_positive
-map_camera_follow_x_0_0_68_1_positive_compare_false:
-  JMP map_camera_follow_x_0_0_68_1_check_negative
-map_camera_follow_x_0_0_68_1_check_negative:
+  BEQ map_camera_follow_x_1_1_68_1_positive_compare_false
+  BCC map_camera_follow_x_1_1_68_1_positive_compare_false
+  JMP map_camera_follow_x_1_1_68_1_move_positive
+map_camera_follow_x_1_1_68_1_positive_compare_false:
+  JMP map_camera_follow_x_1_1_68_1_check_negative
+map_camera_follow_x_1_1_68_1_check_negative:
   CLC
   LDA $C133
   ADC #$68
@@ -1022,18 +1111,18 @@ map_camera_follow_x_0_0_68_1_check_negative:
   STA $C7BE
   LDA $C7BE
   CMP $C7C5
-  BEQ map_camera_follow_x_0_0_68_1_negative_compare_high_equal
-  BCC map_camera_follow_x_0_0_68_1_negative_compare_false
-  JMP map_camera_follow_x_0_0_68_1_move_negative
-map_camera_follow_x_0_0_68_1_negative_compare_high_equal:
+  BEQ map_camera_follow_x_1_1_68_1_negative_compare_high_equal
+  BCC map_camera_follow_x_1_1_68_1_negative_compare_false
+  JMP map_camera_follow_x_1_1_68_1_move_negative
+map_camera_follow_x_1_1_68_1_negative_compare_high_equal:
   LDA $C7BD
   CMP $C7C4
-  BEQ map_camera_follow_x_0_0_68_1_negative_compare_false
-  BCC map_camera_follow_x_0_0_68_1_negative_compare_false
-  JMP map_camera_follow_x_0_0_68_1_move_negative
-map_camera_follow_x_0_0_68_1_negative_compare_false:
-  JMP map_camera_follow_x_0_0_68_1_done
-map_camera_follow_x_0_0_68_1_move_positive:
+  BEQ map_camera_follow_x_1_1_68_1_negative_compare_false
+  BCC map_camera_follow_x_1_1_68_1_negative_compare_false
+  JMP map_camera_follow_x_1_1_68_1_move_negative
+map_camera_follow_x_1_1_68_1_negative_compare_false:
+  JMP map_camera_follow_x_1_1_68_1_done
+map_camera_follow_x_1_1_68_1_move_positive:
   LDA $C12D
   CMP #$2C
   BEQ map_scroll_done_69
@@ -1053,8 +1142,8 @@ map_scroll_moved_69:
   INC $C134
 map_scroll_pixel_x_inc_69_done:
 map_scroll_done_69:
-  JMP map_camera_follow_x_0_0_68_1_done
-map_camera_follow_x_0_0_68_1_move_negative:
+  JMP map_camera_follow_x_1_1_68_1_done
+map_camera_follow_x_1_1_68_1_move_negative:
   LDA $C12D
   BNE map_scroll_can_move_70
   LDA $C12E
@@ -1078,11 +1167,11 @@ map_scroll_moved_70:
 map_scroll_pixel_x_dec_70_low:
   DEC $C133
 map_scroll_done_70:
-map_camera_follow_x_0_0_68_1_done:
+map_camera_follow_x_1_1_68_1_done:
   LDA $C10D
-  BNE map_entity_enabled_0_71
-  JMP map_entity_hidden_0_71
-map_entity_enabled_0_71:
+  BNE map_entity_enabled_1_71
+  JMP map_entity_hidden_1_71
+map_entity_enabled_1_71:
   CLC
   LDA $C103
   ADC #$18
@@ -1098,7 +1187,7 @@ map_entity_enabled_0_71:
   SBC $C134
   STA $C7BE
   BCS map_entity_x_71_not_before_72
-  JMP map_entity_hidden_0_71
+  JMP map_entity_hidden_1_71
 map_entity_x_71_not_before_72:
   LDA $C7BE
   CMP #$01
@@ -1108,7 +1197,7 @@ map_entity_x_71_not_before_72:
   CMP #$50
   BCC map_entity_x_visible_71
 map_entity_x_visible_71_hidden:
-  JMP map_entity_hidden_0_71
+  JMP map_entity_hidden_1_71
 map_entity_x_visible_71:
   CLC
   LDA $C105
@@ -1125,7 +1214,7 @@ map_entity_x_visible_71:
   SBC $C136
   STA $C7BC
   BCS map_entity_y_71_not_before_73
-  JMP map_entity_hidden_0_71
+  JMP map_entity_hidden_1_71
 map_entity_y_71_not_before_73:
   LDA $C7BC
   CMP #$00
@@ -1135,7 +1224,7 @@ map_entity_y_71_not_before_73:
   CMP #$CA
   BCC map_entity_y_visible_71
 map_entity_y_visible_71_hidden:
-  JMP map_entity_hidden_0_71
+  JMP map_entity_hidden_1_71
 map_entity_y_visible_71:
   CLC
   LDA $C7BD
@@ -1150,16 +1239,16 @@ map_entity_y_visible_71:
   STA $C502
   LDA #$01
   STA $C505
-  JMP map_entity_shown_0_71
-map_entity_hidden_0_71:
+  JMP map_entity_shown_1_71
+map_entity_hidden_1_71:
   LDA #$00
   STA $C505
-map_entity_shown_0_71:
-map_entity_project_done_0_71:
+map_entity_shown_1_71:
+map_entity_project_done_1_71:
   LDA $C11B
-  BNE map_entity_enabled_1_74
-  JMP map_entity_hidden_1_74
-map_entity_enabled_1_74:
+  BNE map_entity_enabled_2_74
+  JMP map_entity_hidden_2_74
+map_entity_enabled_2_74:
   CLC
   LDA $C111
   ADC #$18
@@ -1175,7 +1264,7 @@ map_entity_enabled_1_74:
   SBC $C134
   STA $C7BE
   BCS map_entity_x_74_not_before_75
-  JMP map_entity_hidden_1_74
+  JMP map_entity_hidden_2_74
 map_entity_x_74_not_before_75:
   LDA $C7BE
   CMP #$01
@@ -1185,7 +1274,7 @@ map_entity_x_74_not_before_75:
   CMP #$50
   BCC map_entity_x_visible_74
 map_entity_x_visible_74_hidden:
-  JMP map_entity_hidden_1_74
+  JMP map_entity_hidden_2_74
 map_entity_x_visible_74:
   CLC
   LDA $C113
@@ -1202,7 +1291,7 @@ map_entity_x_visible_74:
   SBC $C136
   STA $C7BC
   BCS map_entity_y_74_not_before_76
-  JMP map_entity_hidden_1_74
+  JMP map_entity_hidden_2_74
 map_entity_y_74_not_before_76:
   LDA $C7BC
   CMP #$00
@@ -1212,7 +1301,7 @@ map_entity_y_74_not_before_76:
   CMP #$CA
   BCC map_entity_y_visible_74
 map_entity_y_visible_74_hidden:
-  JMP map_entity_hidden_1_74
+  JMP map_entity_hidden_2_74
 map_entity_y_visible_74:
   CLC
   LDA $C7BD
@@ -1227,16 +1316,16 @@ map_entity_y_visible_74:
   STA $C50A
   LDA #$01
   STA $C50D
-  JMP map_entity_shown_1_74
-map_entity_hidden_1_74:
+  JMP map_entity_shown_2_74
+map_entity_hidden_2_74:
   LDA #$00
   STA $C50D
-map_entity_shown_1_74:
-map_entity_project_done_1_74:
+map_entity_shown_2_74:
+map_entity_project_done_2_74:
   LDA $C129
-  BNE map_entity_enabled_2_77
-  JMP map_entity_hidden_2_77
-map_entity_enabled_2_77:
+  BNE map_entity_enabled_3_77
+  JMP map_entity_hidden_3_77
+map_entity_enabled_3_77:
   CLC
   LDA $C11F
   ADC #$18
@@ -1252,7 +1341,7 @@ map_entity_enabled_2_77:
   SBC $C134
   STA $C7BE
   BCS map_entity_x_77_not_before_78
-  JMP map_entity_hidden_2_77
+  JMP map_entity_hidden_3_77
 map_entity_x_77_not_before_78:
   LDA $C7BE
   CMP #$01
@@ -1262,7 +1351,7 @@ map_entity_x_77_not_before_78:
   CMP #$50
   BCC map_entity_x_visible_77
 map_entity_x_visible_77_hidden:
-  JMP map_entity_hidden_2_77
+  JMP map_entity_hidden_3_77
 map_entity_x_visible_77:
   CLC
   LDA $C121
@@ -1279,7 +1368,7 @@ map_entity_x_visible_77:
   SBC $C136
   STA $C7BC
   BCS map_entity_y_77_not_before_79
-  JMP map_entity_hidden_2_77
+  JMP map_entity_hidden_3_77
 map_entity_y_77_not_before_79:
   LDA $C7BC
   CMP #$00
@@ -1289,7 +1378,7 @@ map_entity_y_77_not_before_79:
   CMP #$CA
   BCC map_entity_y_visible_77
 map_entity_y_visible_77_hidden:
-  JMP map_entity_hidden_2_77
+  JMP map_entity_hidden_3_77
 map_entity_y_visible_77:
   CLC
   LDA $C7BD
@@ -1304,12 +1393,12 @@ map_entity_y_visible_77:
   STA $C542
   LDA #$01
   STA $C545
-  JMP map_entity_shown_2_77
-map_entity_hidden_2_77:
+  JMP map_entity_shown_3_77
+map_entity_hidden_3_77:
   LDA #$00
   STA $C545
-map_entity_shown_2_77:
-map_entity_project_done_2_77:
+map_entity_shown_3_77:
+map_entity_project_done_3_77:
   LDA $C10E
   CMP #$01
   BEQ condition_pass_81
@@ -1950,8 +2039,8 @@ runtime_sprite_mux_bit_masks:
   .byte $01, $02, $04, $08, $10, $20, $40, $80
 runtime_sprite_mux_inverse_masks:
   .byte $FE, $FD, $FB, $F7, $EF, $DF, $BF, $7F
-; Map entity 0: pixel-stepped X/Y tile collision
-runtime_map_entity_move_0:
+; Map entity 1: pixel-stepped X/Y tile collision
+runtime_map_entity_move_1:
   LDA #$00
   STA $C109
   LDA #$00
@@ -1969,23 +2058,23 @@ runtime_map_entity_move_0:
   LDA #$00
   STA $C7C9
   LDA $C107
-  BNE runtime_map_entity_0_x_has_velocity
-  JMP runtime_map_entity_0_x_done
-runtime_map_entity_0_x_has_velocity:
-  BPL runtime_map_entity_0_x_positive
-  JMP runtime_map_entity_0_x_negative
-runtime_map_entity_0_x_positive:
+  BNE runtime_map_entity_1_x_has_velocity
+  JMP runtime_map_entity_1_x_done
+runtime_map_entity_1_x_has_velocity:
+  BPL runtime_map_entity_1_x_positive
+  JMP runtime_map_entity_1_x_negative
+runtime_map_entity_1_x_positive:
   LDA $C107
   CMP #$09
-  BCC runtime_map_entity_0_x_positive_count_store
+  BCC runtime_map_entity_1_x_positive_count_store
   LDA #$08
-runtime_map_entity_0_x_positive_count_store:
+runtime_map_entity_1_x_positive_count_store:
   STA $C7C8
-runtime_map_entity_0_x_positive_loop:
+runtime_map_entity_1_x_positive_loop:
   INC $C103
-  BNE runtime_map_entity_0_x_positive_step_done
+  BNE runtime_map_entity_1_x_positive_step_done
   INC $C104
-runtime_map_entity_0_x_positive_step_done:
+runtime_map_entity_1_x_positive_step_done:
   CLC
   LDA $C103
   ADC #$13
@@ -2001,9 +2090,9 @@ runtime_map_entity_0_x_positive_step_done:
   ADC #$00
   STA $C7C7
   JSR runtime_map_entity_point_solid_0
-  BEQ runtime_map_entity_0_x_positive_sample_0_clear
-  JMP runtime_map_entity_0_x_positive_hit
-runtime_map_entity_0_x_positive_sample_0_clear:
+  BEQ runtime_map_entity_1_x_positive_sample_0_clear
+  JMP runtime_map_entity_1_x_positive_hit
+runtime_map_entity_1_x_positive_sample_0_clear:
   CLC
   LDA $C105
   ADC #$09
@@ -2012,9 +2101,9 @@ runtime_map_entity_0_x_positive_sample_0_clear:
   ADC #$00
   STA $C7C7
   JSR runtime_map_entity_point_solid_0
-  BEQ runtime_map_entity_0_x_positive_sample_1_clear
-  JMP runtime_map_entity_0_x_positive_hit
-runtime_map_entity_0_x_positive_sample_1_clear:
+  BEQ runtime_map_entity_1_x_positive_sample_1_clear
+  JMP runtime_map_entity_1_x_positive_hit
+runtime_map_entity_1_x_positive_sample_1_clear:
   CLC
   LDA $C105
   ADC #$11
@@ -2023,9 +2112,9 @@ runtime_map_entity_0_x_positive_sample_1_clear:
   ADC #$00
   STA $C7C7
   JSR runtime_map_entity_point_solid_0
-  BEQ runtime_map_entity_0_x_positive_sample_2_clear
-  JMP runtime_map_entity_0_x_positive_hit
-runtime_map_entity_0_x_positive_sample_2_clear:
+  BEQ runtime_map_entity_1_x_positive_sample_2_clear
+  JMP runtime_map_entity_1_x_positive_hit
+runtime_map_entity_1_x_positive_sample_2_clear:
   CLC
   LDA $C105
   ADC #$14
@@ -2034,41 +2123,41 @@ runtime_map_entity_0_x_positive_sample_2_clear:
   ADC #$00
   STA $C7C7
   JSR runtime_map_entity_point_solid_0
-  BEQ runtime_map_entity_0_x_positive_sample_3_clear
-  JMP runtime_map_entity_0_x_positive_hit
-runtime_map_entity_0_x_positive_sample_3_clear:
+  BEQ runtime_map_entity_1_x_positive_sample_3_clear
+  JMP runtime_map_entity_1_x_positive_hit
+runtime_map_entity_1_x_positive_sample_3_clear:
   DEC $C7C8
   LDA $C7C8
-  BEQ runtime_map_entity_0_x_positive_done
-  JMP runtime_map_entity_0_x_positive_loop
-runtime_map_entity_0_x_positive_done:
-  JMP runtime_map_entity_0_x_done
-runtime_map_entity_0_x_positive_hit:
+  BEQ runtime_map_entity_1_x_positive_done
+  JMP runtime_map_entity_1_x_positive_loop
+runtime_map_entity_1_x_positive_done:
+  JMP runtime_map_entity_1_x_done
+runtime_map_entity_1_x_positive_hit:
   LDA $C103
-  BNE runtime_map_entity_0_x_positive_undo_low
+  BNE runtime_map_entity_1_x_positive_undo_low
   DEC $C104
-runtime_map_entity_0_x_positive_undo_low:
+runtime_map_entity_1_x_positive_undo_low:
   DEC $C103
   LDA #$01
   STA $C10C
   LDA #$00
   STA $C107
-  JMP runtime_map_entity_0_x_done
-runtime_map_entity_0_x_negative:
+  JMP runtime_map_entity_1_x_done
+runtime_map_entity_1_x_negative:
   LDA $C107
   EOR #$FF
   CLC
   ADC #$01
   CMP #$09
-  BCC runtime_map_entity_0_x_negative_count_store
+  BCC runtime_map_entity_1_x_negative_count_store
   LDA #$08
-runtime_map_entity_0_x_negative_count_store:
+runtime_map_entity_1_x_negative_count_store:
   STA $C7C8
-runtime_map_entity_0_x_negative_loop:
+runtime_map_entity_1_x_negative_loop:
   LDA $C103
-  BNE runtime_map_entity_0_x_negative_step_low
+  BNE runtime_map_entity_1_x_negative_step_low
   DEC $C104
-runtime_map_entity_0_x_negative_step_low:
+runtime_map_entity_1_x_negative_step_low:
   DEC $C103
   CLC
   LDA $C103
@@ -2085,9 +2174,9 @@ runtime_map_entity_0_x_negative_step_low:
   ADC #$00
   STA $C7C7
   JSR runtime_map_entity_point_solid_0
-  BEQ runtime_map_entity_0_x_negative_sample_0_clear
-  JMP runtime_map_entity_0_x_negative_hit
-runtime_map_entity_0_x_negative_sample_0_clear:
+  BEQ runtime_map_entity_1_x_negative_sample_0_clear
+  JMP runtime_map_entity_1_x_negative_hit
+runtime_map_entity_1_x_negative_sample_0_clear:
   CLC
   LDA $C105
   ADC #$09
@@ -2096,9 +2185,9 @@ runtime_map_entity_0_x_negative_sample_0_clear:
   ADC #$00
   STA $C7C7
   JSR runtime_map_entity_point_solid_0
-  BEQ runtime_map_entity_0_x_negative_sample_1_clear
-  JMP runtime_map_entity_0_x_negative_hit
-runtime_map_entity_0_x_negative_sample_1_clear:
+  BEQ runtime_map_entity_1_x_negative_sample_1_clear
+  JMP runtime_map_entity_1_x_negative_hit
+runtime_map_entity_1_x_negative_sample_1_clear:
   CLC
   LDA $C105
   ADC #$11
@@ -2107,9 +2196,9 @@ runtime_map_entity_0_x_negative_sample_1_clear:
   ADC #$00
   STA $C7C7
   JSR runtime_map_entity_point_solid_0
-  BEQ runtime_map_entity_0_x_negative_sample_2_clear
-  JMP runtime_map_entity_0_x_negative_hit
-runtime_map_entity_0_x_negative_sample_2_clear:
+  BEQ runtime_map_entity_1_x_negative_sample_2_clear
+  JMP runtime_map_entity_1_x_negative_hit
+runtime_map_entity_1_x_negative_sample_2_clear:
   CLC
   LDA $C105
   ADC #$14
@@ -2118,45 +2207,45 @@ runtime_map_entity_0_x_negative_sample_2_clear:
   ADC #$00
   STA $C7C7
   JSR runtime_map_entity_point_solid_0
-  BEQ runtime_map_entity_0_x_negative_sample_3_clear
-  JMP runtime_map_entity_0_x_negative_hit
-runtime_map_entity_0_x_negative_sample_3_clear:
+  BEQ runtime_map_entity_1_x_negative_sample_3_clear
+  JMP runtime_map_entity_1_x_negative_hit
+runtime_map_entity_1_x_negative_sample_3_clear:
   DEC $C7C8
   LDA $C7C8
-  BEQ runtime_map_entity_0_x_negative_done
-  JMP runtime_map_entity_0_x_negative_loop
-runtime_map_entity_0_x_negative_done:
-  JMP runtime_map_entity_0_x_done
-runtime_map_entity_0_x_negative_hit:
+  BEQ runtime_map_entity_1_x_negative_done
+  JMP runtime_map_entity_1_x_negative_loop
+runtime_map_entity_1_x_negative_done:
+  JMP runtime_map_entity_1_x_done
+runtime_map_entity_1_x_negative_hit:
   INC $C103
-  BNE runtime_map_entity_0_x_negative_undo_done
+  BNE runtime_map_entity_1_x_negative_undo_done
   INC $C104
-runtime_map_entity_0_x_negative_undo_done:
+runtime_map_entity_1_x_negative_undo_done:
   LDA #$01
   STA $C10B
   LDA #$00
   STA $C107
-runtime_map_entity_0_x_done:
+runtime_map_entity_1_x_done:
   LDA $C108
-  BNE runtime_map_entity_0_y_has_velocity
-  JMP runtime_map_entity_0_y_done
-runtime_map_entity_0_y_has_velocity:
-  BPL runtime_map_entity_0_y_positive
-  JMP runtime_map_entity_0_y_negative
-runtime_map_entity_0_y_positive:
+  BNE runtime_map_entity_1_y_has_velocity
+  JMP runtime_map_entity_1_y_done
+runtime_map_entity_1_y_has_velocity:
+  BPL runtime_map_entity_1_y_positive
+  JMP runtime_map_entity_1_y_negative
+runtime_map_entity_1_y_positive:
   LDA #$01
   STA $C7C9
   LDA $C108
   CMP #$09
-  BCC runtime_map_entity_0_y_positive_count_store
+  BCC runtime_map_entity_1_y_positive_count_store
   LDA #$08
-runtime_map_entity_0_y_positive_count_store:
+runtime_map_entity_1_y_positive_count_store:
   STA $C7C8
-runtime_map_entity_0_y_positive_loop:
+runtime_map_entity_1_y_positive_loop:
   INC $C105
-  BNE runtime_map_entity_0_y_positive_step_done
+  BNE runtime_map_entity_1_y_positive_step_done
   INC $C106
-runtime_map_entity_0_y_positive_step_done:
+runtime_map_entity_1_y_positive_step_done:
   CLC
   LDA $C105
   ADC #$14
@@ -2172,9 +2261,9 @@ runtime_map_entity_0_y_positive_step_done:
   ADC #$00
   STA $C7C5
   JSR runtime_map_entity_point_solid_0
-  BEQ runtime_map_entity_0_y_positive_sample_0_clear
-  JMP runtime_map_entity_0_y_positive_hit
-runtime_map_entity_0_y_positive_sample_0_clear:
+  BEQ runtime_map_entity_1_y_positive_sample_0_clear
+  JMP runtime_map_entity_1_y_positive_hit
+runtime_map_entity_1_y_positive_sample_0_clear:
   CLC
   LDA $C103
   ADC #$0C
@@ -2183,9 +2272,9 @@ runtime_map_entity_0_y_positive_sample_0_clear:
   ADC #$00
   STA $C7C5
   JSR runtime_map_entity_point_solid_0
-  BEQ runtime_map_entity_0_y_positive_sample_1_clear
-  JMP runtime_map_entity_0_y_positive_hit
-runtime_map_entity_0_y_positive_sample_1_clear:
+  BEQ runtime_map_entity_1_y_positive_sample_1_clear
+  JMP runtime_map_entity_1_y_positive_hit
+runtime_map_entity_1_y_positive_sample_1_clear:
   CLC
   LDA $C103
   ADC #$13
@@ -2194,27 +2283,27 @@ runtime_map_entity_0_y_positive_sample_1_clear:
   ADC #$00
   STA $C7C5
   JSR runtime_map_entity_point_solid_0
-  BEQ runtime_map_entity_0_y_positive_sample_2_clear
-  JMP runtime_map_entity_0_y_positive_hit
-runtime_map_entity_0_y_positive_sample_2_clear:
+  BEQ runtime_map_entity_1_y_positive_sample_2_clear
+  JMP runtime_map_entity_1_y_positive_hit
+runtime_map_entity_1_y_positive_sample_2_clear:
   DEC $C7C8
   LDA $C7C8
-  BEQ runtime_map_entity_0_y_positive_done
-  JMP runtime_map_entity_0_y_positive_loop
-runtime_map_entity_0_y_positive_done:
-  JMP runtime_map_entity_0_y_done
-runtime_map_entity_0_y_positive_hit:
+  BEQ runtime_map_entity_1_y_positive_done
+  JMP runtime_map_entity_1_y_positive_loop
+runtime_map_entity_1_y_positive_done:
+  JMP runtime_map_entity_1_y_done
+runtime_map_entity_1_y_positive_hit:
   LDA $C105
-  BNE runtime_map_entity_0_y_positive_undo_low
+  BNE runtime_map_entity_1_y_positive_undo_low
   DEC $C106
-runtime_map_entity_0_y_positive_undo_low:
+runtime_map_entity_1_y_positive_undo_low:
   DEC $C105
   LDA #$01
   STA $C109
   LDA #$00
   STA $C108
-  JMP runtime_map_entity_0_y_done
-runtime_map_entity_0_y_negative:
+  JMP runtime_map_entity_1_y_done
+runtime_map_entity_1_y_negative:
   LDA #$00
   STA $C7C9
   LDA $C108
@@ -2222,15 +2311,15 @@ runtime_map_entity_0_y_negative:
   CLC
   ADC #$01
   CMP #$09
-  BCC runtime_map_entity_0_y_negative_count_store
+  BCC runtime_map_entity_1_y_negative_count_store
   LDA #$08
-runtime_map_entity_0_y_negative_count_store:
+runtime_map_entity_1_y_negative_count_store:
   STA $C7C8
-runtime_map_entity_0_y_negative_loop:
+runtime_map_entity_1_y_negative_loop:
   LDA $C105
-  BNE runtime_map_entity_0_y_negative_step_low
+  BNE runtime_map_entity_1_y_negative_step_low
   DEC $C106
-runtime_map_entity_0_y_negative_step_low:
+runtime_map_entity_1_y_negative_step_low:
   DEC $C105
   CLC
   LDA $C105
@@ -2247,9 +2336,9 @@ runtime_map_entity_0_y_negative_step_low:
   ADC #$00
   STA $C7C5
   JSR runtime_map_entity_point_solid_0
-  BEQ runtime_map_entity_0_y_negative_sample_0_clear
-  JMP runtime_map_entity_0_y_negative_hit
-runtime_map_entity_0_y_negative_sample_0_clear:
+  BEQ runtime_map_entity_1_y_negative_sample_0_clear
+  JMP runtime_map_entity_1_y_negative_hit
+runtime_map_entity_1_y_negative_sample_0_clear:
   CLC
   LDA $C103
   ADC #$0C
@@ -2258,9 +2347,9 @@ runtime_map_entity_0_y_negative_sample_0_clear:
   ADC #$00
   STA $C7C5
   JSR runtime_map_entity_point_solid_0
-  BEQ runtime_map_entity_0_y_negative_sample_1_clear
-  JMP runtime_map_entity_0_y_negative_hit
-runtime_map_entity_0_y_negative_sample_1_clear:
+  BEQ runtime_map_entity_1_y_negative_sample_1_clear
+  JMP runtime_map_entity_1_y_negative_hit
+runtime_map_entity_1_y_negative_sample_1_clear:
   CLC
   LDA $C103
   ADC #$13
@@ -2269,25 +2358,25 @@ runtime_map_entity_0_y_negative_sample_1_clear:
   ADC #$00
   STA $C7C5
   JSR runtime_map_entity_point_solid_0
-  BEQ runtime_map_entity_0_y_negative_sample_2_clear
-  JMP runtime_map_entity_0_y_negative_hit
-runtime_map_entity_0_y_negative_sample_2_clear:
+  BEQ runtime_map_entity_1_y_negative_sample_2_clear
+  JMP runtime_map_entity_1_y_negative_hit
+runtime_map_entity_1_y_negative_sample_2_clear:
   DEC $C7C8
   LDA $C7C8
-  BEQ runtime_map_entity_0_y_negative_done
-  JMP runtime_map_entity_0_y_negative_loop
-runtime_map_entity_0_y_negative_done:
-  JMP runtime_map_entity_0_y_done
-runtime_map_entity_0_y_negative_hit:
+  BEQ runtime_map_entity_1_y_negative_done
+  JMP runtime_map_entity_1_y_negative_loop
+runtime_map_entity_1_y_negative_done:
+  JMP runtime_map_entity_1_y_done
+runtime_map_entity_1_y_negative_hit:
   INC $C105
-  BNE runtime_map_entity_0_y_negative_undo_done
+  BNE runtime_map_entity_1_y_negative_undo_done
   INC $C106
-runtime_map_entity_0_y_negative_undo_done:
+runtime_map_entity_1_y_negative_undo_done:
   LDA #$01
   STA $C10A
   LDA #$00
   STA $C108
-runtime_map_entity_0_y_done:
+runtime_map_entity_1_y_done:
   LDA #$01
   STA $C7C9
   CLC
@@ -2305,9 +2394,9 @@ runtime_map_entity_0_y_done:
   ADC #$00
   STA $C7C5
   JSR runtime_map_entity_point_solid_0
-  BEQ runtime_map_entity_0_ground_probe_sample_0_clear
-  JMP runtime_map_entity_0_grounded
-runtime_map_entity_0_ground_probe_sample_0_clear:
+  BEQ runtime_map_entity_1_ground_probe_sample_0_clear
+  JMP runtime_map_entity_1_grounded
+runtime_map_entity_1_ground_probe_sample_0_clear:
   CLC
   LDA $C103
   ADC #$0C
@@ -2316,9 +2405,9 @@ runtime_map_entity_0_ground_probe_sample_0_clear:
   ADC #$00
   STA $C7C5
   JSR runtime_map_entity_point_solid_0
-  BEQ runtime_map_entity_0_ground_probe_sample_1_clear
-  JMP runtime_map_entity_0_grounded
-runtime_map_entity_0_ground_probe_sample_1_clear:
+  BEQ runtime_map_entity_1_ground_probe_sample_1_clear
+  JMP runtime_map_entity_1_grounded
+runtime_map_entity_1_ground_probe_sample_1_clear:
   CLC
   LDA $C103
   ADC #$13
@@ -2327,14 +2416,14 @@ runtime_map_entity_0_ground_probe_sample_1_clear:
   ADC #$00
   STA $C7C5
   JSR runtime_map_entity_point_solid_0
-  BEQ runtime_map_entity_0_ground_probe_sample_2_clear
-  JMP runtime_map_entity_0_grounded
-runtime_map_entity_0_ground_probe_sample_2_clear:
-  JMP runtime_map_entity_0_behavior_probe
-runtime_map_entity_0_grounded:
+  BEQ runtime_map_entity_1_ground_probe_sample_2_clear
+  JMP runtime_map_entity_1_grounded
+runtime_map_entity_1_ground_probe_sample_2_clear:
+  JMP runtime_map_entity_1_behavior_probe
+runtime_map_entity_1_grounded:
   LDA #$01
   STA $C109
-runtime_map_entity_0_behavior_probe:
+runtime_map_entity_1_behavior_probe:
   CLC
   LDA $C103
   ADC #$0C
@@ -2351,20 +2440,20 @@ runtime_map_entity_0_behavior_probe:
   STA $C7C7
   JSR runtime_map_entity_point_value_0
   CMP #$02
-  BNE runtime_map_entity_0_center_danger_2_next
+  BNE runtime_map_entity_1_center_danger_2_next
   LDA #$01
   STA $C10E
-runtime_map_entity_0_center_danger_2_next:
+runtime_map_entity_1_center_danger_2_next:
   CMP #$03
-  BNE runtime_map_entity_0_center_exit_3_next
+  BNE runtime_map_entity_1_center_exit_3_next
   LDA #$01
   STA $C110
-runtime_map_entity_0_center_exit_3_next:
+runtime_map_entity_1_center_exit_3_next:
   CMP #$04
-  BNE runtime_map_entity_0_center_ladder_4_next
+  BNE runtime_map_entity_1_center_ladder_4_next
   LDA #$01
   STA $C10F
-runtime_map_entity_0_center_ladder_4_next:
+runtime_map_entity_1_center_ladder_4_next:
   CLC
   LDA $C105
   ADC #$14
@@ -2374,21 +2463,21 @@ runtime_map_entity_0_center_ladder_4_next:
   STA $C7C7
   JSR runtime_map_entity_point_value_0
   CMP #$02
-  BNE runtime_map_entity_0_bottom_danger_2_next
+  BNE runtime_map_entity_1_bottom_danger_2_next
   LDA #$01
   STA $C10E
-runtime_map_entity_0_bottom_danger_2_next:
+runtime_map_entity_1_bottom_danger_2_next:
   CMP #$03
-  BNE runtime_map_entity_0_bottom_exit_3_next
+  BNE runtime_map_entity_1_bottom_exit_3_next
   LDA #$01
   STA $C110
-runtime_map_entity_0_bottom_exit_3_next:
+runtime_map_entity_1_bottom_exit_3_next:
   CMP #$04
-  BNE runtime_map_entity_0_bottom_ladder_4_next
+  BNE runtime_map_entity_1_bottom_ladder_4_next
   LDA #$01
   STA $C10F
-runtime_map_entity_0_bottom_ladder_4_next:
-runtime_map_entity_0_done:
+runtime_map_entity_1_bottom_ladder_4_next:
+runtime_map_entity_1_done:
   RTS
 ; Map 0: logical collision lookup from 16-bit world pixels
 runtime_map_entity_point_value_0:
@@ -4660,22 +4749,22 @@ asset_map_chars_0:
   .byte $20, $A0, $56, $5E, $48
 asset_map_colors_0:
   .byte $00, $0E, $02, $05, $07
-asset_bytes_1:
-  .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-asset_bytes_3:
-  .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $01, $01, $01, $01, $01, $01, $01, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-asset_bytes_5:
-  .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $01, $01, $01, $01, $01, $01, $01, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $01, $01, $01, $01, $01, $01, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-asset_bytes_7:
-  .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $03, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $02, $02, $02, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-asset_bytes_9:
-  .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $01, $01, $01, $01, $01, $01, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $04, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $01, $01, $01, $01, $01, $01, $01, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $04, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-asset_bytes_11:
-  .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $01, $01, $01, $01, $01, $01, $01, $00, $00, $04, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $01, $01, $01, $01, $01, $01, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $04, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $01, $01, $01, $01, $01, $01, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $01, $01, $01, $01, $01, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $04, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-asset_bytes_13:
-  .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $03, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $04, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $02, $02, $02, $02, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $02, $02, $02, $02, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $01, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
-asset_bytes_17:
-  .byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+asset_rle_1:
+  .byte $FF, $00, $01, $00
+asset_rle_3:
+  .byte $85, $00, $07, $01, $74, $00
+asset_rle_5:
+  .byte $1A, $00, $07, $01, $3B, $00, $06, $01, $9E, $00
+asset_rle_7:
+  .byte $1D, $00, $01, $03, $2A, $00, $0D, $01, $03, $02, $18, $01, $90, $00
+asset_rle_9:
+  .byte $4D, $00, $06, $01, $47, $00, $01, $04, $2D, $00, $07, $01, $1B, $00, $01, $04, $15, $00
+asset_rle_11:
+  .byte $31, $00, $07, $01, $02, $00, $01, $04, $1E, $00, $06, $01, $2B, $00, $01, $04, $0C, $00, $06, $01, $26, $00, $05, $01, $12, $00, $01, $04, $25, $00
+asset_rle_13:
+  .byte $16, $00, $01, $03, $13, $00, $01, $04, $15, $00, $11, $01, $04, $02, $15, $01, $04, $02, $22, $01, $70, $00
+asset_rle_17:
+  .byte $60, $00
 sprite_sequence_0_idle-right:
   .byte $A0
 sprite_sequence_0_idle-left:

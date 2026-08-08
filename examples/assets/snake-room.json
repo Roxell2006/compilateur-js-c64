@@ -3,7 +3,6 @@
   "charset": {
     "mode": "hires",
     "characters": [
-      [0, 0, 0, 0, 0, 0, 0, 0],
       [255, 129, 189, 165, 165, 189, 129, 255],
       [24, 60, 126, 255, 255, 126, 60, 24],
       [60, 126, 255, 255, 255, 255, 126, 60]
@@ -12,10 +11,10 @@
   "tileWidth": 1,
   "tileHeight": 1,
   "tiles": [
-    { "chars": [0], "colors": [0], "collision": 0, "properties": {} },
-    { "chars": [1], "colors": [14], "collision": 1, "properties": { "solid": true } },
-    { "chars": [2], "colors": [7], "collision": 0, "properties": { "collectible": true } },
-    { "chars": [3], "colors": [5], "collision": 2, "properties": { "snake": true } }
+    { "chars": [32], "colors": [0], "collision": 0, "properties": {} },
+    { "chars": [64], "colors": [14], "collision": 1, "properties": { "solid": true } },
+    { "chars": [65], "colors": [7], "collision": 0, "properties": { "collectible": true } },
+    { "chars": [66], "colors": [5], "collision": 2, "properties": { "snake": true } }
   ],
   "map": {
     "width": 20,

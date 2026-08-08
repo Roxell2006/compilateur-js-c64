@@ -44,10 +44,35 @@ printat_done_3:
   STA $D413
   LDA #$A0
   STA $D414
+  LDA #$3C
+  STA $C76F
+sid_video_detect_low:
+  LDA $D011
+  BMI sid_video_detect_low
+sid_video_detect_high:
+  LDA $D011
+  BPL sid_video_detect_high
+sid_video_detect_scan:
+  LDA $D011
+  BPL sid_video_detect_done
+  LDA $D012
+  CMP #$20
+  BCS sid_video_detect_pal
+  JMP sid_video_detect_scan
+sid_video_detect_pal:
+  LDA #$32
+  STA $C76F
+sid_video_detect_done:
   LDA #$00
   STA $C763
   LDA #$00
   STA $C764
+  LDA #$00
+  STA $C771
+  LDA #$0F
+  STA $C772
+  LDA #$00
+  STA $C776
   LDA #$01
   STA $C765
   SEI
@@ -86,7 +111,18 @@ sid_player_vic_raster:
   LDA #$01
   STA $D019
   LDA $C765
-  BEQ sid_irq_done_jump_2
+  CMP #$01
+  BNE sid_irq_done_jump_2
+  LDA $C771
+  CLC
+  ADC #$32
+  STA $C771
+  CMP $C76F
+  BCS sid_irq_rate_continue_2
+  JMP sid_irq_done_2
+sid_irq_rate_continue_2:
+  SBC $C76F
+  STA $C771
   LDA $C764
   BEQ sid_irq_process_jump_2
   DEC $C764
@@ -101,6 +137,7 @@ sid_irq_process_2:
   BNE sid_irq_stop_continue_2
   JMP sid_irq_stop_2
 sid_irq_stop_continue_2:
+sid_irq_loop_continue_2:
   LDA sid_song_irq_2_v1_action,X
   BEQ sid_irq_voice1_rest_2
   CMP #$01
@@ -162,7 +199,7 @@ sid_irq_voice3_hold_2:
 ; hold sid voice 3
 sid_irq_voice3_done_2:
   INC $C763
-  LDA #$18
+  LDA #$17
   STA $C764
   JMP sid_irq_done_2
 sid_irq_stop_2:

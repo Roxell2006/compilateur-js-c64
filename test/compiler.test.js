@@ -600,12 +600,16 @@ describe("v0.8.2 virtual sprite multiplexer", () => {
 describe("v0.9 static charset and map assets", () => {
   it("loads JSON relative to the source file and emits charset plus map data", async () => {
     const result = await compileFile("examples/tilemap-static.js");
-    expect(result.asm).toMatch(/asset_charset_copy_\d+:/);
-    expect(result.asm).toMatch(/STA \$3000,X/);
+    expect(result.asm).toMatch(/asset_charset_(?:copy|rle)_\d+:/);
+    expect(result.asm).toMatch(/STA \$3000,[XY]/);
     expect(result.asm).toMatch(/STA \(\$FD\),Y/);
     expect(result.asm).toMatch(/AND #\$F1/);
+    expect(result.asm).not.toMatch(/runtime_map_activate_\d+:/);
     expect(result.assetReport).toEqual(expect.arrayContaining([
-      expect.objectContaining({ type: "charset", address: 0x3000, bytes: 2048, characters: 3 }),
+      expect.objectContaining({
+        type: "charset", address: 0x3000, bytes: 2048, characters: 67,
+        storedBytes: 24, romCopiedBytes: 512
+      }),
       expect.objectContaining({ type: "map", mapWidth: 10, mapHeight: 6, screenWidth: 20, screenHeight: 12, tileCount: 3 })
     ]));
     expect(result.asm.match(/asset_bytes_\d+:/g)?.length).toBeLessThan(20);
@@ -694,8 +698,12 @@ describe("v0.9 static charset and map assets", () => {
     expect(result.prgBytes.length).toBeLessThan(7000);
     expect(result.asm).toMatch(/user_routine_drop_piece:/);
     expect(result.asm).toMatch(/user_routine_rotate_piece:/);
+    expect(result.asm).toMatch(/user_routine_clear_full_lines:/);
+    expect(result.asm).toMatch(/user_routine_clear_board:/);
+    expect(result.asm).toMatch(/user_routine_new_game:/);
+    expect(result.asm).toMatch(/game_counter_carry_/);
     expect(result.asm).toMatch(/runtime_map_draw_tile_0:/);
-    expect(result.asm).toMatch(/asset_map_initial_copy_/);
+    expect(result.asm).toMatch(/asset_map_initial_(?:copy|rle)_/);
   });
 
   it("uses a 16-bit pointer for mutable maps larger than 256 cells", async () => {
@@ -1320,6 +1328,15 @@ describe("v0.10.1 map entities foundation", () => {
     expect(result.assetReport).toEqual(expect.arrayContaining([
       expect.objectContaining({ type: "map-entity-budget", entityCount: 16, logicalSpriteCount: 16, physicalSprites: 8, virtualSprites: 8 }),
       expect.objectContaining({ type: "sprite-multiplexer-budget", initialMaxRasterOverlap: 16, maxRasterBudget: 8, deterministic: true, status: "warning" }),
+      expect.objectContaining({
+        type: "optimization-summary",
+        multiplexer: expect.objectContaining({
+          enabled: true,
+          logicalSprites: 16,
+          sortComparisonsWorstCase: 120,
+          totalCyclesEstimate: expect.any(Number)
+        })
+      }),
       expect.objectContaining({ type: "warning", code: "SPRITE_RASTER_BUDGET" })
     ]));
   });
@@ -1509,6 +1526,290 @@ describe("v0.6 sid helpers", () => {
   });
 });
 
+describe("v0.11 game audio", () => {
+  it("reserves one SID voice for effects and omits its music tables", async () => {
+    const result = await compileJsToC64Outputs(`
+      c64.sid.reserveSfxVoice(3);
+      c64.sid.voice(1).waveform("pulse");
+      c64.sid.voice(2).waveform("triangle");
+      c64.sid.playSong({ tempo: 5, loop: true, voices: [
+        ["C4", "E4", "G4"],
+        ["C3", "R", "G2"],
+        ["R", "R", "R"]
+      ] });
+      c64.game.frame(() => {
+        c64.sid.pauseSong();
+        c64.sid.resumeSong();
+        c64.sid.click();
+      }, { hz: "video" });
+    `);
+
+    expect(result.asm).toMatch(/STA \$D412/);
+    expect(result.asm).not.toMatch(/sid_song_irq_\d+_v3_action:/);
+    expect(result.asm).toMatch(/sid_irq_loop_continue_/);
+    expect(result.asm).toMatch(/LDA \$C771[\s\S]*ADC #\$32[\s\S]*CMP \$C76F/);
+    expect(result.asm).toMatch(/sid_pause_done_/);
+    expect(result.asm).toMatch(/sid_resume_done_/);
+    expect(result.assetReport).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: "sid-audio",
+        logicalTickRateHz: 50,
+        videoStandardCompensation: "automatic-pal-ntsc",
+        loop: true,
+        musicVoices: [1, 2],
+        reservedSfxVoice: 3,
+        omittedReservedVoiceBytes: 9,
+        priorityPolicy: "reserved-sfx-voice"
+      })
+    ]));
+    expect(result.assetReport).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "warning", code: "SID_VOICE_CONFLICT" })
+    ]));
+  });
+
+  it("reports music/effect conflicts and notes discarded from a reserved voice", async () => {
+    const shared = await compileJsToC64Outputs(`
+      c64.sid.playSong({ voices: [["C4"], ["R"], ["R"]] });
+      c64.game.frame(() => c64.sid.click());
+    `);
+    expect(shared.assetReport).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "warning", code: "SID_VOICE_CONFLICT" })
+    ]));
+
+    const reserved = await compileJsToC64Outputs(`
+      c64.sid.reserveSfxVoice(2);
+      c64.sid.playSong({ voices: [["C4"], ["E4"], ["G4"]] });
+    `);
+    expect(reserved.assetReport).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "warning", code: "SID_RESERVED_VOICE_MUSIC_DATA" })
+    ]));
+  });
+
+  it("validates the reserved SID voice", async () => {
+    await expect(compileJsToC64Outputs(`c64.sid.reserveSfxVoice(4);`))
+      .rejects.toThrow(/SID voice must be 1, 2 or 3/);
+  });
+
+  it("expands reusable patterns, installs instruments and fades in the SID IRQ", async () => {
+    const result = await compileJsToC64Outputs(`
+      const lead = c64.sid.instrument("lead", {
+        waveform: "pulse", pulseWidth: 0x0800,
+        attackDecay: 0x12, sustainRelease: 0x98
+      });
+      const bass = c64.sid.instrument("bass", {
+        waveform: "triangle", attackDecay: 0x11, sustainRelease: 0x88
+      });
+      const riff = c64.sid.pattern("riff", ["C4", "E4", { note: "G4", duration: 2 }]);
+      const bassLine = c64.sid.pattern("bass-line", ["C3", { rest: true, duration: 3 }]);
+      const silence = c64.sid.pattern("silence", [{ rest: true, duration: 8 }]);
+      c64.sid.reserveSfxVoice(3);
+      c64.sid.volume(12);
+      c64.sid.playSong({
+        tempo: 3, loop: true,
+        instruments: [lead, bass, null],
+        voices: [riff.repeat(2), bassLine.repeat(2), silence]
+      });
+      c64.game.frame(() => c64.sid.fadeSong(0, 4));
+    `);
+
+    expect(result.asm).toMatch(/LDA #\$40\s+STA \$D404/);
+    expect(result.asm).toMatch(/STA \$D402/);
+    expect(result.asm).toMatch(/STA \$D405/);
+    expect(result.asm).toMatch(/STA \$D40C/);
+    expect(result.asm).toMatch(/STA \$C773[\s\S]*STA \$C774[\s\S]*STA \$C776/);
+    expect(result.asm).toMatch(/LDA \$D418\s+AND #\$F0\s+ORA \$C772\s+STA \$D418/);
+    expect(result.assetReport).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: "sid-audio",
+        fadeCalls: 1,
+        expandedSteps: 8,
+        storedSteps: 4,
+        compactedRepeatTableBytes: 24,
+        patterns: expect.arrayContaining([
+          expect.objectContaining({ name: "riff", uses: 2, sourceEntries: 3 }),
+          expect.objectContaining({ name: "bass-line", uses: 2 }),
+          expect.objectContaining({ name: "silence", uses: 1 })
+        ]),
+        instruments: [
+          { voice: 1, name: "lead", waveform: "pulse" },
+          { voice: 2, name: "bass", waveform: "triangle" }
+        ]
+      })
+    ]));
+  });
+
+  it("only emits the fade runtime when fadeSong() is used", async () => {
+    const result = await compileJsToC64Outputs(`
+      c64.sid.playSong({ voices: [["C4"], ["R"], ["R"]] });
+    `);
+    expect(result.asm).not.toMatch(/sid_irq_fade_step_/);
+
+    await expect(compileJsToC64Outputs(`
+      c64.sid.playSong({ voices: [["C4"], ["R"], ["R"]] });
+      c64.sid.fadeSong(16, 2);
+    `)).rejects.toThrow(/fade target volume must be between 0 and 15/);
+  });
+
+  it("pools identical expanded voice tables", async () => {
+    const result = await compileJsToC64Outputs(`
+      const phrase = c64.sid.pattern("phrase", ["C4", "E4", "G4", "R"]);
+      c64.sid.playSong({ voices: [phrase, phrase, ["R", "R", "R", "R"]] });
+    `);
+    expect(result.asm).toMatch(/sid_song_irq_\d+_v1_action:/);
+    expect(result.asm).not.toMatch(/sid_song_irq_\d+_v2_action:/);
+    expect(result.assetReport).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "sid-audio", pooledIdenticalVoiceTableBytes: 12 })
+    ]));
+  });
+});
+
+describe("v0.11 optimization profiles", () => {
+  it("selects conditional RLE for size/balanced and raw copies for speed", async () => {
+    const source = `
+      const level = c64.assets.defineMap({
+        charset: { characters: [Array(8).fill(0)] },
+        tiles: [{ chars: [0], colors: [1], collision: 0 }],
+        map: { width: 40, height: 20, data: Array(800).fill(0) }
+      });
+      c64.charset.use(level.charset);
+    `;
+    const size = await compileJsToC64Outputs(source, { opt: "size" });
+    const balanced = await compileJsToC64Outputs(source, { opt: "balanced" });
+    const speed = await compileJsToC64Outputs(source, { opt: "speed" });
+
+    expect(size.asm).toMatch(/asset_(?:map_initial|charset)_rle_/);
+    expect(balanced.asm).toMatch(/asset_(?:map_initial|charset)_rle_/);
+    expect(speed.asm).not.toMatch(/asset_(?:map_initial|charset)_rle_/);
+    expect(speed.asm).toMatch(/asset_(?:map_initial|charset)_copy_/);
+    expect(size.bytes.length).toBeLessThan(speed.bytes.length);
+    expect(balanced.bytes.length).toBeLessThan(speed.bytes.length);
+    expect(balanced.assetReport).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: "optimization-summary",
+        mode: "balanced",
+        profiles: expect.arrayContaining([
+          expect.objectContaining({ mode: "size" }),
+          expect.objectContaining({ mode: "balanced", programBytes: balanced.bytes.length }),
+          expect.objectContaining({ mode: "speed", runtimeStrategy: "inline-hot-paths" })
+        ]),
+        rle: expect.objectContaining({ compressedChunks: expect.any(Number) })
+      })
+    ]));
+  });
+
+  it("keeps RLE disabled when its loader would make a small asset larger", async () => {
+    const result = await compileJsToC64Outputs(`
+      c64.assets.defineMap({
+        charset: { characters: [Array(8).fill(0), Array(8).fill(255)] },
+        tiles: [{ chars: [0] }, { chars: [1] }],
+        map: { width: 16, height: 1, data: Array.from({ length: 16 }, (_, i) => i & 1) }
+      });
+    `, { opt: "size" });
+    expect(result.asm).toMatch(/asset_map_initial_copy_/);
+    const report = result.assetReport.find((entry) => entry.type === "optimization-summary");
+    expect(report.rle.compressedChunks).toBe(0);
+  });
+
+  it("inlines repeated hot paths in speed and validates --opt values", () => {
+    const instructions = [{ op: "sidClick", args: [] }, { op: "sidClick", args: [] }];
+    const size = compileInstructions(instructions, { opt: "size" });
+    const speed = compileInstructions(instructions, { opt: "speed" });
+    expect(size.asm).toMatch(/runtime_sid_click:/);
+    expect(speed.asm).not.toMatch(/runtime_sid_click:/);
+    expect(speed.asm).not.toMatch(/JSR runtime_sid_click/);
+    expect(() => compileInstructions([], { opt: "tiny" }))
+      .toThrow(/optimization mode must be size, speed or balanced/);
+  });
+});
+
+describe("v1.0 game scenes and active map contract", () => {
+  it("dispatches fixed scenes and applies transitions between frames", async () => {
+    const result = await compileJsToC64Outputs(`
+      const ticks = c64.var.byte("sceneTicks", { initial: 0 });
+      const joystick = c64.input.joystick(2);
+
+      c64.game.scene("title", {
+        enter: () => c64.borderColor(c64.COLOR_BLUE),
+        update: () => c64.control.if(joystick.firePressed(), () => c64.game.go("game"))
+      });
+      c64.game.scene("game", {
+        enter: () => c64.borderColor(c64.COLOR_BLACK),
+        update: () => {
+          ticks.inc();
+          c64.control.if(c64.game.is("pause"), () => ticks.set(0));
+        }
+      });
+      c64.game.scene("pause", { update: () => c64.game.go("game") });
+      c64.game.start("title");
+    `);
+
+    expect(result.asm).toMatch(/game_scene_apply_transition:/);
+    expect(result.asm).toMatch(/game_scene_title_enter:/);
+    expect(result.asm).toMatch(/game_scene_title_update:/);
+    expect(result.asm).toMatch(/game_scene_game_update:/);
+    expect(result.asm).toMatch(/game_scene_pause_update:/);
+    expect(result.asm).toMatch(/STA \$C77A/);
+    expect(result.asm).toMatch(/STA \$C77B/);
+    expect(result.asm).toMatch(/JSR game_scene_update_dispatch/);
+    expect(result.assetReport).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: "game-runtime",
+        scenes: ["title", "game", "pause"],
+        startScene: "title",
+        transitionPolicy: "one-request-between-frames"
+      })
+    ]));
+  });
+
+  it("rejects missing, duplicate and mixed scene loops", async () => {
+    await expect(compileJsToC64Outputs(`
+      c64.game.scene("title", { update() {} });
+      c64.game.start("game");
+    `)).rejects.toThrow(/starting game scene game is not declared/i);
+
+    await expect(compileJsToC64Outputs(`
+      c64.game.scene("title", { update: () => c64.game.go("game") });
+      c64.game.start("title");
+    `)).rejects.toThrow(/scene game is referenced but not declared/i);
+
+    await expect(compileJsToC64Outputs(`
+      c64.game.scene("title", { update() {} });
+      c64.game.scene("title", { update() {} });
+      c64.game.start("title");
+    `)).rejects.toThrow(/scene title is already declared/i);
+
+    await expect(compileJsToC64Outputs(`
+      c64.game.frame(() => {});
+      c64.game.scene("title", { update() {} });
+      c64.game.start("title");
+    `)).rejects.toThrow(/cannot be combined/i);
+  });
+
+  it("queues map activation and restores embedded cells at the safe frame boundary", async () => {
+    const result = await compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({
+        charset: { characters: [[0,0,0,0,0,0,0,0]] },
+        tiles: [{ chars: [0], collision: 0 }, { chars: [0], collision: 1 }],
+        map: { width: 8, height: 2, data: [0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1] }
+      });
+      const active = c64.var.bool("levelActive", { initial: false });
+      c64.game.init(() => level.activate());
+      c64.game.frame(() => {
+        c64.control.if(level.isActive(), () => active.set(true));
+      });
+    `);
+
+    expect(result.asm).toMatch(/runtime_map_activate_\d+:/);
+    expect(result.asm).toMatch(/STA \$C779/);
+    expect(result.asm).toMatch(/STA \$C778/);
+    expect(result.asm).toMatch(/JSR runtime_map_activate_\d+/);
+    expect(result.assetReport).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "map-runtime", activation: "embedded-resettable", activeMapContract: true }),
+      expect.objectContaining({ type: "game-runtime", activeMapContract: true, sharedMapRamSlot: false })
+    ]));
+  });
+});
+
 describe("irq raster", () => {
   it("generates raster vector writes", () => {
     const result = compileInstructions([
@@ -1645,5 +1946,48 @@ describe("irq raster", () => {
     expect(result.asm).toMatch(/game_frame_loop:/);
     expect(result.asm).toMatch(/LDA \$D012/);
     expect(result.asm).toMatch(/STA \$D010/);
+  });
+
+  it("externalizes disk levels and loads non-resident sprites with activate()", async () => {
+    const result = await compileJsToC64Outputs(`
+      const level = c64.assets.defineMap({
+        version: 1,
+        charset: { mode: "hires", characters: [[0,0,0,0,0,0,0,0]] },
+        tiles: [{ chars: [0], colors: [1], collision: 0 }],
+        map: { width: 4, height: 4, data: Array(16).fill(0), objects: [] }
+      });
+      const resident = c64.assets.defineSprite({
+        version: 1, id: "hero", mode: "hires",
+        frames: [{ id: "idle", data: Array(63).fill(1) }]
+      });
+      const enemy = c64.assets.defineSprite({
+        version: 1, id: "enemy", mode: "hires",
+        frames: [{ id: "idle", data: Array(63).fill(2) }]
+      }, { resident: false });
+      c64.sprite.create(0, { x: 24, y: 50, frames: resident.framesRef, color: 1 });
+      c64.sprite.create(1, { x: 80, y: 50, frames: enemy.framesRef, color: 2 });
+      c64.game.init(() => level.activate({ draw: true, sprites: [enemy] }));
+      c64.game.frame(() => {});
+    `, { assets: "disk", device: 9 });
+
+    expect(result.diskFiles.map((file) => file.kind)).toEqual([
+      "map", "charset", "tables", "sprite", "sprite"
+    ]);
+    expect(result.asm).toMatch(/runtime_disk_load_usr:/);
+    expect(result.asm).toMatch(/JSR \$FFBD/);
+    expect(result.asm).toMatch(/JSR \$FFBA/);
+    expect(result.asm).toMatch(/JSR \$FFD5/);
+    expect(result.asm).not.toMatch(/asset_map_initial/);
+    const disk = result.assetReport.find((entry) => entry.type === "disk-assets");
+    expect(disk.device).toBe(9);
+    expect(disk.assetFileType).toBe("prg-data-module");
+    expect(disk.levelDependencies[0].files).toHaveLength(4);
+    expect(disk.mainProgramBytes).toBe(result.bytes.length);
+    expect(result.assetReport.find((entry) => entry.type === "memory-layout").conflicts).toEqual([]);
+  });
+
+  it("validates disk compile options", async () => {
+    await expect(compileJsToC64Outputs("c64.clearScreen();", { assets: "tape" })).rejects.toThrow(/inline or disk/i);
+    await expect(compileJsToC64Outputs("c64.clearScreen();", { assets: "disk", device: 3 })).rejects.toThrow(/between 4 and 30/i);
   });
 });

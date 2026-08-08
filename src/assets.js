@@ -160,6 +160,11 @@ export function loadSpriteAsset(filePath, baseDirectory = process.cwd()) {
 function normalizeCharset(definition = {}) {
   const mode = definition.mode ?? "hires";
   if (mode !== "hires" && mode !== "multicolor") throw new Error("charset.mode must be hires or multicolor");
+  // Custom charsets keep screen codes 0..63 for the original C64 alphabet.
+  // `romCharacters: 0` remains available only for legacy assets which
+  // deliberately replace those codes.
+  const romCharacters = definition.romCharacters ?? 64;
+  if (![0, 64].includes(romCharacters)) throw new Error("charset.romCharacters must be 0 or 64");
   let charsetBytes;
   if (definition.bytes !== undefined) {
     charsetBytes = bytes(definition.bytes, undefined, "charset.bytes");
@@ -168,15 +173,36 @@ function normalizeCharset(definition = {}) {
     const characters = Array.from(definition.characters ?? []);
     charsetBytes = characters.flatMap((character, index) => bytes(character, 8, `charset.characters[${index}]`));
   }
-  if (charsetBytes.length === 0 || charsetBytes.length > 2048) {
-    throw new Error("charset must contain between 1 and 256 characters");
+  // Older Studio exports embedded the 512-byte system area. Detect and drop
+  // that prefix so they also benefit from the automatic ROM copy.
+  if (definition.romCharacters === undefined && romCharacters === 64 && hasEmbeddedSystemCharset(charsetBytes)) {
+    charsetBytes = charsetBytes.slice(64 * 8);
   }
+  const characterCount = romCharacters + charsetBytes.length / 8;
+  if (characterCount === 0 || characterCount > 256) {
+    throw new Error("charset, including ROM characters, must contain between 1 and 256 characters");
+  }
+  const storedBytes = Object.freeze([...charsetBytes]);
+  const prefix = new Array(romCharacters * 8).fill(0);
   return Object.freeze({
     type: "charsetAsset",
     mode,
-    characterCount: charsetBytes.length / 8,
-    bytes: Object.freeze([...charsetBytes, ...new Array(2048 - charsetBytes.length).fill(0)])
+    romCharacters,
+    characterCount,
+    storedBytes,
+    bytes: Object.freeze([...prefix, ...charsetBytes, ...new Array(2048 - prefix.length - charsetBytes.length).fill(0)])
   });
+}
+
+function hasEmbeddedSystemCharset(charsetBytes) {
+  if (charsetBytes.length < 64 * 8) return false;
+  const signatures = [
+    [1 * 8, [24, 60, 102, 126, 102, 102, 102, 0]],
+    [32 * 8, [0, 0, 0, 0, 0, 0, 0, 0]],
+    [48 * 8, [60, 102, 110, 118, 102, 102, 60, 0]],
+    [57 * 8, [60, 102, 102, 62, 6, 102, 60, 0]]
+  ];
+  return signatures.every(([offset, expected]) => expected.every((value, index) => charsetBytes[offset + index] === value));
 }
 
 export function normalizeMapAsset(definition, sourcePath = "<inline>") {

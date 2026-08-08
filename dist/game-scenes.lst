@@ -1,0 +1,378 @@
+0810  A9 FF       LDA #$FF
+0812  8D 7A C7    STA $C77A
+0815  A9 FF       LDA #$FF
+0817  8D 7B C7    STA $C77B
+081A  A9 00       LDA #$00
+081C  8D 00 C1    STA $C100
+081F  A9 00       LDA #$00
+0821  8D 01 C1    STA $C101
+            ; Deterministic game frame loop
+0824  A9 00       LDA #$00
+0826  8D 6A C7    STA $C76A
+0829  A9 00       LDA #$00
+082B  8D 6B C7    STA $C76B
+082E  A9 00       LDA #$00
+0830  8D 70 C7    STA $C770
+0833  A9 FF       LDA #$FF
+0835  8D 67 C7    STA $C767
+0838  A9 FF       LDA #$FF
+083A  8D 69 C7    STA $C769
+083D  A9 3C       LDA #$3C
+083F  8D 6F C7    STA $C76F
+0842        game_video_detect_low:
+0842  AD 11 D0    LDA $D011
+0845  30 FB       BMI game_video_detect_low
+0847        game_video_detect_high:
+0847  AD 11 D0    LDA $D011
+084A  10 FB       BPL game_video_detect_high
+084C        game_video_detect_scan:
+084C  AD 11 D0    LDA $D011
+084F  10 0F       BPL game_video_detect_done
+0851  AD 12 D0    LDA $D012
+0854  C9 20       CMP #$20
+0856  B0 03       BCS game_video_detect_pal
+0858  4C 4C 08    JMP game_video_detect_scan
+085B        game_video_detect_pal:
+085B  A9 32       LDA #$32
+085D  8D 6F C7    STA $C76F
+0860        game_video_detect_done:
+0860  A9 00       LDA #$00
+0862  8D 7A C7    STA $C77A
+0865  A9 FF       LDA #$FF
+0867  8D 7B C7    STA $C77B
+086A  20 D7 08    JSR game_scene_enter_dispatch
+086D        game_frame_loop:
+086D        game_frame_wait_leave:
+086D  AD 12 D0    LDA $D012
+0870  C9 F0       CMP #$F0
+0872  F0 F9       BEQ game_frame_wait_leave
+0874        game_frame_wait_target:
+0874  AD 12 D0    LDA $D012
+0877  C9 F0       CMP #$F0
+0879  D0 F9       BNE game_frame_wait_target
+087B  18          CLC
+087C  AD 70 C7    LDA $C770
+087F  69 32       ADC #$32
+0881  8D 70 C7    STA $C770
+0884  CD 6F C7    CMP $C76F
+0887  B0 03       BCS game_frame_logical_tick
+0889  4C 6D 08    JMP game_frame_loop
+088C        game_frame_logical_tick:
+088C  38          SEC
+088D  AD 70 C7    LDA $C770
+0890  ED 6F C7    SBC $C76F
+0893  8D 70 C7    STA $C770
+0896  AD 67 C7    LDA $C767
+0899  8D 69 C7    STA $C769
+089C  AD 00 DC    LDA $DC00
+089F  8D 67 C7    STA $C767
+08A2  EE 6A C7    INC $C76A
+08A5  D0 03       BNE game_frame_counter_done_0
+08A7  EE 6B C7    INC $C76B
+08AA        game_frame_counter_done_0:
+08AA  20 04 09    JSR game_scene_update_dispatch
+08AD  20 B3 08    JSR game_scene_apply_transition
+08B0  4C 6D 08    JMP game_frame_loop
+            ; Apply at most one requested scene transition between frames
+08B3        game_scene_apply_transition:
+08B3  AD 7B C7    LDA $C77B
+08B6  C9 FF       CMP #$FF
+08B8  D0 01       BNE game_scene_transition_requested
+08BA  60          RTS
+08BB        game_scene_transition_requested:
+08BB  CD 7A C7    CMP $C77A
+08BE  D0 06       BNE game_scene_transition_changed
+08C0  A9 FF       LDA #$FF
+08C2  8D 7B C7    STA $C77B
+08C5  60          RTS
+08C6        game_scene_transition_changed:
+08C6  48          PHA
+08C7  A9 FF       LDA #$FF
+08C9  8D 7B C7    STA $C77B
+08CC  20 31 09    JSR game_scene_exit_dispatch
+08CF  68          PLA
+08D0  8D 7A C7    STA $C77A
+08D3  20 D7 08    JSR game_scene_enter_dispatch
+08D6  60          RTS
+08D7        game_scene_enter_dispatch:
+08D7  AD 7A C7    LDA $C77A
+08DA  C9 00       CMP #$00
+08DC  D0 04       BNE game_scene_enter_dispatch_next_0
+08DE  20 52 09    JSR game_scene_title_enter
+08E1  60          RTS
+08E2        game_scene_enter_dispatch_next_0:
+08E2  AD 7A C7    LDA $C77A
+08E5  C9 01       CMP #$01
+08E7  D0 04       BNE game_scene_enter_dispatch_next_1
+08E9  20 B2 09    JSR game_scene_game_enter
+08EC  60          RTS
+08ED        game_scene_enter_dispatch_next_1:
+08ED  AD 7A C7    LDA $C77A
+08F0  C9 02       CMP #$02
+08F2  D0 04       BNE game_scene_enter_dispatch_next_2
+08F4  20 21 0A    JSR game_scene_pause_enter
+08F7  60          RTS
+08F8        game_scene_enter_dispatch_next_2:
+08F8  AD 7A C7    LDA $C77A
+08FB  C9 03       CMP #$03
+08FD  D0 04       BNE game_scene_enter_dispatch_next_3
+08FF  20 51 0A    JSR game_scene_gameOver_enter
+0902  60          RTS
+0903        game_scene_enter_dispatch_next_3:
+0903  60          RTS
+0904        game_scene_update_dispatch:
+0904  AD 7A C7    LDA $C77A
+0907  C9 00       CMP #$00
+0909  D0 04       BNE game_scene_update_dispatch_next_0
+090B  20 95 09    JSR game_scene_title_update
+090E  60          RTS
+090F        game_scene_update_dispatch_next_0:
+090F  AD 7A C7    LDA $C77A
+0912  C9 01       CMP #$01
+0914  D0 04       BNE game_scene_update_dispatch_next_1
+0916  20 E1 09    JSR game_scene_game_update
+0919  60          RTS
+091A        game_scene_update_dispatch_next_1:
+091A  AD 7A C7    LDA $C77A
+091D  C9 02       CMP #$02
+091F  D0 04       BNE game_scene_update_dispatch_next_2
+0921  20 34 0A    JSR game_scene_pause_update
+0924  60          RTS
+0925        game_scene_update_dispatch_next_2:
+0925  AD 7A C7    LDA $C77A
+0928  C9 03       CMP #$03
+092A  D0 04       BNE game_scene_update_dispatch_next_3
+092C  20 80 0A    JSR game_scene_gameOver_update
+092F  60          RTS
+0930        game_scene_update_dispatch_next_3:
+0930  60          RTS
+0931        game_scene_exit_dispatch:
+0931  AD 7A C7    LDA $C77A
+0934  C9 00       CMP #$00
+0936  D0 01       BNE game_scene_exit_dispatch_next_0
+0938  60          RTS
+0939        game_scene_exit_dispatch_next_0:
+0939  AD 7A C7    LDA $C77A
+093C  C9 01       CMP #$01
+093E  D0 01       BNE game_scene_exit_dispatch_next_1
+0940  60          RTS
+0941        game_scene_exit_dispatch_next_1:
+0941  AD 7A C7    LDA $C77A
+0944  C9 02       CMP #$02
+0946  D0 01       BNE game_scene_exit_dispatch_next_2
+0948  60          RTS
+0949        game_scene_exit_dispatch_next_2:
+0949  AD 7A C7    LDA $C77A
+094C  C9 03       CMP #$03
+094E  D0 01       BNE game_scene_exit_dispatch_next_3
+0950  60          RTS
+0951        game_scene_exit_dispatch_next_3:
+0951  60          RTS
+            ; Scene title: enter
+0952        game_scene_title_enter:
+0952  A9 00       LDA #$00
+0954  8D 00 C1    STA $C100
+0957  A9 00       LDA #$00
+0959  8D 01 C1    STA $C101
+095C  A9 93       LDA #$93
+095E  20 D2 FF    JSR $FFD2
+0961  A9 06       LDA #$06
+0963  8D 20 D0    STA $D020
+0966  A9 06       LDA #$06
+0968  8D 21 D0    STA $D021
+096B  A9 01       LDA #$01
+096D  8D 86 02    STA $0286
+0970  A2 00       LDX #$00
+0972        printat_loop_1:
+0972  BD 9D 0A    LDA str_screen_0,X
+0975  F0 0B       BEQ printat_done_2
+0977  9D 75 05    STA $0575,X
+097A  A9 01       LDA #$01
+097C  9D 75 D9    STA $D975,X
+097F  E8          INX
+0980  D0 F0       BNE printat_loop_1
+0982        printat_done_2:
+0982  A2 00       LDX #$00
+0984        printat_loop_3:
+0984  BD AB 0A    LDA str_screen_1,X
+0987  F0 0B       BEQ printat_done_4
+0989  9D EC 05    STA $05EC,X
+098C  A9 01       LDA #$01
+098E  9D EC D9    STA $D9EC,X
+0991  E8          INX
+0992  D0 F0       BNE printat_loop_3
+0994        printat_done_4:
+0994  60          RTS
+            ; Scene title: update
+0995        game_scene_title_update:
+0995  AD 67 C7    LDA $C767
+0998  29 10       AND #$10
+099A  F0 03       BEQ joystick_current_pressed_6
+099C  4C B1 09    JMP control_if_else_5
+099F        joystick_current_pressed_6:
+099F  AD 69 C7    LDA $C769
+09A2  29 10       AND #$10
+09A4  D0 03       BNE condition_pass_6
+09A6  4C B1 09    JMP control_if_else_5
+09A9        condition_pass_6:
+09A9  A9 01       LDA #$01
+09AB  8D 7B C7    STA $C77B
+09AE  4C B1 09    JMP control_if_end_5
+09B1        control_if_else_5:
+09B1        control_if_end_5:
+09B1  60          RTS
+            ; Scene game: enter
+09B2        game_scene_game_enter:
+09B2  A9 93       LDA #$93
+09B4  20 D2 FF    JSR $FFD2
+09B7  A9 00       LDA #$00
+09B9  8D 21 D0    STA $D021
+09BC  A2 00       LDX #$00
+09BE        printat_loop_7:
+09BE  BD BB 0A    LDA str_screen_2,X
+09C1  F0 0B       BEQ printat_done_8
+09C3  9D 9E 05    STA $059E,X
+09C6  A9 01       LDA #$01
+09C8  9D 9E D9    STA $D99E,X
+09CB  E8          INX
+09CC  D0 F0       BNE printat_loop_7
+09CE        printat_done_8:
+09CE  A2 00       LDX #$00
+09D0        printat_loop_9:
+09D0  BD C8 0A    LDA str_screen_3,X
+09D3  F0 0B       BEQ printat_done_10
+09D5  9D EE 05    STA $05EE,X
+09D8  A9 01       LDA #$01
+09DA  9D EE D9    STA $D9EE,X
+09DD  E8          INX
+09DE  D0 F0       BNE printat_loop_9
+09E0        printat_done_10:
+09E0  60          RTS
+            ; Scene game: update
+09E1        game_scene_game_update:
+09E1  EE 00 C1    INC $C100
+09E4  D0 03       BNE runtime_word_inc_done_11
+09E6  EE 01 C1    INC $C101
+09E9        runtime_word_inc_done_11:
+09E9  AD 67 C7    LDA $C767
+09EC  29 10       AND #$10
+09EE  F0 03       BEQ joystick_current_pressed_13
+09F0  4C 05 0A    JMP control_if_else_12
+09F3        joystick_current_pressed_13:
+09F3  AD 69 C7    LDA $C769
+09F6  29 10       AND #$10
+09F8  D0 03       BNE condition_pass_13
+09FA  4C 05 0A    JMP control_if_else_12
+09FD        condition_pass_13:
+09FD  A9 02       LDA #$02
+09FF  8D 7B C7    STA $C77B
+0A02  4C 05 0A    JMP control_if_end_12
+0A05        control_if_else_12:
+0A05        control_if_end_12:
+0A05  AD 01 C1    LDA $C101
+0A08  C9 00       CMP #$00
+0A0A  90 09       BCC word_compare_low_15
+0A0C  D0 0A       BNE condition_pass_15
+0A0E  AD 00 C1    LDA $C100
+0A11  C9 FA       CMP #$FA
+0A13  B0 03       BCS condition_pass_15
+0A15        word_compare_low_15:
+0A15  4C 20 0A    JMP control_if_else_14
+0A18        condition_pass_15:
+0A18  A9 03       LDA #$03
+0A1A  8D 7B C7    STA $C77B
+0A1D  4C 20 0A    JMP control_if_end_14
+0A20        control_if_else_14:
+0A20        control_if_end_14:
+0A20  60          RTS
+            ; Scene pause: enter
+0A21        game_scene_pause_enter:
+0A21  A2 00       LDX #$00
+0A23        printat_loop_16:
+0A23  BD D4 0A    LDA str_screen_4,X
+0A26  F0 0B       BEQ printat_done_17
+0A28  9D 36 06    STA $0636,X
+0A2B  A9 01       LDA #$01
+0A2D  9D 36 DA    STA $DA36,X
+0A30  E8          INX
+0A31  D0 F0       BNE printat_loop_16
+0A33        printat_done_17:
+0A33  60          RTS
+            ; Scene pause: update
+0A34        game_scene_pause_update:
+0A34  AD 67 C7    LDA $C767
+0A37  29 10       AND #$10
+0A39  F0 03       BEQ joystick_current_pressed_19
+0A3B  4C 50 0A    JMP control_if_else_18
+0A3E        joystick_current_pressed_19:
+0A3E  AD 69 C7    LDA $C769
+0A41  29 10       AND #$10
+0A43  D0 03       BNE condition_pass_19
+0A45  4C 50 0A    JMP control_if_else_18
+0A48        condition_pass_19:
+0A48  A9 01       LDA #$01
+0A4A  8D 7B C7    STA $C77B
+0A4D  4C 50 0A    JMP control_if_end_18
+0A50        control_if_else_18:
+0A50        control_if_end_18:
+0A50  60          RTS
+            ; Scene gameOver: enter
+0A51        game_scene_gameOver_enter:
+0A51  A9 93       LDA #$93
+0A53  20 D2 FF    JSR $FFD2
+0A56  A9 02       LDA #$02
+0A58  8D 21 D0    STA $D021
+0A5B  A2 00       LDX #$00
+0A5D        printat_loop_20:
+0A5D  BD F0 0A    LDA str_screen_5,X
+0A60  F0 0B       BEQ printat_done_21
+0A62  9D 9F 05    STA $059F,X
+0A65  A9 01       LDA #$01
+0A67  9D 9F D9    STA $D99F,X
+0A6A  E8          INX
+0A6B  D0 F0       BNE printat_loop_20
+0A6D        printat_done_21:
+0A6D  A2 00       LDX #$00
+0A6F        printat_loop_22:
+0A6F  BD FA 0A    LDA str_screen_6,X
+0A72  F0 0B       BEQ printat_done_23
+0A74  9D EE 05    STA $05EE,X
+0A77  A9 01       LDA #$01
+0A79  9D EE D9    STA $D9EE,X
+0A7C  E8          INX
+0A7D  D0 F0       BNE printat_loop_22
+0A7F        printat_done_23:
+0A7F  60          RTS
+            ; Scene gameOver: update
+0A80        game_scene_gameOver_update:
+0A80  AD 67 C7    LDA $C767
+0A83  29 10       AND #$10
+0A85  F0 03       BEQ joystick_current_pressed_25
+0A87  4C 9C 0A    JMP control_if_else_24
+0A8A        joystick_current_pressed_25:
+0A8A  AD 69 C7    LDA $C769
+0A8D  29 10       AND #$10
+0A8F  D0 03       BNE condition_pass_25
+0A91  4C 9C 0A    JMP control_if_else_24
+0A94        condition_pass_25:
+0A94  A9 00       LDA #$00
+0A96  8D 7B C7    STA $C77B
+0A99  4C 9C 0A    JMP control_if_end_24
+0A9C        control_if_else_24:
+0A9C        control_if_end_24:
+0A9C  60          RTS
+            ; String pool
+0A9D        str_screen_0:
+0A9D  0A 13 2D 03 36 34 20 13 03 05 0E 05 13 00 .byte $0A, $13, $2D, $03, $36, $34, $20, $13, $03, $05, $0E, $05, $13, $00
+0AAB        str_screen_1:
+0AAB  06 09 12 05 20 10 0F 15 12 20 0A 0F 15 05 12 00 .byte $06, $09, $12, $05, $20, $10, $0F, $15, $12, $20, $0A, $0F, $15, $05, $12, $00
+0ABB        str_screen_2:
+0ABB  0A 05 15 20 05 0E 20 03 0F 15 12 13 00 .byte $0A, $05, $15, $20, $05, $0E, $20, $03, $0F, $15, $12, $13, $00
+0AC8        str_screen_3:
+0AC8  06 09 12 05 3A 20 10 01 15 13 05 00 .byte $06, $09, $12, $05, $3A, $20, $10, $01, $15, $13, $05, $00
+0AD4        str_screen_4:
+0AD4  10 01 15 13 05 20 2D 20 06 09 12 05 20 10 0F 15 12 20 12 05 10 12 05 0E 04 12 05 00 .byte $10, $01, $15, $13, $05, $20, $2D, $20, $06, $09, $12, $05, $20, $10, $0F, $15, $12, $20, $12, $05, $10, $12, $05, $0E, $04, $12, $05, $00
+0AF0        str_screen_5:
+0AF0  07 01 0D 05 20 0F 16 05 12 00 .byte $07, $01, $0D, $05, $20, $0F, $16, $05, $12, $00
+0AFA        str_screen_6:
+0AFA  06 09 12 05 3A 20 14 09 14 12 05 00 .byte $06, $09, $12, $05, $3A, $20, $14, $09, $14, $12, $05, $00

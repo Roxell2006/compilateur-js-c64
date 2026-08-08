@@ -19,12 +19,32 @@ export interface CompileResult {
   basicProgram: string;
   basicText: string;
   assetReport: Array<Record<string, unknown>>;
+  diskFiles: Array<{
+    name: string;
+    kind: "map" | "charset" | "tables" | "sprite" | string;
+    address: number;
+    bytes: number;
+    sourcePath: string;
+    data: Uint8Array;
+  }>;
+}
+
+export interface CompileOptions {
+  codeStart?: number;
+  sysAddress?: number;
+  opt?: "size" | "speed" | "balanced";
+  assets?: "inline" | "disk";
+  device?: number;
 }
 
 export interface CharsetAsset {
   readonly type: "charsetAsset";
   readonly mode: "hires" | "multicolor";
+  /** Compiler-derived ROM prefix. User assets omit this field; 0 is a legacy override. */
+  readonly romCharacters: 0 | 64;
   readonly characterCount: number;
+  /** Only bytes that must be stored in the generated program or disk module. */
+  readonly storedBytes: ReadonlyArray<number>;
   readonly bytes: ReadonlyArray<number>;
 }
 
@@ -55,6 +75,8 @@ export interface SpriteAsset {
   readonly animations: Readonly<Record<string, SpriteAssetAnimation>>;
   readonly initialAnimation: string | null;
   readonly framesRef: SpriteFramesRef;
+  /** Loaded once at startup in disk mode. False means activate it with a level. */
+  readonly resident: boolean;
 }
 
 export interface TileAsset {
@@ -102,6 +124,21 @@ export interface MapAsset {
     readonly objects: ReadonlyArray<MapObjectAsset>;
     redraw(): void;
   };
+  activate(options?: {
+    /** Redraw the complete map after loading it. */
+    draw?: boolean | { x?: number; y?: number };
+    /** Non-resident sprite assets required by this level. */
+    sprites?: ReadonlyArray<SpriteAsset>;
+  }): void;
+  isActive(): RuntimeCondition;
+}
+
+export type GameSceneName = "title" | "game" | "pause" | "gameOver";
+
+export interface GameSceneHandlers {
+  enter?: () => void;
+  update?: () => void;
+  exit?: () => void;
 }
 
 export interface MapTileRef {
@@ -151,6 +188,39 @@ export interface MapEntityProjectionOptions {
 }
 
 export type MapCollisionBehavior = "solid" | "platform" | "danger" | "ladder" | "exit" | "passable";
+
+export type SidSongEntry = string | { note: string; duration?: number } | { rest: true; duration?: number };
+
+export interface SidPatternRepeatRef {
+  readonly type: "sidPatternRepeat";
+  readonly pattern: SidPatternRef;
+  readonly count: number;
+}
+
+export interface SidPatternRef {
+  readonly type: "sidPattern";
+  readonly name: string;
+  readonly entries: ReadonlyArray<SidSongEntry | SidPatternRef | SidPatternRepeatRef>;
+  repeat(count: number): SidPatternRepeatRef;
+}
+
+export interface SidInstrumentRef {
+  readonly type: "sidInstrument";
+  readonly name: string;
+  readonly waveform?: "triangle" | "saw" | "pulse" | "noise";
+  readonly pulseWidth?: number;
+  readonly attackDecay?: number;
+  readonly sustainRelease?: number;
+}
+
+export type SidVoiceSequence = ReadonlyArray<SidSongEntry | SidPatternRef | SidPatternRepeatRef> | SidPatternRef | SidPatternRepeatRef;
+
+export interface SidSongDefinition {
+  tempo?: number;
+  loop?: boolean;
+  instruments?: [SidInstrumentRef | null, SidInstrumentRef | null, SidInstrumentRef | null];
+  voices: [SidVoiceSequence, SidVoiceSequence, SidVoiceSequence];
+}
 
 export interface MapEntityRef {
   readonly type: "mapEntityRef";
@@ -244,6 +314,28 @@ export interface RuntimeBoolRef {
   toggle(): void;
   eq(value: boolean | RuntimeBoolRef): RuntimeCondition;
   ne(value: boolean | RuntimeBoolRef): RuntimeCondition;
+}
+
+export interface GameCounterRef {
+  readonly type: "gameCounterRef";
+  readonly name: string;
+  readonly digits: number;
+  readonly digitRefs: ReadonlyArray<RuntimeByteRef>;
+  set(value: number): void;
+  add(value?: number): void;
+  sub(value?: number): void;
+  inc(): void;
+  dec(): void;
+  draw(x: number, y: number, options?: { color?: number }): void;
+}
+
+export interface FixedPoolRef<T> {
+  readonly type: "fixedPoolRef";
+  readonly name: string;
+  readonly size: number;
+  readonly items: ReadonlyArray<T>;
+  at(index: number): T;
+  forEach(handler: (item: T, index: number) => void): void;
 }
 
 export interface InputButton {
@@ -351,6 +443,14 @@ export interface C64Api {
     routine(name: string, handler: () => void): void;
     call(name: string): void;
   };
+  pool: {
+    fixed<T>(name: string, size: number, factory: (index: number) => T): FixedPoolRef<T>;
+  };
+  random: {
+    seed(value: number): void;
+    byte(target: RuntimeByteRef): void;
+    range(target: RuntimeByteRef, maximum: number): void;
+  };
   input: {
     joystick(port?: 1 | 2): JoystickInput;
     keyboard<T extends Record<string, number>>(bindings: T): { [K in keyof T]: InputButton };
@@ -364,6 +464,48 @@ export interface C64Api {
     init(handler: () => void): void;
     every(count: number, handler: () => void): void;
     frame(handler: () => void, options?: { rasterLine?: number; hz?: 50 | "video" }): void;
+    scene(name: GameSceneName, handlers: GameSceneHandlers): void;
+    start(name?: GameSceneName, options?: { rasterLine?: number; hz?: 50 | "video" }): void;
+    go(name: GameSceneName): void;
+    is(name: GameSceneName): RuntimeCondition;
+    counter(name: string, options?: { digits?: number; initial?: number }): GameCounterRef;
+    score(options?: { name?: string; digits?: number; initial?: number }): GameCounterRef;
+    lives(options?: { name?: string; digits?: number; initial?: number }): GameCounterRef;
+  };
+  sid: {
+    volume(value: number): void;
+    filter(mode: string | ReadonlyArray<string>, cutoff: number, resonance: number): void;
+    voice(voice: 1 | 2 | 3): {
+      frequency(value: number): void;
+      pulseWidth(value: number): void;
+      waveform(type: "triangle" | "saw" | "pulse" | "noise"): void;
+      gate(on?: boolean): void;
+      attackDecay(value: number): void;
+      sustainRelease(value: number): void;
+    };
+    note(voice: 1 | 2 | 3, noteName: string, duration?: number): void;
+    freq(voice: 1 | 2 | 3, hzOrRawValue: number): void;
+    rest(voice: 1 | 2 | 3, duration?: number): void;
+    pattern(name: string, entries: ReadonlyArray<SidSongEntry | SidPatternRef | SidPatternRepeatRef>): SidPatternRef;
+    instrument(name: string, options: {
+      waveform?: "triangle" | "saw" | "pulse" | "noise";
+      pulseWidth?: number;
+      attackDecay?: number;
+      sustainRelease?: number;
+    }): SidInstrumentRef;
+    reserveSfxVoice(voice: 1 | 2 | 3): void;
+    playSong(song: SidSongDefinition): void;
+    installPlayer(line?: number): void;
+    pauseSong(): void;
+    resumeSong(): void;
+    fadeSong(targetVolume: number, stepEvery?: number): void;
+    stopSong(): void;
+    beep(): void;
+    noise(duration?: number): void;
+    click(): void;
+    explosion(): void;
+    laser(): void;
+    pickup(): void;
   };
   table: {
     byte(name: string, values: Iterable<number>): {
@@ -374,8 +516,8 @@ export interface C64Api {
   assets: {
     loadMap(filePath: string): MapAsset;
     defineMap(definition: unknown): MapAsset;
-    loadSprite(filePath: string, options?: { address?: number }): SpriteAsset;
-    defineSprite(definition: unknown, options?: { address?: number }): SpriteAsset;
+    loadSprite(filePath: string, options?: { address?: number; resident?: boolean }): SpriteAsset;
+    defineSprite(definition: unknown, options?: { address?: number; resident?: boolean }): SpriteAsset;
   };
   charset: {
     use(charset: CharsetAsset | MapAsset, options?: { address?: number; background?: number; multicolor1?: number; multicolor2?: number }): void;
@@ -454,16 +596,29 @@ export declare class Assembler6502 {
   getSymbolTable(): Record<string, number>;
 }
 
-export declare function compileFile(inputFile: string, options?: { codeStart?: number; sysAddress?: number }): Promise<CompileResult>;
-export declare function compileInstructions(instructions: Array<{ op: string; args?: any[] }>, options?: { codeStart?: number; sysAddress?: number }): CompileResult;
-export declare function compileJsToC64Outputs(source: string, options?: { codeStart?: number; sysAddress?: number }): Promise<CompileResult & { source: string }>;
-export declare function compileJsToBasicData(source: string, options?: { codeStart?: number; sysAddress?: number }): Promise<string>;
+export declare function compileFile(inputFile: string, options?: CompileOptions): Promise<CompileResult>;
+export declare function compileInstructions(instructions: Array<{ op: string; args?: any[] }>, options?: CompileOptions): CompileResult;
+export declare function compileJsToC64Outputs(source: string, options?: CompileOptions): Promise<CompileResult & { source: string }>;
+export declare function compileJsToBasicData(source: string, options?: CompileOptions): Promise<string>;
 export declare function loadMapAsset(filePath: string, baseDirectory?: string): RawMapAsset;
 export declare function normalizeMapAsset(definition: unknown, sourcePath?: string): RawMapAsset;
 export declare function expandMapAsset(asset: RawMapAsset | MapAsset): { width: number; height: number; chars: number[]; colors: number[] };
-export declare function loadSpriteAsset(filePath: string, baseDirectory?: string): Omit<SpriteAsset, "framesRef">;
-export declare function normalizeSpriteAsset(definition: unknown, sourcePath?: string): Omit<SpriteAsset, "framesRef">;
+export declare function loadSpriteAsset(filePath: string, baseDirectory?: string): Omit<SpriteAsset, "framesRef" | "resident">;
+export declare function normalizeSpriteAsset(definition: unknown, sourcePath?: string): Omit<SpriteAsset, "framesRef" | "resident">;
 export declare function createPrg(machineCode: Uint8Array, sysAddress?: number): Uint8Array;
+export declare const D64_SIZE: 174848;
+export declare function d64SectorOffset(track: number, sector: number): number;
+export declare function createD64(options: {
+  name?: string;
+  id?: string;
+  files: Array<{ name: string; type: "prg" | "usr"; data: Iterable<number> }>;
+}): {
+  bytes: Uint8Array;
+  files: Array<{ name: string; type: "prg" | "usr"; bytes: number; blocks: number; startTrack: number; startSector: number }>;
+  usedBlocks: number;
+  directoryBlocks: number;
+  freeBlocks: number;
+};
 export declare function createBasicSysStub(sysAddress?: number): Uint8Array;
 export declare function exportBasicData(bytes: ArrayLike<number>, startLine?: number, step?: number, chunkSize?: number): string;
 export declare const c64: C64Api;

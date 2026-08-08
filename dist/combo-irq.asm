@@ -60,12 +60,37 @@ printat_done_5:
   STA $D413
   LDA #$A0
   STA $D414
+  LDA #$3C
+  STA $C76F
+sid_video_detect_low:
+  LDA $D011
+  BMI sid_video_detect_low
+sid_video_detect_high:
+  LDA $D011
+  BPL sid_video_detect_high
+sid_video_detect_scan:
+  LDA $D011
+  BPL sid_video_detect_done
+  LDA $D012
+  CMP #$20
+  BCS sid_video_detect_pal
+  JMP sid_video_detect_scan
+sid_video_detect_pal:
+  LDA #$32
+  STA $C76F
+sid_video_detect_done:
   LDA #$00
   STA $C0FE
   LDA #$00
   STA $C763
   LDA #$00
   STA $C764
+  LDA #$00
+  STA $C771
+  LDA #$0F
+  STA $C772
+  LDA #$00
+  STA $C776
   LDA #$01
   STA $C765
   SEI
@@ -119,7 +144,18 @@ irq_dispatch_next_1:
   JMP irq_handler_0
 irq_handler_0:
   LDA $C765
-  BEQ sid_irq_body_done_jump_3
+  CMP #$01
+  BNE sid_irq_body_done_jump_3
+  LDA $C771
+  CLC
+  ADC #$32
+  STA $C771
+  CMP $C76F
+  BCS sid_irq_body_rate_continue_3
+  JMP sid_irq_body_done_3
+sid_irq_body_rate_continue_3:
+  SBC $C76F
+  STA $C771
   LDA $C764
   BEQ sid_irq_body_process_jump_3
   DEC $C764
@@ -134,6 +170,7 @@ sid_irq_body_process_3:
   BNE sid_irq_body_stop_continue_3
   JMP sid_irq_body_stop_3
 sid_irq_body_stop_continue_3:
+sid_irq_body_loop_continue_3:
   LDA sid_song_irq_body_3_v1_action,X
   BEQ sid_irq_body_voice1_rest_3
   CMP #$01
@@ -195,7 +232,7 @@ sid_irq_body_voice3_hold_3:
 ; hold sid voice 3
 sid_irq_body_voice3_done_3:
   INC $C763
-  LDA #$12
+  LDA #$11
   STA $C764
   JMP sid_irq_body_done_3
 sid_irq_body_stop_3:

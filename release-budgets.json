@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "games": {
+    "snake": {
+      "maxPrgBytes": 4600,
+      "maxProgramBytes": 4600,
+      "maxAssetBytes": 2600,
+      "maxStartupCycles": 50000,
+      "maxReportedFrameCycles": 20000
+    },
+    "breakout-mini": {
+      "maxPrgBytes": 3700,
+      "maxProgramBytes": 3700,
+      "maxAssetBytes": 400,
+      "maxStartupCycles": 1000,
+      "maxReportedFrameCycles": 20000
+    },
+    "maze-game": {
+      "maxPrgBytes": 2300,
+      "maxProgramBytes": 2300,
+      "maxAssetBytes": 2600,
+      "maxStartupCycles": 42000,
+      "maxReportedFrameCycles": 20000
+    },
+    "platformer-mini": {
+      "maxPrgBytes": 12500,
+      "maxProgramBytes": 12500,
+      "maxAssetBytes": 3000,
+      "maxStartupCycles": 45000,
+      "maxReportedFrameCycles": 16250
+    }
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "packageVersion": "1.0.0",
+  "generatedAt": "2026-08-08T11:09:04.020Z",
+  "standards": [
+    "PAL",
+    "NTSC"
+  ],
+  "d64Bytes": 174848,
+  "games": {
+    "snake": {
+      "measured": {
+        "prgBytes": 4110,
+        "programBytes": 4093,
+        "assetBytes": 2348,
+        "startupCycles": 11570,
+        "reportedFrameCycles": 0,
+        "memoryConflicts": []
+      },
+      "limits": {
+        "maxPrgBytes": 4600,
+        "maxProgramBytes": 4600,
+        "maxAssetBytes": 2600,
+        "maxStartupCycles": 50000,
+        "maxReportedFrameCycles": 20000
+      }
+    },
+    "breakout-mini": {
+      "measured": {
+        "prgBytes": 3361,
+        "programBytes": 3344,
+        "assetBytes": 254,
+        "startupCycles": 0,
+        "reportedFrameCycles": 0,
+        "memoryConflicts": []
+      },
+      "limits": {
+        "maxPrgBytes": 3700,
+        "maxProgramBytes": 3700,
+        "maxAssetBytes": 400,
+        "maxStartupCycles": 1000,
+        "maxReportedFrameCycles": 20000
+      }
+    },
+    "maze-game": {
+      "measured": {
+        "prgBytes": 1807,
+        "programBytes": 1790,
+        "assetBytes": 2348,
+        "startupCycles": 10844,
+        "reportedFrameCycles": 0,
+        "memoryConflicts": []
+      },
+      "limits": {
+        "maxPrgBytes": 2300,
+        "maxProgramBytes": 2300,
+        "maxAssetBytes": 2600,
+        "maxStartupCycles": 42000,
+        "maxReportedFrameCycles": 20000
+      }
+    },
+    "platformer-mini": {
+      "measured": {
+        "prgBytes": 11102,
+        "programBytes": 11034,
+        "assetBytes": 2656,
+        "startupCycles": 39466,
+        "reportedFrameCycles": 16148,
+        "memoryConflicts": []
+      },
+      "limits": {
+        "maxPrgBytes": 12500,
+        "maxProgramBytes": 12500,
+        "maxAssetBytes": 3000,
+        "maxStartupCycles": 45000,
+        "maxReportedFrameCycles": 16250
+      }
+    }
+  }
+}

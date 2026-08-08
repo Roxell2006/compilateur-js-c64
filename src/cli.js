@@ -3,11 +3,12 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { compileFile } from "./compiler.js";
 import { createRawBinary } from "./prgWriter.js";
+import { createD64 } from "./d64Writer.js";
 
 function usage() {
   return [
     "Usage:",
-    "  c64js build <input.js> -o <output> [--format prg|bin|asm|lst|data] [--sys address] [--map symbols.json]",
+    "  c64js build <input.js> -o <output> [--format prg|bin|asm|lst|data|d64] [--assets inline|disk] [--device 8] [--disk-name name] [--program-name name] [--sys address] [--opt size|speed|balanced] [--map symbols.json] [--report report.json]",
     "  c64js init <folder>"
   ].join("\n");
 }
@@ -20,6 +21,24 @@ function parseSysAddress(value) {
   return parsed;
 }
 
+function parseOptimizationMode(value) {
+  if (!["size", "speed", "balanced"].includes(value)) {
+    throw new Error(`Invalid --opt value: ${value}; expected size, speed or balanced`);
+  }
+  return value;
+}
+
+function parseAssetStorage(value) {
+  if (!["inline", "disk"].includes(value)) throw new Error(`Invalid --assets value: ${value}; expected inline or disk`);
+  return value;
+}
+
+function parseDevice(value) {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 4 || parsed > 30) throw new Error(`Invalid --device value: ${value}`);
+  return parsed;
+}
+
 function parseArgs(argv) {
   const [command, ...rest] = argv;
   if (!command) {
@@ -27,7 +46,7 @@ function parseArgs(argv) {
   }
 
   if (command === "build") {
-    const args = { command, input: null, output: null, format: null, map: null, sys: null };
+    const args = { command, input: null, output: null, format: null, map: null, report: null, sys: null, opt: null, assets: null, device: 8, diskName: null, programName: null };
     for (let i = 0; i < rest.length; i += 1) {
       const token = rest[i];
       if (!args.input && !token.startsWith("-")) {
@@ -38,8 +57,20 @@ function parseArgs(argv) {
         args.format = rest[++i];
       } else if (token === "--sys") {
         args.sys = parseSysAddress(rest[++i]);
+      } else if (token === "--opt") {
+        args.opt = parseOptimizationMode(rest[++i]);
+      } else if (token === "--assets") {
+        args.assets = parseAssetStorage(rest[++i]);
+      } else if (token === "--device") {
+        args.device = parseDevice(rest[++i]);
+      } else if (token === "--disk-name") {
+        args.diskName = rest[++i];
+      } else if (token === "--program-name") {
+        args.programName = rest[++i];
       } else if (token === "--map") {
         args.map = rest[++i];
+      } else if (token === "--report") {
+        args.report = rest[++i];
       } else {
         throw new Error(`Unknown argument: ${token}`);
       }
@@ -67,7 +98,13 @@ function inferFormat(filePath, explicitFormat) {
   if (ext === ".asm") return "asm";
   if (ext === ".lst") return "lst";
   if (ext === ".bas") return "data";
+  if (ext === ".d64") return "d64";
   return "prg";
+}
+
+function defaultDiskName(filePath) {
+  const name = path.basename(filePath, path.extname(filePath)).toUpperCase().replace(/[^A-Z0-9 _-]/g, "_");
+  return (name || "JS-C64").slice(0, 16);
 }
 
 async function writeFileEnsured(filePath, content, encoding) {
@@ -83,6 +120,12 @@ async function handleBuild(args) {
     compileOptions.codeStart = args.sys;
     compileOptions.sysAddress = args.sys;
   }
+  if (args.opt !== null) compileOptions.opt = args.opt;
+  if (format === "d64" && args.assets === "inline") {
+    throw new Error("D64 output requires disk assets; remove --assets inline or use --assets disk");
+  }
+  compileOptions.assets = format === "d64" ? "disk" : (args.assets ?? "inline");
+  compileOptions.device = args.device;
 
   const result = await compileFile(args.input, compileOptions);
   for (const warning of result.assetReport?.filter((entry) => entry.type === "warning") ?? []) {
@@ -99,12 +142,45 @@ async function handleBuild(args) {
     await writeFileEnsured(args.output, `${result.listing}\n`, "utf8");
   } else if (format === "data") {
     await writeFileEnsured(args.output, result.basicText, "utf8");
+  } else if (format === "d64") {
+    const programName = args.programName ?? defaultDiskName(args.output);
+    const diskName = args.diskName ?? programName;
+    const image = createD64({
+      name: diskName,
+      files: [
+        { name: programName, type: "prg", data: result.prgBytes },
+        // KERNAL LOAD searches PRG directory entries. These are data modules
+        // with a two-byte load address, not independently runnable programs.
+        ...result.diskFiles.map((file) => ({ name: file.name, type: "prg", data: file.data }))
+      ]
+    });
+    result.assetReport.push({
+      type: "d64-image",
+      diskName,
+      programName,
+      bytes: image.bytes.length,
+      usedBlocks: image.usedBlocks,
+      directoryBlocks: image.directoryBlocks,
+      freeBlocks: image.freeBlocks,
+      files: image.files
+    });
+    await writeFileEnsured(args.output, Buffer.from(image.bytes), undefined);
   } else {
     throw new Error(`Unsupported format: ${format}`);
   }
 
   if (args.map) {
     await writeFileEnsured(args.map, `${JSON.stringify(result.symbols, null, 2)}\n`, "utf8");
+  }
+  if (args.report) {
+    await writeFileEnsured(args.report, `${JSON.stringify(result.assetReport, null, 2)}\n`, "utf8");
+  }
+  if (args.opt !== null) {
+    const optimization = result.assetReport?.find((entry) => entry.type === "optimization-summary");
+    const comparison = optimization?.profiles
+      ?.map((profile) => `${profile.mode}~${profile.estimatedProgramBytes}B/${profile.startupCyclesEstimate}cy`)
+      .join(", ");
+    console.log(`optimization ${args.opt}: ${result.bytes.length} bytes${comparison ? ` (${comparison})` : ""}`);
   }
 }
 
@@ -126,7 +202,7 @@ async function handleInit(args) {
         build: "c64js build examples/hello.js -o build/hello.prg"
       },
       dependencies: {
-        "js-c64": "^0.1.0"
+        "js-c64": "^1.0.0"
       }
     }, null, 2),
     "utf8"

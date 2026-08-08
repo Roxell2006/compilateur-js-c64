@@ -12,7 +12,7 @@
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const clone = value => JSON.parse(JSON.stringify(value));
   const blankChar = () => Array(8).fill(0);
-  const SYSTEM_CHAR_COUNT = 65;
+  const SYSTEM_CHAR_COUNT = 64;
   const C64_LETTERS = [
     [24,60,102,126,102,102,102,0], [124,102,102,124,102,102,124,0],
     [60,102,96,96,96,102,60,0], [120,108,102,102,102,108,120,0],
@@ -29,7 +29,7 @@
     [102,102,102,60,24,24,24,0], [126,6,12,24,48,96,126,0]
   ];
   const C64_DIGITS = [
-    [60,102,110,118,102,102,60,0], [24,56,24,24,24,24,126,0],
+    [60,102,110,118,102,102,60,0], [24,24,56,24,24,24,126,0],
     [60,102,6,12,48,96,126,0], [60,102,6,28,6,102,60,0],
     [6,14,30,102,127,6,6,0], [126,96,124,6,6,102,60,0],
     [60,102,96,124,102,102,60,0], [126,102,12,24,24,24,24,0],
@@ -43,7 +43,7 @@
     41: [48,24,12,12,12,24,48,0], 42: [0,102,60,255,60,102,0,0],
     43: [0,24,24,126,24,24,0,0], 44: [0,0,0,0,0,24,24,48],
     45: [0,0,0,126,0,0,0,0], 46: [0,0,0,0,0,24,24,0],
-    47: [0,6,12,24,48,96,0,0], 58: [0,0,24,0,0,24,0,0],
+    47: [0,3,6,12,24,48,96,0], 58: [0,0,24,0,0,24,0,0],
     59: [0,0,24,0,0,24,24,48], 60: [14,24,48,96,48,24,14,0],
     61: [0,0,126,0,126,0,0,0], 62: [112,24,12,6,12,24,112,0],
     63: [60,102,6,12,24,0,24,0]
@@ -51,10 +51,22 @@
 
   function createSystemCharset() {
     const characters = Array.from({ length: SYSTEM_CHAR_COUNT }, blankChar);
+    characters[0] = [60,102,110,110,96,98,60,0];
     C64_LETTERS.forEach((character, index) => { characters[index + 1] = [...character]; });
     C64_DIGITS.forEach((character, index) => { characters[index + 48] = [...character]; });
     Object.entries(C64_PUNCTUATION).forEach(([index, character]) => { characters[Number(index)] = [...character]; });
+    characters[27] = [60,48,48,48,48,48,60,0];
+    characters[28] = [12,18,48,124,48,98,252,0];
+    characters[29] = [60,12,12,12,12,12,60,0];
+    characters[30] = [0,24,60,126,24,24,24,24];
+    characters[31] = [0,16,48,127,127,48,16,0];
     return characters;
+  }
+
+  function hasSystemAlphabet(asset) {
+    const characters = asset?.charset?.characters;
+    return Array.isArray(characters) && characters.length >= SYSTEM_CHAR_COUNT
+      && C64_LETTERS.every((character, index) => character.every((byte, row) => characters[index + 1]?.[row] === byte));
   }
 
   function hasSystemCharset(asset) {
@@ -66,7 +78,18 @@
 
   function installSystemCharacters(asset) {
     if (hasSystemCharset(asset)) return false;
-    if (asset.charset.characters.length + SYSTEM_CHAR_COUNT > 256) throw new Error("Il faut libérer 65 caractères avant d’installer le charset système.");
+    if (hasSystemAlphabet(asset)) {
+      // Migration des anciens projets qui réservaient par erreur 65 entrées
+      // et contenaient un caractère vide supplémentaire au code 64.
+      if (asset.charset.characters.length >= 65 && asset.charset.characters[64]?.every(byte => byte === 0)) {
+        asset.charset.characters.splice(64, 1);
+        asset.tiles.forEach(tile => { tile.chars = tile.chars.map(index => index >= 65 ? index - 1 : index); });
+      }
+      const system = createSystemCharset();
+      for (let index = 0; index < SYSTEM_CHAR_COUNT; index++) asset.charset.characters[index] = [...system[index]];
+      return true;
+    }
+    if (asset.charset.characters.length + SYSTEM_CHAR_COUNT > 256) throw new Error("Il faut libérer 64 caractères avant d’installer le charset système.");
     asset.charset.characters = [...createSystemCharset(), ...asset.charset.characters.map(character => [...character])];
     asset.tiles.forEach(tile => { tile.chars = tile.chars.map(index => index + SYSTEM_CHAR_COUNT); });
     return true;
@@ -91,9 +114,9 @@
     tileHeight: 1,
     tiles: [
       { chars: [32], colors: [1], collision: 0, properties: {} },
-      { chars: [65], colors: [14], collision: 1, properties: { solid: true } },
-      { chars: [66], colors: [7], collision: 0, properties: { collectible: true } },
-      { chars: [67], colors: [5], collision: 1, properties: { solid: true } }
+      { chars: [64], colors: [14], collision: 1, properties: { solid: true } },
+      { chars: [65], colors: [7], collision: 0, properties: { collectible: true } },
+      { chars: [66], colors: [5], collision: 1, properties: { solid: true } }
     ],
     map: {
       width: 16,
@@ -155,6 +178,10 @@
         result.charset.characters.push(result.charset.bytes.slice(index, index + 8));
       }
       delete result.charset.bytes;
+    }
+    if (result.charset.romCharacters === SYSTEM_CHAR_COUNT) {
+      result.charset.characters = [...createSystemCharset(), ...result.charset.characters];
+      delete result.charset.romCharacters;
     }
     result.tileWidth ??= 1;
     result.tileHeight ??= 1;
@@ -907,11 +934,15 @@
     if (!asset.charset || !["hires", "multicolor"].includes(asset.charset.mode)) errors.push("charset.mode doit valoir \"hires\" ou \"multicolor\".");
     const byteCharset = asset.charset?.bytes;
     const characters = asset.charset?.characters;
-    const characterCount = Array.isArray(characters) ? characters.length : Array.isArray(byteCharset) ? byteCharset.length / 8 : 0;
+    const romCharacters = asset.charset?.romCharacters ?? (hasSystemCharset(asset) ? 0 : SYSTEM_CHAR_COUNT);
+    if (![0, SYSTEM_CHAR_COUNT].includes(romCharacters)) errors.push(`charset.romCharacters doit valoir 0 ou ${SYSTEM_CHAR_COUNT}.`);
+    const storedCharacterCount = Array.isArray(characters) ? characters.length : Array.isArray(byteCharset) ? byteCharset.length / 8 : 0;
+    const characterCount = romCharacters + storedCharacterCount;
     if (characters !== undefined && byteCharset !== undefined) errors.push("charset doit utiliser characters ou bytes, pas les deux.");
     if (byteCharset !== undefined && (!Array.isArray(byteCharset) || byteCharset.length < 8 || byteCharset.length > 2048 || byteCharset.length % 8 !== 0 || byteCharset.some(value => !Number.isInteger(value) || value < 0 || value > 255))) errors.push("charset.bytes doit contenir un multiple de 8 octets valides.");
+    else if (Array.isArray(byteCharset) && (characterCount < 1 || characterCount > 256)) errors.push("charset.bytes, caractères ROM inclus, dépasse les 256 caractères disponibles.");
     else if (!Array.isArray(characters) && byteCharset === undefined) errors.push("charset doit contenir characters ou bytes.");
-    else if (Array.isArray(characters) && (characters.length < 1 || characters.length > 256)) errors.push("charset.characters doit contenir de 1 à 256 caractères.");
+    else if (Array.isArray(characters) && (characterCount < 1 || characterCount > 256)) errors.push("charset, caractères ROM inclus, doit contenir de 1 à 256 caractères.");
     else if (Array.isArray(characters)) characters.forEach((character, ci) => {
       if (!Array.isArray(character) || character.length !== 8 || character.some(value => !Number.isInteger(value) || value < 0 || value > 255)) errors.push(`Caractère ${ci} invalide : 8 octets attendus.`);
     });
@@ -940,7 +971,6 @@
     }
     if (asset.map && asset.map.width * asset.map.height > 8192) errors.push("La map dépasse les 8192 cases disponibles dans la RAM dynamique actuelle.");
     if (asset.map && (asset.map.width * tw > 40 || asset.map.height * th > 25)) warnings.push("La map dépasse l’écran C64 de 40 × 25 caractères et nécessitera scrolling ou découpage.");
-    if (Array.isArray(characters) && !hasSystemCharset(asset)) warnings.push("Le charset ne contient pas encore la zone système A–Z / 0–9 ; utilisez le bouton d’installation avant d’écrire du texte.");
     return { errors, warnings };
   }
 
@@ -991,6 +1021,21 @@
     return ($("#projectName").value || "js-c64-map").trim().replace(/[^a-z0-9_-]+/gi, "-").replace(/^-+|-+$/g, "") || "js-c64-map";
   }
 
+  function compactProject() {
+    const result = clone(project);
+    if (hasSystemCharset(result)) {
+      result.charset.characters = result.charset.characters.slice(SYSTEM_CHAR_COUNT);
+    }
+    delete result.charset.romCharacters;
+    return result;
+  }
+
+  function customCharactersForExport() {
+    return hasSystemCharset(project)
+      ? project.charset.characters.slice(SYSTEM_CHAR_COUNT)
+      : project.charset.characters;
+  }
+
   function download(content, filename, type) {
     const blob = content instanceof Uint8Array ? new Blob([content], { type }) : new Blob([content], { type });
     const url = URL.createObjectURL(blob);
@@ -1007,12 +1052,13 @@
   function exportJson() {
     const validation = validateAsset(project);
     if (validation.errors.length) return showToast("Export impossible : corrigez les erreurs signalées.");
-    download(`${JSON.stringify(project, null, 2)}\n`, `${sanitizedName()}.json`, "application/json");
+    download(`${JSON.stringify(compactProject(), null, 2)}\n`, `${sanitizedName()}.json`, "application/json");
   }
 
   function exportBin() {
-    const bytes = new Uint8Array(2048);
-    project.charset.characters.forEach((character, index) => bytes.set(character, index * 8));
+    const characters = customCharactersForExport();
+    const bytes = new Uint8Array(characters.length * 8);
+    characters.forEach((character, index) => bytes.set(character, index * 8));
     download(bytes, `${sanitizedName()}-charset.bin`, "application/octet-stream");
   }
 
@@ -1037,7 +1083,7 @@
   }
 
   function exportJs() {
-    download(`// Généré par JS-C64 Asset Studio v0.9\nexport default ${JSON.stringify(project, null, 2)};\n`, `${sanitizedName()}.js`, "text/javascript");
+    download(`// Généré par JS-C64 Asset Studio v1.0\nexport default ${JSON.stringify(compactProject(), null, 2)};\n`, `${sanitizedName()}.js`, "text/javascript");
   }
 
   function asmBytes(values, perLine = 16) {
@@ -1049,13 +1095,13 @@
   }
 
   function exportAsm() {
-    const charset = project.charset.characters.flat();
+    const charset = customCharactersForExport().flat();
     const tileChars = project.tiles.flatMap(tile => tile.chars);
     const tileColors = project.tiles.flatMap(tile => tile.colors);
     const collisions = project.tiles.map(tile => tile.collision);
     const objects = project.map.objects || [];
     const objectTypes = objects.map((object, index) => `; objet ${index}: ${object.type} ${JSON.stringify(object.properties || {})}`).join("\n");
-    const source = `; Généré par JS-C64 Asset Studio v0.9\n; ${project.charset.characters.length} caractères, ${project.tiles.length} métatuiles, map ${project.map.width}x${project.map.height}\n\nasset_tile_width = ${project.tileWidth}\nasset_tile_height = ${project.tileHeight}\nasset_map_width = ${project.map.width}\nasset_map_height = ${project.map.height}\nasset_object_count = ${objects.length}\n\nasset_charset:\n${asmBytes(charset)}\n\nasset_tile_chars:\n${asmBytes(tileChars)}\n\nasset_tile_colors:\n${asmBytes(tileColors)}\n\nasset_tile_collisions:\n${asmBytes(collisions)}\n\nasset_map:\n${asmBytes(project.map.data)}\n\n${objectTypes}\nasset_object_x:\n${asmBytes(objects.map(object => object.x))}\nasset_object_y:\n${asmBytes(objects.map(object => object.y))}\n`;
+    const source = `; Généré par JS-C64 Asset Studio v1.0\n; ${customCharactersForExport().length} caractères personnalisés (codes 64+), ${project.tiles.length} métatuiles, map ${project.map.width}x${project.map.height}\n\nasset_tile_width = ${project.tileWidth}\nasset_tile_height = ${project.tileHeight}\nasset_map_width = ${project.map.width}\nasset_map_height = ${project.map.height}\nasset_object_count = ${objects.length}\n\nasset_charset_custom:\n${asmBytes(charset)}\n\nasset_tile_chars:\n${asmBytes(tileChars)}\n\nasset_tile_colors:\n${asmBytes(tileColors)}\n\nasset_tile_collisions:\n${asmBytes(collisions)}\n\nasset_map:\n${asmBytes(project.map.data)}\n\n${objectTypes}\nasset_object_x:\n${asmBytes(objects.map(object => object.x))}\nasset_object_y:\n${asmBytes(objects.map(object => object.y))}\n`;
     download(source, `${sanitizedName()}.asm`, "text/plain");
   }
 
@@ -1376,12 +1422,13 @@
   }
 
   globalThis.JsC64MapStudio = Object.freeze({
-    getProject: () => clone(project),
+    getProject: () => compactProject(),
     validateProject: value => [...validateAsset(value).errors],
     replaceProject(value, name) {
       const validation = validateAsset(value);
       if (validation.errors.length) throw new Error(validation.errors.join(" "));
       project = normalizeAsset(clone(value));
+      try { installSystemCharacters(project); } catch (_) { /* Le projet reste importable. */ }
       selectedChar = Math.min(SYSTEM_CHAR_COUNT, project.charset.characters.length - 1);
       selectedTile = 0;
       tilePaintChar = selectedChar;

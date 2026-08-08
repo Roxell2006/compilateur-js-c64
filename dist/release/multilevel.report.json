@@ -1,0 +1,671 @@
+[
+  {
+    "type": "charset",
+    "mode": "hires",
+    "address": 12288,
+    "endAddress": 14335,
+    "bytes": 2048,
+    "storedBytes": 32,
+    "romCopiedBytes": 512,
+    "romCopyCyclesEstimate": 5920,
+    "characters": 68,
+    "storage": "disk-level"
+  },
+  {
+    "type": "map-level-tables",
+    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level1.json",
+    "address": 14336,
+    "endAddress": 14403,
+    "bytes": 68,
+    "contents": [
+      "tile-collision",
+      "tile-characters",
+      "tile-colors"
+    ],
+    "storage": "disk-level"
+  },
+  {
+    "type": "map-runtime",
+    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level1.json",
+    "address": 32768,
+    "endAddress": 32867,
+    "bytes": 100,
+    "indexBits": 16,
+    "objects": 0,
+    "activation": "disk-on-demand",
+    "activeMapContract": true,
+    "storage": "disk",
+    "sharedMapRamSlot": true
+  },
+  {
+    "type": "charset",
+    "mode": "hires",
+    "address": 12288,
+    "endAddress": 14335,
+    "bytes": 2048,
+    "storedBytes": 32,
+    "romCopiedBytes": 512,
+    "romCopyCyclesEstimate": 5920,
+    "characters": 68,
+    "storage": "disk-level"
+  },
+  {
+    "type": "map-level-tables",
+    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level2.json",
+    "address": 14336,
+    "endAddress": 14403,
+    "bytes": 68,
+    "contents": [
+      "tile-collision",
+      "tile-characters",
+      "tile-colors"
+    ],
+    "storage": "disk-level"
+  },
+  {
+    "type": "map-runtime",
+    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level2.json",
+    "address": 32768,
+    "endAddress": 32867,
+    "bytes": 100,
+    "indexBits": 16,
+    "objects": 0,
+    "activation": "disk-on-demand",
+    "activeMapContract": true,
+    "storage": "disk",
+    "sharedMapRamSlot": true
+  },
+  {
+    "type": "charset",
+    "mode": "hires",
+    "address": 12288,
+    "endAddress": 14335,
+    "bytes": 2048,
+    "storedBytes": 32,
+    "romCopiedBytes": 512,
+    "romCopyCyclesEstimate": 5920,
+    "characters": 68,
+    "storage": "disk-level"
+  },
+  {
+    "type": "map-level-tables",
+    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level3.json",
+    "address": 14336,
+    "endAddress": 14403,
+    "bytes": 68,
+    "contents": [
+      "tile-collision",
+      "tile-characters",
+      "tile-colors"
+    ],
+    "storage": "disk-level"
+  },
+  {
+    "type": "map-runtime",
+    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level3.json",
+    "address": 32768,
+    "endAddress": 32867,
+    "bytes": 100,
+    "indexBits": 16,
+    "objects": 0,
+    "activation": "disk-on-demand",
+    "activeMapContract": true,
+    "storage": "disk",
+    "sharedMapRamSlot": true
+  },
+  {
+    "type": "sprite-asset",
+    "id": "platformerActors",
+    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\platformer-actors.sprite.json",
+    "mode": "hires",
+    "frames": 2,
+    "animations": [
+      "idle-right",
+      "idle-left",
+      "run-right",
+      "run-left",
+      "jump-right",
+      "jump-left"
+    ],
+    "color": 7,
+    "multicolor1": null,
+    "multicolor2": null,
+    "origin": {
+      "x": 0,
+      "y": 0
+    },
+    "hitbox": {
+      "offsetX": 4,
+      "offsetY": 1,
+      "width": 16,
+      "height": 20
+    },
+    "bytes": 128,
+    "resident": true,
+    "diskLoadPolicy": "startup"
+  },
+  {
+    "type": "sprite-asset",
+    "id": "platformerEnemy",
+    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\platformer-enemy.sprite.json",
+    "mode": "hires",
+    "frames": 1,
+    "animations": [
+      "enemy"
+    ],
+    "color": 2,
+    "multicolor1": null,
+    "multicolor2": null,
+    "origin": {
+      "x": 0,
+      "y": 0
+    },
+    "hitbox": {
+      "offsetX": 4,
+      "offsetY": 2,
+      "width": 16,
+      "height": 19
+    },
+    "bytes": 64,
+    "resident": false,
+    "diskLoadPolicy": "with-level"
+  },
+  {
+    "type": "sprite-asset",
+    "id": "platformerCoin",
+    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\platformer-coin.sprite.json",
+    "mode": "hires",
+    "frames": 1,
+    "animations": [
+      "coin"
+    ],
+    "color": 10,
+    "multicolor1": null,
+    "multicolor2": null,
+    "origin": {
+      "x": 0,
+      "y": 0
+    },
+    "hitbox": {
+      "offsetX": 7,
+      "offsetY": 3,
+      "width": 10,
+      "height": 12
+    },
+    "bytes": 64,
+    "resident": false,
+    "diskLoadPolicy": "with-level"
+  },
+  {
+    "type": "sprite-asset",
+    "id": "levelPortal",
+    "sourcePath": "<inline sprite>",
+    "mode": "hires",
+    "frames": 1,
+    "animations": [],
+    "color": 3,
+    "multicolor1": null,
+    "multicolor2": null,
+    "origin": {
+      "x": 0,
+      "y": 0
+    },
+    "hitbox": {
+      "offsetX": 0,
+      "offsetY": 0,
+      "width": 24,
+      "height": 21
+    },
+    "bytes": 64,
+    "resident": false,
+    "diskLoadPolicy": "with-level"
+  },
+  {
+    "type": "map-entity-budget",
+    "entityCount": 0,
+    "logicalSpriteCount": 2,
+    "physicalSprites": 2,
+    "virtualSprites": 0,
+    "maxVisibleEntities": 0,
+    "spriteMemoryBytes": 320
+  },
+  {
+    "type": "game-runtime",
+    "scenes": [
+      "title",
+      "game",
+      "gameOver"
+    ],
+    "startScene": "title",
+    "transitionPolicy": "one-request-between-frames",
+    "activeMapContract": true,
+    "mapActivationPolicy": "deferred-after-frame-or-before-first-frame",
+    "registeredMaps": 3,
+    "sharedMapRamSlot": true,
+    "deterministicRng": false,
+    "fixedPools": [],
+    "counters": []
+  },
+  {
+    "type": "disk-assets",
+    "device": 8,
+    "mainProgramStorage": "prg",
+    "assetFileType": "prg-data-module",
+    "files": [
+      {
+        "name": "LEVEL0",
+        "kind": "map",
+        "address": 32768,
+        "bytes": 100,
+        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level1.json"
+      },
+      {
+        "name": "CHARSET0",
+        "kind": "charset",
+        "address": 12800,
+        "bytes": 32,
+        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level1.json"
+      },
+      {
+        "name": "TABLES0",
+        "kind": "tables",
+        "address": 14336,
+        "bytes": 68,
+        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level1.json"
+      },
+      {
+        "name": "LEVEL1",
+        "kind": "map",
+        "address": 32768,
+        "bytes": 100,
+        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level2.json"
+      },
+      {
+        "name": "TABLES1",
+        "kind": "tables",
+        "address": 14336,
+        "bytes": 68,
+        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level2.json"
+      },
+      {
+        "name": "LEVEL2",
+        "kind": "map",
+        "address": 32768,
+        "bytes": 100,
+        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level3.json"
+      },
+      {
+        "name": "TABLES2",
+        "kind": "tables",
+        "address": 14336,
+        "bytes": 68,
+        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level3.json"
+      },
+      {
+        "name": "SPRITE0",
+        "kind": "sprite",
+        "address": 8192,
+        "bytes": 128,
+        "sourcePath": "platformerActors"
+      },
+      {
+        "name": "SPRITE1",
+        "kind": "sprite",
+        "address": 8704,
+        "bytes": 64,
+        "sourcePath": "platformerEnemy"
+      },
+      {
+        "name": "SPRITE2",
+        "kind": "sprite",
+        "address": 8704,
+        "bytes": 64,
+        "sourcePath": "platformerCoin"
+      },
+      {
+        "name": "SPRITE3",
+        "kind": "sprite",
+        "address": 8704,
+        "bytes": 64,
+        "sourcePath": "levelPortal"
+      }
+    ],
+    "levelDependencies": [
+      {
+        "mapId": 0,
+        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level1.json",
+        "files": [
+          "LEVEL0",
+          "TABLES0",
+          "CHARSET0",
+          "SPRITE1"
+        ]
+      },
+      {
+        "mapId": 1,
+        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level2.json",
+        "files": [
+          "LEVEL1",
+          "TABLES1",
+          "CHARSET0",
+          "SPRITE2"
+        ]
+      },
+      {
+        "mapId": 2,
+        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level3.json",
+        "files": [
+          "LEVEL2",
+          "TABLES2",
+          "CHARSET0",
+          "SPRITE3"
+        ]
+      }
+    ],
+    "mainProgramBytes": 3434,
+    "assetBytes": 856,
+    "sharedMapRamSlot": true,
+    "activeMapSlotAddress": 32768,
+    "largestMapBytes": 100
+  },
+  {
+    "type": "optimization-summary",
+    "mode": "balanced",
+    "programBytes": 3434,
+    "profiles": [
+      {
+        "mode": "size",
+        "assetProgramBytesEstimate": 0,
+        "startupCyclesEstimate": 0,
+        "compressedChunks": 0,
+        "runtimeStrategy": "shared-repeated-routines",
+        "estimatedProgramBytes": 3434
+      },
+      {
+        "mode": "balanced",
+        "assetProgramBytesEstimate": 0,
+        "startupCyclesEstimate": 0,
+        "compressedChunks": 0,
+        "runtimeStrategy": "shared-repeated-routines",
+        "estimatedProgramBytes": 3434,
+        "programBytes": 3434
+      },
+      {
+        "mode": "speed",
+        "assetProgramBytesEstimate": 0,
+        "startupCyclesEstimate": 0,
+        "compressedChunks": 0,
+        "runtimeStrategy": "inline-hot-paths",
+        "estimatedProgramBytes": 3434
+      }
+    ],
+    "rle": {
+      "candidates": 0,
+      "compressedChunks": 0,
+      "rawBytes": 0,
+      "storedBytes": 0,
+      "estimatedNetSavedBytes": 0
+    },
+    "sharedRoutines": {
+      "sidClick": false,
+      "spriteSync": 2,
+      "spriteAabb": false
+    },
+    "omittedRoutines": [
+      "sid-player",
+      "sid-fade",
+      "sprite-animator",
+      "sprite-multiplexer",
+      "hires-runtime"
+    ],
+    "audio": {
+      "compactedRepeatTableBytes": 0,
+      "pooledIdenticalVoiceTableBytes": 0
+    },
+    "multiplexer": {
+      "enabled": false,
+      "logicalSprites": 2,
+      "sortComparisonsWorstCase": 0,
+      "sortCyclesEstimate": 0,
+      "projectionCyclesEstimate": 0,
+      "totalCyclesEstimate": 0
+    }
+  },
+  {
+    "type": "memory-layout",
+    "ranges": [
+      {
+        "name": "screen RAM",
+        "kind": "video",
+        "start": 1024,
+        "end": 2023,
+        "bytes": 1000
+      },
+      {
+        "name": "program",
+        "kind": "program",
+        "start": 2064,
+        "end": 5497,
+        "bytes": 3434
+      },
+      {
+        "name": "sprite frames",
+        "kind": "sprite",
+        "start": 8192,
+        "end": 8319,
+        "bytes": 128
+      },
+      {
+        "name": "sprite frames",
+        "kind": "sprite",
+        "start": 8704,
+        "end": 8767,
+        "bytes": 64
+      },
+      {
+        "name": "charset",
+        "kind": "charset",
+        "start": 12288,
+        "end": 14335,
+        "bytes": 2048,
+        "mode": "hires"
+      },
+      {
+        "name": "active disk level tables",
+        "kind": "map",
+        "start": 14336,
+        "end": 14403,
+        "bytes": 68,
+        "shared": true
+      },
+      {
+        "name": "active disk map slot",
+        "kind": "map",
+        "start": 32768,
+        "end": 32867,
+        "bytes": 100,
+        "shared": true
+      },
+      {
+        "name": "IRQ state",
+        "kind": "runtime",
+        "start": 49406,
+        "end": 49406,
+        "bytes": 1
+      },
+      {
+        "name": "sprite animator",
+        "kind": "runtime",
+        "start": 49920,
+        "end": 49983,
+        "bytes": 64
+      },
+      {
+        "name": "sprite gameplay runtime",
+        "kind": "runtime",
+        "start": 50176,
+        "end": 50303,
+        "bytes": 128
+      },
+      {
+        "name": "sprite logical state",
+        "kind": "runtime",
+        "start": 50432,
+        "end": 50559,
+        "bytes": 128
+      },
+      {
+        "name": "Y-sorted sprite multiplexer",
+        "kind": "runtime",
+        "start": 50560,
+        "end": 50599,
+        "bytes": 40
+      },
+      {
+        "name": "compiler runtime",
+        "kind": "runtime",
+        "start": 51000,
+        "end": 51071,
+        "bytes": 72
+      },
+      {
+        "name": "keyboard input runtime",
+        "kind": "runtime",
+        "start": 51072,
+        "end": 51103,
+        "bytes": 32
+      },
+      {
+        "name": "collision runtime",
+        "kind": "runtime",
+        "start": 51104,
+        "end": 51121,
+        "bytes": 18
+      },
+      {
+        "name": "dynamic map, viewport and entity temporary state",
+        "kind": "runtime",
+        "start": 51122,
+        "end": 51145,
+        "bytes": 24
+      },
+      {
+        "name": "color RAM",
+        "kind": "video",
+        "start": 55296,
+        "end": 56295,
+        "bytes": 1000
+      }
+    ],
+    "conflicts": [],
+    "programBytes": 3434,
+    "assetBytes": 2408
+  },
+  {
+    "type": "d64-image",
+    "diskName": "JS-C64 1.0",
+    "programName": "MULTILEVEL",
+    "bytes": 174848,
+    "usedBlocks": 25,
+    "directoryBlocks": 2,
+    "freeBlocks": 639,
+    "files": [
+      {
+        "name": "MULTILEVEL",
+        "type": "prg",
+        "bytes": 3451,
+        "blocks": 14,
+        "startTrack": 1,
+        "startSector": 0
+      },
+      {
+        "name": "LEVEL0",
+        "type": "prg",
+        "bytes": 102,
+        "blocks": 1,
+        "startTrack": 1,
+        "startSector": 14
+      },
+      {
+        "name": "CHARSET0",
+        "type": "prg",
+        "bytes": 34,
+        "blocks": 1,
+        "startTrack": 1,
+        "startSector": 15
+      },
+      {
+        "name": "TABLES0",
+        "type": "prg",
+        "bytes": 70,
+        "blocks": 1,
+        "startTrack": 1,
+        "startSector": 16
+      },
+      {
+        "name": "LEVEL1",
+        "type": "prg",
+        "bytes": 102,
+        "blocks": 1,
+        "startTrack": 1,
+        "startSector": 17
+      },
+      {
+        "name": "TABLES1",
+        "type": "prg",
+        "bytes": 70,
+        "blocks": 1,
+        "startTrack": 1,
+        "startSector": 18
+      },
+      {
+        "name": "LEVEL2",
+        "type": "prg",
+        "bytes": 102,
+        "blocks": 1,
+        "startTrack": 1,
+        "startSector": 19
+      },
+      {
+        "name": "TABLES2",
+        "type": "prg",
+        "bytes": 70,
+        "blocks": 1,
+        "startTrack": 1,
+        "startSector": 20
+      },
+      {
+        "name": "SPRITE0",
+        "type": "prg",
+        "bytes": 130,
+        "blocks": 1,
+        "startTrack": 2,
+        "startSector": 0
+      },
+      {
+        "name": "SPRITE1",
+        "type": "prg",
+        "bytes": 66,
+        "blocks": 1,
+        "startTrack": 2,
+        "startSector": 1
+      },
+      {
+        "name": "SPRITE2",
+        "type": "prg",
+        "bytes": 66,
+        "blocks": 1,
+        "startTrack": 2,
+        "startSector": 2
+      },
+      {
+        "name": "SPRITE3",
+        "type": "prg",
+        "bytes": 66,
+        "blocks": 1,
+        "startTrack": 2,
+        "startSector": 3
+      }
+    ]
+  }
+]

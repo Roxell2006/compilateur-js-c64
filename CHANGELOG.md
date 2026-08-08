@@ -2,6 +2,39 @@
 
 ## Unreleased
 
+- Made ROM-backed screen codes 0–63 automatic for every custom charset; `romCharacters` is no longer required in user assets
+- Updated the asset studio to export only custom glyphs in JSON, JS, BIN and ASM while keeping the system area visible and protected in the editor
+- Updated Snake with readable ROM-backed text and score, FIRE-to-start, and FIRE/SPACE restart with a complete map and score reset
+
+## 1.0.0 - 2026-08-07
+
+- Added the stable fixed game API: decimal score/lives counters, seeded deterministic RNG and compile-time bounded pools
+- Updated Snake to validate the 1.0 score and seeded RNG APIs while still refusing food positions occupied by the snake
+- Added release budgets for Snake, Breakout Mini, Maze Game and Platformer Mini with automated PRG, RAM and cycle regression checks
+- Added a Windows/Linux Node 18/20/22 release matrix that builds every example and the multi-level D64
+- Added an end-to-end `npm pack` gate that verifies public exports, installs the tarball in an empty project and runs the installed `npx c64js`
+- Froze the 1.0 package metadata, TypeScript declarations, asset schemas and beginner/publication documentation
+
+- Added standard 35-track D64 generation with BAM, chained directory sectors, PRG/USR entries and disk-full/name validation
+- Added `--format d64`, automatic `.d64` detection, `--assets inline|disk`, `--device`, `--disk-name` and `--program-name`
+- Added KERNAL disk loading through `SETNAM`/`SETLFS`/`LOAD`, deferred level transitions, IRQ restoration and a visible `DISK ERROR` state
+- Externalized maps, charsets, tile/collision tables and sprite pixels with deterministic manifests and shared active RAM slots
+- Added resident and per-level sprite loading plus `mapAsset.activate({ draw, sprites })`
+- Added `examples/multilevel-d64.js`, three sample levels, D64 writer/compiler tests and detailed disk/block reports
+- Store disk assets as load-address PRG data modules because the stock KERNAL `LOAD` routine rejects USR directory entries with `TYPE MISMATCH`
+- Started the v1.0 game API with fixed `title`, `game`, `pause` and `gameOver` scenes plus deterministic between-frame transitions
+- Added `mapAsset.activate()`/`isActive()`, one pending activation slot and embedded map reset routines in preparation for D64 levels
+- Added `examples/game-scenes.js`, TypeScript declarations and `game-runtime`/map activation diagnostics
+- Completed v0.11 optimization with `--opt size|balanced|speed`, balanced by default, and an `optimization-summary` build report
+- Added conditional per-block RLE for maps and charsets, including decoder cost and startup-cycle estimates in the selection
+- Added `--report` JSON output with comparative profiles, shared/omitted routine families, audio savings and multiplexer CPU estimates
+- Compacted exact repeated periods in looping SID voice tables while preserving expanded/stored step diagnostics
+- Added reusable `sid.instrument()` and nested/repeatable `sid.pattern()` definitions for the IRQ music player
+- Added non-blocking bidirectional `sid.fadeSong()` with an on-demand IRQ runtime and preserved SID filter bits
+- Pooled identical expanded music tables across voices and exposed pattern, instrument, fade and pooled-byte metrics in `sid-audio`
+- Started v0.11 game audio with `reserveSfxVoice()`, deterministic music/effect voice ownership, `pauseSong()`/`resumeSong()` and looping songs
+- Added an automatic logical 50 Hz SID clock for stable PAL/NTSC tempo plus `sid-audio`, `SID_VOICE_CONFLICT` and reserved-voice diagnostics
+- Removed all three music tables for a reserved SID effect voice and added the playable `sid-game-audio.js` example
 - Fixed advanced map collision tables incorrectly treating collision value `0` as solid, which prevented `platformer-mini` from moving
 - Expanded `platformer-mini` to a 36 x 20 map viewport with a five-line fixed panel, cleared the BASIC screen on startup and shortened the multiplexer's lower-border raster wait
 - Added compact relocated PRGs: code configured at `$4000` is copied by a small `$0810` loader instead of storing 14 KB of zero padding

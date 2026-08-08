@@ -100,6 +100,12 @@ printat_done_6:
   STA $C763
   LDA #$00
   STA $C764
+  LDA #$00
+  STA $C771
+  LDA #$0C
+  STA $C772
+  LDA #$00
+  STA $C776
   LDA #$01
   STA $C765
   SEI
@@ -138,7 +144,18 @@ sid_player_vic_raster:
   LDA #$01
   STA $D019
   LDA $C765
-  BEQ sid_irq_done_jump_3
+  CMP #$01
+  BNE sid_irq_done_jump_3
+  LDA $C771
+  CLC
+  ADC #$32
+  STA $C771
+  CMP $C76F
+  BCS sid_irq_rate_continue_3
+  JMP sid_irq_done_3
+sid_irq_rate_continue_3:
+  SBC $C76F
+  STA $C771
   LDA $C764
   BEQ sid_irq_process_jump_3
   DEC $C764
@@ -153,6 +170,7 @@ sid_irq_process_3:
   BNE sid_irq_stop_continue_3
   JMP sid_irq_stop_3
 sid_irq_stop_continue_3:
+sid_irq_loop_continue_3:
   LDA sid_song_irq_3_v1_action,X
   BEQ sid_irq_voice1_rest_3
   CMP #$01
@@ -214,7 +232,7 @@ sid_irq_voice3_hold_3:
 ; hold sid voice 3
 sid_irq_voice3_done_3:
   INC $C763
-  LDA #$06
+  LDA #$05
   STA $C764
   JMP sid_irq_done_3
 sid_irq_stop_3:
@@ -247,8 +265,6 @@ program_end_after_sid_player:
   STA $C76B
   LDA #$00
   STA $C770
-  LDA #$3C
-  STA $C76F
   LDA #$00
   STA $C104
   LDA #$FF
@@ -259,6 +275,8 @@ program_end_after_sid_player:
   STA $C780
   LDA #$01
   STA $C790
+  LDA #$3C
+  STA $C76F
 game_video_detect_low:
   LDA $D011
   BMI game_video_detect_low
