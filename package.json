@@ -4,7 +4,7 @@
   "description": "JavaScript DSL and mini game engine that emits Commodore 64 6502 programs, assets and D64 disks.",
   "type": "module",
   "bin": {
-    "c64js": "./src/cli.js"
+    "c64js": "src/cli.js"
   },
   "main": "./src/index.js",
   "types": "./index.d.ts",
