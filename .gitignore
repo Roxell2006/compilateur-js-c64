@@ -1,0 +1,9 @@
+node_modules/
+
+# fichiers temporaires
+tmp/
+
+# exemples de fichiers Markdown à ne pas envoyer
+MODE_EMPLOI_NPM.txt
+MODE_EMPLOI_PUBLICATION_NPM.txt
+ROADMAP.md
