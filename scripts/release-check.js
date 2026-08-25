@@ -53,7 +53,7 @@ try {
   const frozenFiles = [
     "README.md", "LICENSE", "CHANGELOG.md", "index.d.ts",
     "RELEASE_CHECKLIST.md", "release-budgets.json",
-    "MODE_EMPLOI_DEBUTANT.txt", "MODE_EMPLOI_PUBLICATION_NPM.txt",
+    "MODE_EMPLOI_DEBUTANT.txt",
     "schemas/map-asset-v1.schema.json", "schemas/sprite-asset-v1.schema.json"
   ];
   for (const file of frozenFiles) {

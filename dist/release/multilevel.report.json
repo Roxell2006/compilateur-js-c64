@@ -13,7 +13,7 @@
   },
   {
     "type": "map-level-tables",
-    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level1.json",
+    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\js-c64-clean\\examples\\assets\\d64-level1.json",
     "address": 14336,
     "endAddress": 14403,
     "bytes": 68,
@@ -26,7 +26,7 @@
   },
   {
     "type": "map-runtime",
-    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level1.json",
+    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\js-c64-clean\\examples\\assets\\d64-level1.json",
     "address": 32768,
     "endAddress": 32867,
     "bytes": 100,
@@ -51,7 +51,7 @@
   },
   {
     "type": "map-level-tables",
-    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level2.json",
+    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\js-c64-clean\\examples\\assets\\d64-level2.json",
     "address": 14336,
     "endAddress": 14403,
     "bytes": 68,
@@ -64,7 +64,7 @@
   },
   {
     "type": "map-runtime",
-    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level2.json",
+    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\js-c64-clean\\examples\\assets\\d64-level2.json",
     "address": 32768,
     "endAddress": 32867,
     "bytes": 100,
@@ -89,7 +89,7 @@
   },
   {
     "type": "map-level-tables",
-    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level3.json",
+    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\js-c64-clean\\examples\\assets\\d64-level3.json",
     "address": 14336,
     "endAddress": 14403,
     "bytes": 68,
@@ -102,7 +102,7 @@
   },
   {
     "type": "map-runtime",
-    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level3.json",
+    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\js-c64-clean\\examples\\assets\\d64-level3.json",
     "address": 32768,
     "endAddress": 32867,
     "bytes": 100,
@@ -116,7 +116,7 @@
   {
     "type": "sprite-asset",
     "id": "platformerActors",
-    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\platformer-actors.sprite.json",
+    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\js-c64-clean\\examples\\assets\\platformer-actors.sprite.json",
     "mode": "hires",
     "frames": 2,
     "animations": [
@@ -147,7 +147,7 @@
   {
     "type": "sprite-asset",
     "id": "platformerEnemy",
-    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\platformer-enemy.sprite.json",
+    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\js-c64-clean\\examples\\assets\\platformer-enemy.sprite.json",
     "mode": "hires",
     "frames": 1,
     "animations": [
@@ -173,7 +173,7 @@
   {
     "type": "sprite-asset",
     "id": "platformerCoin",
-    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\platformer-coin.sprite.json",
+    "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\js-c64-clean\\examples\\assets\\platformer-coin.sprite.json",
     "mode": "hires",
     "frames": 1,
     "animations": [
@@ -257,49 +257,49 @@
         "kind": "map",
         "address": 32768,
         "bytes": 100,
-        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level1.json"
+        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\js-c64-clean\\examples\\assets\\d64-level1.json"
       },
       {
         "name": "CHARSET0",
         "kind": "charset",
         "address": 12800,
         "bytes": 32,
-        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level1.json"
+        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\js-c64-clean\\examples\\assets\\d64-level1.json"
       },
       {
         "name": "TABLES0",
         "kind": "tables",
         "address": 14336,
         "bytes": 68,
-        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level1.json"
+        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\js-c64-clean\\examples\\assets\\d64-level1.json"
       },
       {
         "name": "LEVEL1",
         "kind": "map",
         "address": 32768,
         "bytes": 100,
-        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level2.json"
+        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\js-c64-clean\\examples\\assets\\d64-level2.json"
       },
       {
         "name": "TABLES1",
         "kind": "tables",
         "address": 14336,
         "bytes": 68,
-        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level2.json"
+        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\js-c64-clean\\examples\\assets\\d64-level2.json"
       },
       {
         "name": "LEVEL2",
         "kind": "map",
         "address": 32768,
         "bytes": 100,
-        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level3.json"
+        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\js-c64-clean\\examples\\assets\\d64-level3.json"
       },
       {
         "name": "TABLES2",
         "kind": "tables",
         "address": 14336,
         "bytes": 68,
-        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level3.json"
+        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\js-c64-clean\\examples\\assets\\d64-level3.json"
       },
       {
         "name": "SPRITE0",
@@ -333,7 +333,7 @@
     "levelDependencies": [
       {
         "mapId": 0,
-        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level1.json",
+        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\js-c64-clean\\examples\\assets\\d64-level1.json",
         "files": [
           "LEVEL0",
           "TABLES0",
@@ -343,7 +343,7 @@
       },
       {
         "mapId": 1,
-        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level2.json",
+        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\js-c64-clean\\examples\\assets\\d64-level2.json",
         "files": [
           "LEVEL1",
           "TABLES1",
@@ -353,7 +353,7 @@
       },
       {
         "mapId": 2,
-        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\compilateur js-c64\\examples\\assets\\d64-level3.json",
+        "sourcePath": "D:\\Programmation\\Vibe Coding Pro\\js-c64-clean\\examples\\assets\\d64-level3.json",
         "files": [
           "LEVEL2",
           "TABLES2",
