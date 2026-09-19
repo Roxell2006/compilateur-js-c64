@@ -1,10 +1,42 @@
-out
-dist
-coverage
-.github
-index.html
+# The package.json "files" allowlist is the primary publication boundary.
+# Keep local development material excluded if that allowlist is expanded.
+/test/
+/tests/
+/scripts/
+/artifacts/
+/tmp/
+/out/
+/output/
+/dist/
+/coverage/
+/studio graphique/
+/.github/
+/.agents/
+/.codex/
+/.vscode/
+/.idea/
+/index.html
+/RELEASE_CHECKLIST.md
+/release-budgets.json
+/MODE_EMPLOI_PUBLICATION_NPM.txt
+/MODE_EMPLOI_NPM.txt
+/ROADMAP.md
+**/__tests__/
+**/__fixtures__/
+*.test.js
+*.spec.js
+*.log
+*.tgz
+*.tmp
+*.bak
+*.map
 *.prg
 *.bin
 *.lst
 *.asm
 *.bas
+*.d64
+*.symbols.json
+*.report.json
+.env
+.env.*

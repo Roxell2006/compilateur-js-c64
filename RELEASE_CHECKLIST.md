@@ -12,10 +12,18 @@ npm ci
 npm run release:check
 ```
 
-This single gate must pass before `npm publish`. It runs 130 tests, compiles all
+This single gate must pass before `npm publish`. It runs the test suite, compiles all
 examples, creates the 174,848-byte multi-level D64, checks memory conflicts and
 game budgets, inspects every published export, installs the generated tarball
 in an empty project and executes its installed `npx c64js` command.
+
+`npm run package:check` checks the actual `npm pack --dry-run` manifest without
+publishing. The package contains runtime JavaScript, schemas, example sources
+and assets, types and user documentation. Tests, build scripts, generated PRGs,
+reports, caches, the asset studio and release-maintenance documents stay local.
+The same content check is part of `release:check`, which `prepublishOnly` runs
+automatically before publication. Update the version before publishing a new
+release; the checks and build report use the current package version.
 
 GitHub Actions repeats the gate on Windows and Linux with Node 18, 20 and 22. The
 Linux/Node 22 job uploads `dist/release/` as the release-candidate artifact.

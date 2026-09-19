@@ -500,11 +500,17 @@ export interface C64Api {
     resumeSong(): void;
     fadeSong(targetVolume: number, stepEvery?: number): void;
     stopSong(): void;
+    /** Non-blocking effect; replaces the current effect on the SFX voice. */
     beep(): void;
+    /** Non-blocking noise, duration in 50 Hz ticks (0 becomes one tick). */
     noise(duration?: number): void;
+    /** Non-blocking click; replaces the current effect on the SFX voice. */
     click(): void;
+    /** Non-blocking effect; replaces the current effect on the SFX voice. */
     explosion(): void;
+    /** Non-blocking two-note effect, timed by the audio IRQ. */
     laser(): void;
+    /** Non-blocking two-note effect, timed by the audio IRQ. */
     pickup(): void;
   };
   table: {

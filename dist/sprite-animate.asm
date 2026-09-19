@@ -117,13 +117,18 @@ game_video_detect_pal:
 game_video_detect_done:
 game_frame_loop:
 game_frame_wait_leave:
+  LDA $D011
+  BMI game_frame_wait_leave
   LDA $D012
   CMP #$F0
-  BEQ game_frame_wait_leave
+  BCS game_frame_wait_leave
 game_frame_wait_target:
+  LDA $D011
+  BMI game_frame_target_reached
   LDA $D012
   CMP #$F0
-  BNE game_frame_wait_target
+  BCC game_frame_wait_target
+game_frame_target_reached:
   CLC
   LDA $C770
   ADC #$32

@@ -58,6 +58,25 @@ printat_loop_8:
   INX
   BNE printat_loop_8
 printat_done_9:
+  LDA #$3C
+  STA $C76F
+game_video_detect_low:
+  LDA $D011
+  BMI game_video_detect_low
+game_video_detect_high:
+  LDA $D011
+  BPL game_video_detect_high
+game_video_detect_scan:
+  LDA $D011
+  BPL game_video_detect_done
+  LDA $D012
+  CMP #$20
+  BCS game_video_detect_pal
+  JMP game_video_detect_scan
+game_video_detect_pal:
+  LDA #$32
+  STA $C76F
+game_video_detect_done:
   LDA #$00
   STA $C763
   LDA #$00
@@ -256,34 +275,20 @@ program_end_after_sid_player:
   STA $C767
   LDA #$FF
   STA $C769
-  LDA #$3C
-  STA $C76F
-game_video_detect_low:
-  LDA $D011
-  BMI game_video_detect_low
-game_video_detect_high:
-  LDA $D011
-  BPL game_video_detect_high
-game_video_detect_scan:
-  LDA $D011
-  BPL game_video_detect_done
-  LDA $D012
-  CMP #$20
-  BCS game_video_detect_pal
-  JMP game_video_detect_scan
-game_video_detect_pal:
-  LDA #$32
-  STA $C76F
-game_video_detect_done:
 game_frame_loop:
 game_frame_wait_leave:
+  LDA $D011
+  BMI game_frame_wait_leave
   LDA $D012
   CMP #$F0
-  BEQ game_frame_wait_leave
+  BCS game_frame_wait_leave
 game_frame_wait_target:
+  LDA $D011
+  BMI game_frame_target_reached
   LDA $D012
   CMP #$F0
-  BNE game_frame_wait_target
+  BCC game_frame_wait_target
+game_frame_target_reached:
   LDA $C767
   STA $C769
   LDA $DC00

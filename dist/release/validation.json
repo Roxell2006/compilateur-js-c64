@@ -1,6 +1,6 @@
 {
   "packageVersion": "1.0.0",
-  "generatedAt": "2026-08-25T22:13:28.225Z",
+  "generatedAt": "2026-09-11T16:41:39.900Z",
   "standards": [
     "PAL",
     "NTSC"
@@ -9,8 +9,8 @@
   "games": {
     "snake": {
       "measured": {
-        "prgBytes": 4110,
-        "programBytes": 4093,
+        "prgBytes": 2859,
+        "programBytes": 2842,
         "assetBytes": 2348,
         "startupCycles": 11570,
         "reportedFrameCycles": 0,
@@ -26,8 +26,8 @@
     },
     "breakout-mini": {
       "measured": {
-        "prgBytes": 3361,
-        "programBytes": 3344,
+        "prgBytes": 3371,
+        "programBytes": 3354,
         "assetBytes": 254,
         "startupCycles": 0,
         "reportedFrameCycles": 0,
@@ -43,8 +43,8 @@
     },
     "maze-game": {
       "measured": {
-        "prgBytes": 1807,
-        "programBytes": 1790,
+        "prgBytes": 1361,
+        "programBytes": 1344,
         "assetBytes": 2348,
         "startupCycles": 10844,
         "reportedFrameCycles": 0,
@@ -60,8 +60,8 @@
     },
     "platformer-mini": {
       "measured": {
-        "prgBytes": 11102,
-        "programBytes": 11034,
+        "prgBytes": 10174,
+        "programBytes": 10106,
         "assetBytes": 2656,
         "startupCycles": 39466,
         "reportedFrameCycles": 16148,

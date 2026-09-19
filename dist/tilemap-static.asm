@@ -53,49 +53,7 @@ runtime_map_draw_tile_0:
   LDA $C7B3
   STA $C7C3
 runtime_map_draw_tile_body_0:
-  LDA #$00
-  STA $C7B6
-  LDA #$00
-  STA $C7BA
-  LDA $C7B3
-  STA $C7B7
-  LDA #$00
-  STA $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC $C7B2
-  STA $C7B6
-  LDA $C7BA
-  ADC #$00
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC #$00
-  STA $FB
-  LDA $C7BA
-  ADC #$80
-  STA $FC
-  LDY #$00
+  JSR runtime_map_pointer_0
   LDA ($FB),Y
   STA $C7B4
   LDA $C7B4
@@ -237,6 +195,51 @@ runtime_map_redraw_column_0:
   LDA $C7B3
   CMP #$06
   BNE runtime_map_redraw_row_0
+  RTS
+runtime_map_pointer_0:
+  LDA #$00
+  STA $C7B6
+  LDA #$00
+  STA $C7BA
+  LDA $C7B3
+  STA $C7B7
+  LDA #$00
+  STA $C7BF
+  ASL $C7B7
+  ROL $C7BF
+  CLC
+  LDA $C7B6
+  ADC $C7B7
+  STA $C7B6
+  LDA $C7BA
+  ADC $C7BF
+  STA $C7BA
+  ASL $C7B7
+  ROL $C7BF
+  ASL $C7B7
+  ROL $C7BF
+  CLC
+  LDA $C7B6
+  ADC $C7B7
+  STA $C7B6
+  LDA $C7BA
+  ADC $C7BF
+  STA $C7BA
+  CLC
+  LDA $C7B6
+  ADC $C7B2
+  STA $C7B6
+  LDA $C7BA
+  ADC #$00
+  STA $C7BA
+  CLC
+  LDA $C7B6
+  ADC #$00
+  STA $FB
+  LDA $C7BA
+  ADC #$80
+  STA $FC
+  LDY #$00
   RTS
 ; User data
 asset_map_collisions_0:

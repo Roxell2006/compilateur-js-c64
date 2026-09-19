@@ -8,6 +8,7 @@ import { D64_SIZE } from "../src/d64Writer.js";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const RELEASE_DIR = path.join(ROOT, "dist", "release");
 const budgets = JSON.parse(await fs.readFile(path.join(ROOT, "release-budgets.json"), "utf8"));
+const pkg = JSON.parse(await fs.readFile(path.join(ROOT, "package.json"), "utf8"));
 
 function run(command, args) {
   return new Promise((resolve, reject) => {
@@ -74,7 +75,7 @@ for (const [name, limits] of Object.entries(budgets.games)) {
 }
 
 const report = {
-  packageVersion: "1.0.0",
+  packageVersion: pkg.version,
   generatedAt: new Date().toISOString(),
   standards: ["PAL", "NTSC"],
   d64Bytes: d64.length,

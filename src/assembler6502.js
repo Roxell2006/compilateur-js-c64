@@ -235,6 +235,13 @@ export class Assembler6502 {
         this.bytes[fixup.offset] = fixup.transform === "hi"
           ? ((target >> 8) & 0xff)
           : (target & 0xff);
+      } else if (ONE_BYTE_MODES.has(fixup.type)) {
+        if (target < 0 || target > 0xff) {
+          throw new Error(`Zero-page label ${fixup.label} is outside $0000..$00FF`);
+        }
+        // A zero-page operand occupies one byte. Writing a word here used to
+        // overwrite the opcode immediately following the label reference.
+        this.bytes[fixup.offset] = target;
       } else {
         const [lo, hi] = wordToBytes(target);
         this.bytes[fixup.offset] = lo;

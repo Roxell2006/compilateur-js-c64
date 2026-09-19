@@ -468,6 +468,12 @@ printat_done_13:
   STA $C132
   JSR runtime_map_viewport_0
   JSR runtime_map_scroll_restore_0
+  LDA #$00
+  STA $C137
+  LDA #$00
+  STA $C77E
+  LDA #$00
+  STA $C59B
   SEI
   LDA #$7F
   STA $DC0D
@@ -532,9 +538,17 @@ irq_dispatch_next_1:
 irq_dispatch_match_2:
   JMP irq_handler_2
 irq_dispatch_next_2:
+  CMP #$03
+  BEQ irq_dispatch_match_3
+  JMP irq_dispatch_next_3
+irq_dispatch_match_3:
+  JMP irq_handler_3
+irq_dispatch_next_3:
   JMP irq_handler_0
 irq_handler_0:
   JSR runtime_map_scroll_apply_0
+  LDA #$01
+  STA $C77E
   LDA #$01
   STA $C0FE
   LDA #$D2
@@ -566,6 +580,22 @@ irq_handler_1:
 irq_handler_2:
   LDA #$00
   STA $D021
+  LDA #$03
+  STA $C0FE
+  LDA #$00
+  STA $D012
+  LDA $D011
+  AND #$7F
+  ORA #$80
+  STA $D011
+  PLA
+  TAY
+  PLA
+  TAX
+  PLA
+  JMP $EA81
+irq_handler_3:
+  JSR runtime_sprite_mux_present
   LDA #$00
   STA $C0FE
   LDA #$1E
@@ -612,13 +642,11 @@ game_video_detect_pal:
 game_video_detect_done:
 game_frame_loop:
 game_frame_wait_leave:
-  LDA $D012
-  CMP #$C8
+  LDA $C77E
   BEQ game_frame_wait_leave
-game_frame_wait_target:
-  LDA $D012
-  CMP #$C8
-  BNE game_frame_wait_target
+  LDA #$00
+  STA $C77E
+game_frame_target_reached:
   CLC
   LDA $C770
   ADC #$32
@@ -639,6 +667,8 @@ game_frame_logical_tick:
   BNE game_frame_counter_done_14
   INC $C76B
 game_frame_counter_done_14:
+  LDA #$00
+  STA $C59B
   LDA #$00
   STA $C107
   LDA $C767
@@ -1039,9 +1069,10 @@ map_scroll_can_move_66:
   JMP map_scroll_moved_66
 map_scroll_wrap_66:
   INC $C12D
-  JSR runtime_map_scroll_shift_left_0
   LDA #$07
   STA $C12E
+  LDA #$01
+  STA $C137
 map_scroll_moved_66:
   INC $C133
   BNE map_scroll_pixel_x_inc_66_done
@@ -1063,9 +1094,10 @@ map_scroll_can_move_67:
   JMP map_scroll_moved_67
 map_scroll_wrap_67:
   DEC $C12D
-  JSR runtime_map_scroll_shift_right_0
   LDA #$00
   STA $C12E
+  LDA #$FF
+  STA $C137
 map_scroll_moved_67:
   LDA $C133
   BNE map_scroll_pixel_x_dec_67_low
@@ -1133,9 +1165,10 @@ map_scroll_can_move_69:
   JMP map_scroll_moved_69
 map_scroll_wrap_69:
   INC $C12D
-  JSR runtime_map_scroll_shift_left_0
   LDA #$07
   STA $C12E
+  LDA #$01
+  STA $C137
 map_scroll_moved_69:
   INC $C133
   BNE map_scroll_pixel_x_inc_69_done
@@ -1157,9 +1190,10 @@ map_scroll_can_move_70:
   JMP map_scroll_moved_70
 map_scroll_wrap_70:
   DEC $C12D
-  JSR runtime_map_scroll_shift_right_0
   LDA #$00
   STA $C12E
+  LDA #$FF
+  STA $C137
 map_scroll_moved_70:
   LDA $C133
   BNE map_scroll_pixel_x_dec_70_low
@@ -1751,7 +1785,26 @@ control_if_end_98:
   JMP control_if_end_96
 control_if_else_96:
 control_if_end_96:
-  JSR runtime_sprite_mux_render
+  LDA #$01
+  STA $C59B
+  LDA $C137
+  BEQ map_scroll_deferred_done_0
+map_scroll_deferred_wait_0:
+  LDA $D011
+  BMI map_scroll_deferred_ready_0
+  LDA $D012
+  CMP #$D6
+  BCC map_scroll_deferred_wait_0
+map_scroll_deferred_ready_0:
+  LDA $C137
+  BMI map_scroll_deferred_right_0
+  JSR runtime_map_scroll_shift_left_0
+  JMP map_scroll_deferred_done_0
+map_scroll_deferred_right_0:
+  JSR runtime_map_scroll_shift_right_0
+map_scroll_deferred_done_0:
+  LDA #$00
+  STA $C137
   JMP game_frame_loop
 ; Shared non-blocking SID click
 runtime_sid_click:
@@ -1833,47 +1886,6 @@ aabb_greater_runtime_3:
 runtime_sprite_aabb_false:
   LDA #$00
   RTS
-; Dynamic 16-to-8 sprite multiplexer: sort active sprites by Y
-runtime_sprite_mux_sort:
-  LDA #$00
-  STA $C590
-  LDA #$00
-  STA $C591
-runtime_sprite_mux_sort_outer:
-  LDY $C591
-  LDA $C505,Y
-  BEQ runtime_sprite_mux_sort_next
-  STY $C592
-  LDA $C502,Y
-  STA $C593
-  LDX $C590
-runtime_sprite_mux_sort_insert:
-  CPX #$00
-  BEQ runtime_sprite_mux_sort_place
-  DEX
-  LDA $C580,X
-  TAY
-  LDA $C502,Y
-  CMP $C593
-  BCC runtime_sprite_mux_sort_after
-  BEQ runtime_sprite_mux_sort_after
-  LDA $C580,X
-  STA $C581,X
-  JMP runtime_sprite_mux_sort_insert
-runtime_sprite_mux_sort_after:
-  INX
-runtime_sprite_mux_sort_place:
-  LDA $C592
-  STA $C580,X
-  INC $C590
-runtime_sprite_mux_sort_next:
-  CLC
-  LDA $C591
-  ADC #$08
-  STA $C591
-  CMP #$80
-  BNE runtime_sprite_mux_sort_outer
-  RTS
 ; Copy one logical sprite to one VIC-II hardware channel
 runtime_sprite_mux_draw:
   STX $C595
@@ -1883,8 +1895,6 @@ runtime_sprite_mux_draw:
   TAX
   LDA $C500,Y
   STA $D000,X
-  LDA $C502,Y
-  STA $D001,X
   LDX $C595
   LDA runtime_sprite_mux_bit_masks,X
   STA $C599
@@ -1897,61 +1907,67 @@ runtime_sprite_mux_draw:
   LDA $D015
   ORA $C599
   STA $D015
-  LDA $D010
-  AND $C59A
-  STA $D010
-  LDY $C597
   LDA $C501,Y
   AND #$01
   BEQ runtime_sprite_mux_x_low
   LDA $D010
   ORA $C599
-  STA $D010
+  BNE runtime_sprite_mux_x_low_store
 runtime_sprite_mux_x_low:
-  LDA $D01C
+  LDA $D010
   AND $C59A
-  STA $D01C
-  LDY $C597
+runtime_sprite_mux_x_low_store:
+  STA $D010
   LDA $C406,Y
   AND #$01
   BEQ runtime_sprite_mux_no_multicolor
   LDA $D01C
   ORA $C599
-  STA $D01C
+  BNE runtime_sprite_mux_no_multicolor_store
 runtime_sprite_mux_no_multicolor:
-  LDA $D01D
+  LDA $D01C
   AND $C59A
-  STA $D01D
-  LDY $C597
+runtime_sprite_mux_no_multicolor_store:
+  STA $D01C
   LDA $C406,Y
   AND #$02
   BEQ runtime_sprite_mux_no_expand_x
   LDA $D01D
   ORA $C599
-  STA $D01D
+  BNE runtime_sprite_mux_no_expand_x_store
 runtime_sprite_mux_no_expand_x:
-  LDA $D017
+  LDA $D01D
   AND $C59A
-  STA $D017
-  LDY $C597
+runtime_sprite_mux_no_expand_x_store:
+  STA $D01D
   LDA $C406,Y
   AND #$04
   BEQ runtime_sprite_mux_no_expand_y
   LDA $D017
   ORA $C599
-  STA $D017
+  BNE runtime_sprite_mux_no_expand_y_store
 runtime_sprite_mux_no_expand_y:
-  LDA $D01B
+  LDA $D017
   AND $C59A
-  STA $D01B
-  LDY $C597
+runtime_sprite_mux_no_expand_y_store:
+  STA $D017
   LDA $C406,Y
   AND #$08
   BEQ runtime_sprite_mux_no_priority
   LDA $D01B
   ORA $C599
-  STA $D01B
+  BNE runtime_sprite_mux_no_priority_store
 runtime_sprite_mux_no_priority:
+  LDA $D01B
+  AND $C59A
+runtime_sprite_mux_no_priority_store:
+  STA $D01B
+  LDX $C595
+  TXA
+  ASL A
+  TAX
+  LDA $C502,Y
+  STA $D001,X
   LDX $C595
   LDY $C597
   LDA $C406,Y
@@ -1969,71 +1985,34 @@ runtime_sprite_mux_add_height:
 runtime_sprite_mux_end_ready:
   STA $C5A0,X
   RTS
-; Render the sorted display list and recycle channels after sprite end
-runtime_sprite_mux_render:
-  JSR runtime_sprite_mux_sort
-runtime_sprite_mux_wait_safe_raster:
-  LDA $D011
-  BMI runtime_sprite_mux_frame_ready
-  LDA $D012
-  CMP #$40
-  BCC runtime_sprite_mux_frame_ready
-  JMP runtime_sprite_mux_wait_safe_raster
-runtime_sprite_mux_frame_ready:
+runtime_sprite_mux_present:
+  LDA $C59B
+  BNE runtime_sprite_mux_present_ready
+  RTS
+runtime_sprite_mux_present_ready:
   LDA #$00
   STA $D015
+  LDY #$00
+  LDA $C505,Y
+  BEQ runtime_sprite_mux_present_next_0
   LDX #$00
-runtime_sprite_mux_first_slots:
-  CPX $C590
-  BCS runtime_sprite_mux_first_done
-  CPX #$08
-  BEQ runtime_sprite_mux_first_done
-  LDA $C580,X
-  TAY
   JSR runtime_sprite_mux_draw
-  INX
-  JMP runtime_sprite_mux_first_slots
-runtime_sprite_mux_first_done:
-  STX $C594
-  CPX $C590
-  BCS runtime_sprite_mux_render_done
-runtime_sprite_mux_schedule_next:
-  LDX $C594
-  CPX $C590
-  BCS runtime_sprite_mux_render_done
-  LDX #$00
-  STX $C595
-  LDA $C5A0
-  STA $C596
-  INX
-runtime_sprite_mux_find_slot:
-  LDA $C5A0,X
-  CMP $C596
-  BCS runtime_sprite_mux_find_next
-  STA $C596
-  STX $C595
-runtime_sprite_mux_find_next:
-  INX
-  CPX #$08
-  BNE runtime_sprite_mux_find_slot
-  LDX $C594
-  LDA $C580,X
-  STA $C597
-  TAY
-  LDA $C502,Y
-  CMP $C596
-  BCC runtime_sprite_mux_skip_overflow
-runtime_sprite_mux_wait_release:
-  LDA $D012
-  CMP $C596
-  BCC runtime_sprite_mux_wait_release
-  LDX $C595
-  LDY $C597
+runtime_sprite_mux_present_next_0:
+  LDY #$08
+  LDA $C505,Y
+  BEQ runtime_sprite_mux_present_next_1
+  LDX #$01
   JSR runtime_sprite_mux_draw
-runtime_sprite_mux_skip_overflow:
-  INC $C594
-  JMP runtime_sprite_mux_schedule_next
-runtime_sprite_mux_render_done:
+runtime_sprite_mux_present_next_1:
+  LDY #$40
+  LDA $C505,Y
+  BEQ runtime_sprite_mux_present_next_8
+  LDX #$02
+  JSR runtime_sprite_mux_draw
+runtime_sprite_mux_present_next_8:
+  LDA #$00
+  STA $C59B
+runtime_sprite_mux_present_done:
   RTS
 runtime_sprite_mux_bit_masks:
   .byte $01, $02, $04, $08, $10, $20, $40, $80
@@ -2525,55 +2504,7 @@ runtime_map_entity_point_0_y_inside:
   ROR $C7BB
   LDA $C7BB
   STA $C7B3
-  LDA #$00
-  STA $C7B6
-  LDA #$00
-  STA $C7BA
-  LDA $C7B3
-  STA $C7B7
-  LDA #$00
-  STA $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC $C7B2
-  STA $C7B6
-  LDA $C7BA
-  ADC #$00
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC #$00
-  STA $FB
-  LDA $C7BA
-  ADC #$80
-  STA $FC
-  LDY #$00
+  JSR runtime_map_pointer_0
   LDA ($FB),Y
   TAX
   LDA asset_map_collisions_0,X
@@ -2607,55 +2538,7 @@ runtime_map_draw_tile_0:
   LDA $C7B3
   STA $C7C3
 runtime_map_draw_tile_body_0:
-  LDA #$00
-  STA $C7B6
-  LDA #$00
-  STA $C7BA
-  LDA $C7B3
-  STA $C7B7
-  LDA #$00
-  STA $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC $C7B2
-  STA $C7B6
-  LDA $C7BA
-  ADC #$00
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC #$00
-  STA $FB
-  LDA $C7BA
-  ADC #$80
-  STA $FC
-  LDY #$00
+  JSR runtime_map_pointer_0
   LDA ($FB),Y
   STA $C7B4
   LDA $C7B4
@@ -2764,71 +2647,42 @@ runtime_map_scroll_shift_left_0:
   STA $C7B2
   LDA $C12F
   STA $C7B3
-  LDA #$00
-  STA $C7B6
-  LDA #$00
-  STA $C7BA
-  LDA $C7B3
-  STA $C7B7
-  LDA #$00
-  STA $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC $C7B2
-  STA $C7B6
-  LDA $C7BA
-  ADC #$00
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC #$00
-  STA $FB
-  LDA $C7BA
-  ADC #$80
-  STA $FC
-  LDY #$00
+  JSR runtime_map_pointer_0
   LDA $0403
   STA $0402
   LDA $D803
   STA $D802
-  LDX #$DE
+  LDA $0404
+  STA $0403
+  LDA $D804
+  STA $D803
+  LDA $0405
+  STA $0404
+  LDA $D805
+  STA $D804
+  LDX #$00
 runtime_map_scroll_left_row_0_0:
-  LDA $0326,X
-  STA $0325,X
-  LDA $D726,X
-  STA $D725,X
+  LDA $0406,X
+  STA $0405,X
+  LDA $D806,X
+  STA $D805,X
+  LDA $0407,X
+  STA $0406,X
+  LDA $D807,X
+  STA $D806,X
+  LDA $0408,X
+  STA $0407,X
+  LDA $D808,X
+  STA $D807,X
+  LDA $0409,X
+  STA $0408,X
+  LDA $D809,X
+  STA $D808,X
   INX
-  LDA $0326,X
-  STA $0325,X
-  LDA $D726,X
-  STA $D725,X
   INX
+  INX
+  INX
+  CPX #$20
   BNE runtime_map_scroll_left_row_0_0
   LDY #$00
   LDA ($FB),Y
@@ -2848,18 +2702,37 @@ runtime_map_scroll_left_row_0_0:
   STA $042A
   LDA $D82B
   STA $D82A
-  LDX #$DE
+  LDA $042C
+  STA $042B
+  LDA $D82C
+  STA $D82B
+  LDA $042D
+  STA $042C
+  LDA $D82D
+  STA $D82C
+  LDX #$00
 runtime_map_scroll_left_row_0_1:
-  LDA $034E,X
-  STA $034D,X
-  LDA $D74E,X
-  STA $D74D,X
+  LDA $042E,X
+  STA $042D,X
+  LDA $D82E,X
+  STA $D82D,X
+  LDA $042F,X
+  STA $042E,X
+  LDA $D82F,X
+  STA $D82E,X
+  LDA $0430,X
+  STA $042F,X
+  LDA $D830,X
+  STA $D82F,X
+  LDA $0431,X
+  STA $0430,X
+  LDA $D831,X
+  STA $D830,X
   INX
-  LDA $034E,X
-  STA $034D,X
-  LDA $D74E,X
-  STA $D74D,X
   INX
+  INX
+  INX
+  CPX #$20
   BNE runtime_map_scroll_left_row_0_1
   LDY #$00
   LDA ($FB),Y
@@ -2879,18 +2752,37 @@ runtime_map_scroll_left_row_0_1:
   STA $0452
   LDA $D853
   STA $D852
-  LDX #$DE
+  LDA $0454
+  STA $0453
+  LDA $D854
+  STA $D853
+  LDA $0455
+  STA $0454
+  LDA $D855
+  STA $D854
+  LDX #$00
 runtime_map_scroll_left_row_0_2:
-  LDA $0376,X
-  STA $0375,X
-  LDA $D776,X
-  STA $D775,X
+  LDA $0456,X
+  STA $0455,X
+  LDA $D856,X
+  STA $D855,X
+  LDA $0457,X
+  STA $0456,X
+  LDA $D857,X
+  STA $D856,X
+  LDA $0458,X
+  STA $0457,X
+  LDA $D858,X
+  STA $D857,X
+  LDA $0459,X
+  STA $0458,X
+  LDA $D859,X
+  STA $D858,X
   INX
-  LDA $0376,X
-  STA $0375,X
-  LDA $D776,X
-  STA $D775,X
   INX
+  INX
+  INX
+  CPX #$20
   BNE runtime_map_scroll_left_row_0_2
   LDY #$00
   LDA ($FB),Y
@@ -2910,18 +2802,37 @@ runtime_map_scroll_left_row_0_2:
   STA $047A
   LDA $D87B
   STA $D87A
-  LDX #$DE
+  LDA $047C
+  STA $047B
+  LDA $D87C
+  STA $D87B
+  LDA $047D
+  STA $047C
+  LDA $D87D
+  STA $D87C
+  LDX #$00
 runtime_map_scroll_left_row_0_3:
-  LDA $039E,X
-  STA $039D,X
-  LDA $D79E,X
-  STA $D79D,X
+  LDA $047E,X
+  STA $047D,X
+  LDA $D87E,X
+  STA $D87D,X
+  LDA $047F,X
+  STA $047E,X
+  LDA $D87F,X
+  STA $D87E,X
+  LDA $0480,X
+  STA $047F,X
+  LDA $D880,X
+  STA $D87F,X
+  LDA $0481,X
+  STA $0480,X
+  LDA $D881,X
+  STA $D880,X
   INX
-  LDA $039E,X
-  STA $039D,X
-  LDA $D79E,X
-  STA $D79D,X
   INX
+  INX
+  INX
+  CPX #$20
   BNE runtime_map_scroll_left_row_0_3
   LDY #$00
   LDA ($FB),Y
@@ -2941,18 +2852,37 @@ runtime_map_scroll_left_row_0_3:
   STA $04A2
   LDA $D8A3
   STA $D8A2
-  LDX #$DE
+  LDA $04A4
+  STA $04A3
+  LDA $D8A4
+  STA $D8A3
+  LDA $04A5
+  STA $04A4
+  LDA $D8A5
+  STA $D8A4
+  LDX #$00
 runtime_map_scroll_left_row_0_4:
-  LDA $03C6,X
-  STA $03C5,X
-  LDA $D7C6,X
-  STA $D7C5,X
+  LDA $04A6,X
+  STA $04A5,X
+  LDA $D8A6,X
+  STA $D8A5,X
+  LDA $04A7,X
+  STA $04A6,X
+  LDA $D8A7,X
+  STA $D8A6,X
+  LDA $04A8,X
+  STA $04A7,X
+  LDA $D8A8,X
+  STA $D8A7,X
+  LDA $04A9,X
+  STA $04A8,X
+  LDA $D8A9,X
+  STA $D8A8,X
   INX
-  LDA $03C6,X
-  STA $03C5,X
-  LDA $D7C6,X
-  STA $D7C5,X
   INX
+  INX
+  INX
+  CPX #$20
   BNE runtime_map_scroll_left_row_0_4
   LDY #$00
   LDA ($FB),Y
@@ -2972,18 +2902,37 @@ runtime_map_scroll_left_row_0_4:
   STA $04CA
   LDA $D8CB
   STA $D8CA
-  LDX #$DE
+  LDA $04CC
+  STA $04CB
+  LDA $D8CC
+  STA $D8CB
+  LDA $04CD
+  STA $04CC
+  LDA $D8CD
+  STA $D8CC
+  LDX #$00
 runtime_map_scroll_left_row_0_5:
-  LDA $03EE,X
-  STA $03ED,X
-  LDA $D7EE,X
-  STA $D7ED,X
+  LDA $04CE,X
+  STA $04CD,X
+  LDA $D8CE,X
+  STA $D8CD,X
+  LDA $04CF,X
+  STA $04CE,X
+  LDA $D8CF,X
+  STA $D8CE,X
+  LDA $04D0,X
+  STA $04CF,X
+  LDA $D8D0,X
+  STA $D8CF,X
+  LDA $04D1,X
+  STA $04D0,X
+  LDA $D8D1,X
+  STA $D8D0,X
   INX
-  LDA $03EE,X
-  STA $03ED,X
-  LDA $D7EE,X
-  STA $D7ED,X
   INX
+  INX
+  INX
+  CPX #$20
   BNE runtime_map_scroll_left_row_0_5
   LDY #$00
   LDA ($FB),Y
@@ -3003,18 +2952,37 @@ runtime_map_scroll_left_row_0_5:
   STA $04F2
   LDA $D8F3
   STA $D8F2
-  LDX #$DE
+  LDA $04F4
+  STA $04F3
+  LDA $D8F4
+  STA $D8F3
+  LDA $04F5
+  STA $04F4
+  LDA $D8F5
+  STA $D8F4
+  LDX #$00
 runtime_map_scroll_left_row_0_6:
-  LDA $0416,X
-  STA $0415,X
-  LDA $D816,X
-  STA $D815,X
+  LDA $04F6,X
+  STA $04F5,X
+  LDA $D8F6,X
+  STA $D8F5,X
+  LDA $04F7,X
+  STA $04F6,X
+  LDA $D8F7,X
+  STA $D8F6,X
+  LDA $04F8,X
+  STA $04F7,X
+  LDA $D8F8,X
+  STA $D8F7,X
+  LDA $04F9,X
+  STA $04F8,X
+  LDA $D8F9,X
+  STA $D8F8,X
   INX
-  LDA $0416,X
-  STA $0415,X
-  LDA $D816,X
-  STA $D815,X
   INX
+  INX
+  INX
+  CPX #$20
   BNE runtime_map_scroll_left_row_0_6
   LDY #$00
   LDA ($FB),Y
@@ -3034,18 +3002,37 @@ runtime_map_scroll_left_row_0_6:
   STA $051A
   LDA $D91B
   STA $D91A
-  LDX #$DE
+  LDA $051C
+  STA $051B
+  LDA $D91C
+  STA $D91B
+  LDA $051D
+  STA $051C
+  LDA $D91D
+  STA $D91C
+  LDX #$00
 runtime_map_scroll_left_row_0_7:
-  LDA $043E,X
-  STA $043D,X
-  LDA $D83E,X
-  STA $D83D,X
+  LDA $051E,X
+  STA $051D,X
+  LDA $D91E,X
+  STA $D91D,X
+  LDA $051F,X
+  STA $051E,X
+  LDA $D91F,X
+  STA $D91E,X
+  LDA $0520,X
+  STA $051F,X
+  LDA $D920,X
+  STA $D91F,X
+  LDA $0521,X
+  STA $0520,X
+  LDA $D921,X
+  STA $D920,X
   INX
-  LDA $043E,X
-  STA $043D,X
-  LDA $D83E,X
-  STA $D83D,X
   INX
+  INX
+  INX
+  CPX #$20
   BNE runtime_map_scroll_left_row_0_7
   LDY #$00
   LDA ($FB),Y
@@ -3065,18 +3052,37 @@ runtime_map_scroll_left_row_0_7:
   STA $0542
   LDA $D943
   STA $D942
-  LDX #$DE
+  LDA $0544
+  STA $0543
+  LDA $D944
+  STA $D943
+  LDA $0545
+  STA $0544
+  LDA $D945
+  STA $D944
+  LDX #$00
 runtime_map_scroll_left_row_0_8:
-  LDA $0466,X
-  STA $0465,X
-  LDA $D866,X
-  STA $D865,X
+  LDA $0546,X
+  STA $0545,X
+  LDA $D946,X
+  STA $D945,X
+  LDA $0547,X
+  STA $0546,X
+  LDA $D947,X
+  STA $D946,X
+  LDA $0548,X
+  STA $0547,X
+  LDA $D948,X
+  STA $D947,X
+  LDA $0549,X
+  STA $0548,X
+  LDA $D949,X
+  STA $D948,X
   INX
-  LDA $0466,X
-  STA $0465,X
-  LDA $D866,X
-  STA $D865,X
   INX
+  INX
+  INX
+  CPX #$20
   BNE runtime_map_scroll_left_row_0_8
   LDY #$00
   LDA ($FB),Y
@@ -3096,18 +3102,37 @@ runtime_map_scroll_left_row_0_8:
   STA $056A
   LDA $D96B
   STA $D96A
-  LDX #$DE
+  LDA $056C
+  STA $056B
+  LDA $D96C
+  STA $D96B
+  LDA $056D
+  STA $056C
+  LDA $D96D
+  STA $D96C
+  LDX #$00
 runtime_map_scroll_left_row_0_9:
-  LDA $048E,X
-  STA $048D,X
-  LDA $D88E,X
-  STA $D88D,X
+  LDA $056E,X
+  STA $056D,X
+  LDA $D96E,X
+  STA $D96D,X
+  LDA $056F,X
+  STA $056E,X
+  LDA $D96F,X
+  STA $D96E,X
+  LDA $0570,X
+  STA $056F,X
+  LDA $D970,X
+  STA $D96F,X
+  LDA $0571,X
+  STA $0570,X
+  LDA $D971,X
+  STA $D970,X
   INX
-  LDA $048E,X
-  STA $048D,X
-  LDA $D88E,X
-  STA $D88D,X
   INX
+  INX
+  INX
+  CPX #$20
   BNE runtime_map_scroll_left_row_0_9
   LDY #$00
   LDA ($FB),Y
@@ -3127,18 +3152,37 @@ runtime_map_scroll_left_row_0_9:
   STA $0592
   LDA $D993
   STA $D992
-  LDX #$DE
+  LDA $0594
+  STA $0593
+  LDA $D994
+  STA $D993
+  LDA $0595
+  STA $0594
+  LDA $D995
+  STA $D994
+  LDX #$00
 runtime_map_scroll_left_row_0_10:
-  LDA $04B6,X
-  STA $04B5,X
-  LDA $D8B6,X
-  STA $D8B5,X
+  LDA $0596,X
+  STA $0595,X
+  LDA $D996,X
+  STA $D995,X
+  LDA $0597,X
+  STA $0596,X
+  LDA $D997,X
+  STA $D996,X
+  LDA $0598,X
+  STA $0597,X
+  LDA $D998,X
+  STA $D997,X
+  LDA $0599,X
+  STA $0598,X
+  LDA $D999,X
+  STA $D998,X
   INX
-  LDA $04B6,X
-  STA $04B5,X
-  LDA $D8B6,X
-  STA $D8B5,X
   INX
+  INX
+  INX
+  CPX #$20
   BNE runtime_map_scroll_left_row_0_10
   LDY #$00
   LDA ($FB),Y
@@ -3158,18 +3202,37 @@ runtime_map_scroll_left_row_0_10:
   STA $05BA
   LDA $D9BB
   STA $D9BA
-  LDX #$DE
+  LDA $05BC
+  STA $05BB
+  LDA $D9BC
+  STA $D9BB
+  LDA $05BD
+  STA $05BC
+  LDA $D9BD
+  STA $D9BC
+  LDX #$00
 runtime_map_scroll_left_row_0_11:
-  LDA $04DE,X
-  STA $04DD,X
-  LDA $D8DE,X
-  STA $D8DD,X
+  LDA $05BE,X
+  STA $05BD,X
+  LDA $D9BE,X
+  STA $D9BD,X
+  LDA $05BF,X
+  STA $05BE,X
+  LDA $D9BF,X
+  STA $D9BE,X
+  LDA $05C0,X
+  STA $05BF,X
+  LDA $D9C0,X
+  STA $D9BF,X
+  LDA $05C1,X
+  STA $05C0,X
+  LDA $D9C1,X
+  STA $D9C0,X
   INX
-  LDA $04DE,X
-  STA $04DD,X
-  LDA $D8DE,X
-  STA $D8DD,X
   INX
+  INX
+  INX
+  CPX #$20
   BNE runtime_map_scroll_left_row_0_11
   LDY #$00
   LDA ($FB),Y
@@ -3189,18 +3252,37 @@ runtime_map_scroll_left_row_0_11:
   STA $05E2
   LDA $D9E3
   STA $D9E2
-  LDX #$DE
+  LDA $05E4
+  STA $05E3
+  LDA $D9E4
+  STA $D9E3
+  LDA $05E5
+  STA $05E4
+  LDA $D9E5
+  STA $D9E4
+  LDX #$00
 runtime_map_scroll_left_row_0_12:
-  LDA $0506,X
-  STA $0505,X
-  LDA $D906,X
-  STA $D905,X
+  LDA $05E6,X
+  STA $05E5,X
+  LDA $D9E6,X
+  STA $D9E5,X
+  LDA $05E7,X
+  STA $05E6,X
+  LDA $D9E7,X
+  STA $D9E6,X
+  LDA $05E8,X
+  STA $05E7,X
+  LDA $D9E8,X
+  STA $D9E7,X
+  LDA $05E9,X
+  STA $05E8,X
+  LDA $D9E9,X
+  STA $D9E8,X
   INX
-  LDA $0506,X
-  STA $0505,X
-  LDA $D906,X
-  STA $D905,X
   INX
+  INX
+  INX
+  CPX #$20
   BNE runtime_map_scroll_left_row_0_12
   LDY #$00
   LDA ($FB),Y
@@ -3220,18 +3302,37 @@ runtime_map_scroll_left_row_0_12:
   STA $060A
   LDA $DA0B
   STA $DA0A
-  LDX #$DE
+  LDA $060C
+  STA $060B
+  LDA $DA0C
+  STA $DA0B
+  LDA $060D
+  STA $060C
+  LDA $DA0D
+  STA $DA0C
+  LDX #$00
 runtime_map_scroll_left_row_0_13:
-  LDA $052E,X
-  STA $052D,X
-  LDA $D92E,X
-  STA $D92D,X
+  LDA $060E,X
+  STA $060D,X
+  LDA $DA0E,X
+  STA $DA0D,X
+  LDA $060F,X
+  STA $060E,X
+  LDA $DA0F,X
+  STA $DA0E,X
+  LDA $0610,X
+  STA $060F,X
+  LDA $DA10,X
+  STA $DA0F,X
+  LDA $0611,X
+  STA $0610,X
+  LDA $DA11,X
+  STA $DA10,X
   INX
-  LDA $052E,X
-  STA $052D,X
-  LDA $D92E,X
-  STA $D92D,X
   INX
+  INX
+  INX
+  CPX #$20
   BNE runtime_map_scroll_left_row_0_13
   LDY #$00
   LDA ($FB),Y
@@ -3251,18 +3352,37 @@ runtime_map_scroll_left_row_0_13:
   STA $0632
   LDA $DA33
   STA $DA32
-  LDX #$DE
+  LDA $0634
+  STA $0633
+  LDA $DA34
+  STA $DA33
+  LDA $0635
+  STA $0634
+  LDA $DA35
+  STA $DA34
+  LDX #$00
 runtime_map_scroll_left_row_0_14:
-  LDA $0556,X
-  STA $0555,X
-  LDA $D956,X
-  STA $D955,X
+  LDA $0636,X
+  STA $0635,X
+  LDA $DA36,X
+  STA $DA35,X
+  LDA $0637,X
+  STA $0636,X
+  LDA $DA37,X
+  STA $DA36,X
+  LDA $0638,X
+  STA $0637,X
+  LDA $DA38,X
+  STA $DA37,X
+  LDA $0639,X
+  STA $0638,X
+  LDA $DA39,X
+  STA $DA38,X
   INX
-  LDA $0556,X
-  STA $0555,X
-  LDA $D956,X
-  STA $D955,X
   INX
+  INX
+  INX
+  CPX #$20
   BNE runtime_map_scroll_left_row_0_14
   LDY #$00
   LDA ($FB),Y
@@ -3282,18 +3402,37 @@ runtime_map_scroll_left_row_0_14:
   STA $065A
   LDA $DA5B
   STA $DA5A
-  LDX #$DE
+  LDA $065C
+  STA $065B
+  LDA $DA5C
+  STA $DA5B
+  LDA $065D
+  STA $065C
+  LDA $DA5D
+  STA $DA5C
+  LDX #$00
 runtime_map_scroll_left_row_0_15:
-  LDA $057E,X
-  STA $057D,X
-  LDA $D97E,X
-  STA $D97D,X
+  LDA $065E,X
+  STA $065D,X
+  LDA $DA5E,X
+  STA $DA5D,X
+  LDA $065F,X
+  STA $065E,X
+  LDA $DA5F,X
+  STA $DA5E,X
+  LDA $0660,X
+  STA $065F,X
+  LDA $DA60,X
+  STA $DA5F,X
+  LDA $0661,X
+  STA $0660,X
+  LDA $DA61,X
+  STA $DA60,X
   INX
-  LDA $057E,X
-  STA $057D,X
-  LDA $D97E,X
-  STA $D97D,X
   INX
+  INX
+  INX
+  CPX #$20
   BNE runtime_map_scroll_left_row_0_15
   LDY #$00
   LDA ($FB),Y
@@ -3313,18 +3452,37 @@ runtime_map_scroll_left_row_0_15:
   STA $0682
   LDA $DA83
   STA $DA82
-  LDX #$DE
+  LDA $0684
+  STA $0683
+  LDA $DA84
+  STA $DA83
+  LDA $0685
+  STA $0684
+  LDA $DA85
+  STA $DA84
+  LDX #$00
 runtime_map_scroll_left_row_0_16:
-  LDA $05A6,X
-  STA $05A5,X
-  LDA $D9A6,X
-  STA $D9A5,X
+  LDA $0686,X
+  STA $0685,X
+  LDA $DA86,X
+  STA $DA85,X
+  LDA $0687,X
+  STA $0686,X
+  LDA $DA87,X
+  STA $DA86,X
+  LDA $0688,X
+  STA $0687,X
+  LDA $DA88,X
+  STA $DA87,X
+  LDA $0689,X
+  STA $0688,X
+  LDA $DA89,X
+  STA $DA88,X
   INX
-  LDA $05A6,X
-  STA $05A5,X
-  LDA $D9A6,X
-  STA $D9A5,X
   INX
+  INX
+  INX
+  CPX #$20
   BNE runtime_map_scroll_left_row_0_16
   LDY #$00
   LDA ($FB),Y
@@ -3344,18 +3502,37 @@ runtime_map_scroll_left_row_0_16:
   STA $06AA
   LDA $DAAB
   STA $DAAA
-  LDX #$DE
+  LDA $06AC
+  STA $06AB
+  LDA $DAAC
+  STA $DAAB
+  LDA $06AD
+  STA $06AC
+  LDA $DAAD
+  STA $DAAC
+  LDX #$00
 runtime_map_scroll_left_row_0_17:
-  LDA $05CE,X
-  STA $05CD,X
-  LDA $D9CE,X
-  STA $D9CD,X
+  LDA $06AE,X
+  STA $06AD,X
+  LDA $DAAE,X
+  STA $DAAD,X
+  LDA $06AF,X
+  STA $06AE,X
+  LDA $DAAF,X
+  STA $DAAE,X
+  LDA $06B0,X
+  STA $06AF,X
+  LDA $DAB0,X
+  STA $DAAF,X
+  LDA $06B1,X
+  STA $06B0,X
+  LDA $DAB1,X
+  STA $DAB0,X
   INX
-  LDA $05CE,X
-  STA $05CD,X
-  LDA $D9CE,X
-  STA $D9CD,X
   INX
+  INX
+  INX
+  CPX #$20
   BNE runtime_map_scroll_left_row_0_17
   LDY #$00
   LDA ($FB),Y
@@ -3375,18 +3552,37 @@ runtime_map_scroll_left_row_0_17:
   STA $06D2
   LDA $DAD3
   STA $DAD2
-  LDX #$DE
+  LDA $06D4
+  STA $06D3
+  LDA $DAD4
+  STA $DAD3
+  LDA $06D5
+  STA $06D4
+  LDA $DAD5
+  STA $DAD4
+  LDX #$00
 runtime_map_scroll_left_row_0_18:
-  LDA $05F6,X
-  STA $05F5,X
-  LDA $D9F6,X
-  STA $D9F5,X
+  LDA $06D6,X
+  STA $06D5,X
+  LDA $DAD6,X
+  STA $DAD5,X
+  LDA $06D7,X
+  STA $06D6,X
+  LDA $DAD7,X
+  STA $DAD6,X
+  LDA $06D8,X
+  STA $06D7,X
+  LDA $DAD8,X
+  STA $DAD7,X
+  LDA $06D9,X
+  STA $06D8,X
+  LDA $DAD9,X
+  STA $DAD8,X
   INX
-  LDA $05F6,X
-  STA $05F5,X
-  LDA $D9F6,X
-  STA $D9F5,X
   INX
+  INX
+  INX
+  CPX #$20
   BNE runtime_map_scroll_left_row_0_18
   LDY #$00
   LDA ($FB),Y
@@ -3406,18 +3602,37 @@ runtime_map_scroll_left_row_0_18:
   STA $06FA
   LDA $DAFB
   STA $DAFA
-  LDX #$DE
+  LDA $06FC
+  STA $06FB
+  LDA $DAFC
+  STA $DAFB
+  LDA $06FD
+  STA $06FC
+  LDA $DAFD
+  STA $DAFC
+  LDX #$00
 runtime_map_scroll_left_row_0_19:
-  LDA $061E,X
-  STA $061D,X
-  LDA $DA1E,X
-  STA $DA1D,X
+  LDA $06FE,X
+  STA $06FD,X
+  LDA $DAFE,X
+  STA $DAFD,X
+  LDA $06FF,X
+  STA $06FE,X
+  LDA $DAFF,X
+  STA $DAFE,X
+  LDA $0700,X
+  STA $06FF,X
+  LDA $DB00,X
+  STA $DAFF,X
+  LDA $0701,X
+  STA $0700,X
+  LDA $DB01,X
+  STA $DB00,X
   INX
-  LDA $061E,X
-  STA $061D,X
-  LDA $DA1E,X
-  STA $DA1D,X
   INX
+  INX
+  INX
+  CPX #$20
   BNE runtime_map_scroll_left_row_0_19
   LDY #$00
   LDA ($FB),Y
@@ -3433,55 +3648,7 @@ runtime_map_scroll_shift_right_0:
   STA $C7B2
   LDA $C12F
   STA $C7B3
-  LDA #$00
-  STA $C7B6
-  LDA #$00
-  STA $C7BA
-  LDA $C7B3
-  STA $C7B7
-  LDA #$00
-  STA $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC $C7B2
-  STA $C7B6
-  LDA $C7BA
-  ADC #$00
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC #$00
-  STA $FB
-  LDA $C7BA
-  ADC #$80
-  STA $FC
-  LDY #$00
+  JSR runtime_map_pointer_0
   LDA $0424
   STA $0425
   LDA $D824
@@ -4096,639 +4263,24 @@ runtime_map_scroll_right_row_0_19:
   LDA asset_map_colors_0,X
   STA $DAFA
   RTS
-; Map 0: shift Screen RAM and Color RAM one character up
-runtime_map_scroll_shift_up_0:
-  LDX #$DC
-runtime_map_scroll_up_row_0_0:
-  LDA $034E,X
-  STA $0326,X
-  LDA $D74E,X
-  STA $D726,X
-  INX
-  LDA $034E,X
-  STA $0326,X
-  LDA $D74E,X
-  STA $D726,X
-  INX
-  BNE runtime_map_scroll_up_row_0_0
-  LDX #$DC
-runtime_map_scroll_up_row_0_1:
-  LDA $0376,X
-  STA $034E,X
-  LDA $D776,X
-  STA $D74E,X
-  INX
-  LDA $0376,X
-  STA $034E,X
-  LDA $D776,X
-  STA $D74E,X
-  INX
-  BNE runtime_map_scroll_up_row_0_1
-  LDX #$DC
-runtime_map_scroll_up_row_0_2:
-  LDA $039E,X
-  STA $0376,X
-  LDA $D79E,X
-  STA $D776,X
-  INX
-  LDA $039E,X
-  STA $0376,X
-  LDA $D79E,X
-  STA $D776,X
-  INX
-  BNE runtime_map_scroll_up_row_0_2
-  LDX #$DC
-runtime_map_scroll_up_row_0_3:
-  LDA $03C6,X
-  STA $039E,X
-  LDA $D7C6,X
-  STA $D79E,X
-  INX
-  LDA $03C6,X
-  STA $039E,X
-  LDA $D7C6,X
-  STA $D79E,X
-  INX
-  BNE runtime_map_scroll_up_row_0_3
-  LDX #$DC
-runtime_map_scroll_up_row_0_4:
-  LDA $03EE,X
-  STA $03C6,X
-  LDA $D7EE,X
-  STA $D7C6,X
-  INX
-  LDA $03EE,X
-  STA $03C6,X
-  LDA $D7EE,X
-  STA $D7C6,X
-  INX
-  BNE runtime_map_scroll_up_row_0_4
-  LDX #$DC
-runtime_map_scroll_up_row_0_5:
-  LDA $0416,X
-  STA $03EE,X
-  LDA $D816,X
-  STA $D7EE,X
-  INX
-  LDA $0416,X
-  STA $03EE,X
-  LDA $D816,X
-  STA $D7EE,X
-  INX
-  BNE runtime_map_scroll_up_row_0_5
-  LDX #$DC
-runtime_map_scroll_up_row_0_6:
-  LDA $043E,X
-  STA $0416,X
-  LDA $D83E,X
-  STA $D816,X
-  INX
-  LDA $043E,X
-  STA $0416,X
-  LDA $D83E,X
-  STA $D816,X
-  INX
-  BNE runtime_map_scroll_up_row_0_6
-  LDX #$DC
-runtime_map_scroll_up_row_0_7:
-  LDA $0466,X
-  STA $043E,X
-  LDA $D866,X
-  STA $D83E,X
-  INX
-  LDA $0466,X
-  STA $043E,X
-  LDA $D866,X
-  STA $D83E,X
-  INX
-  BNE runtime_map_scroll_up_row_0_7
-  LDX #$DC
-runtime_map_scroll_up_row_0_8:
-  LDA $048E,X
-  STA $0466,X
-  LDA $D88E,X
-  STA $D866,X
-  INX
-  LDA $048E,X
-  STA $0466,X
-  LDA $D88E,X
-  STA $D866,X
-  INX
-  BNE runtime_map_scroll_up_row_0_8
-  LDX #$DC
-runtime_map_scroll_up_row_0_9:
-  LDA $04B6,X
-  STA $048E,X
-  LDA $D8B6,X
-  STA $D88E,X
-  INX
-  LDA $04B6,X
-  STA $048E,X
-  LDA $D8B6,X
-  STA $D88E,X
-  INX
-  BNE runtime_map_scroll_up_row_0_9
-  LDX #$DC
-runtime_map_scroll_up_row_0_10:
-  LDA $04DE,X
-  STA $04B6,X
-  LDA $D8DE,X
-  STA $D8B6,X
-  INX
-  LDA $04DE,X
-  STA $04B6,X
-  LDA $D8DE,X
-  STA $D8B6,X
-  INX
-  BNE runtime_map_scroll_up_row_0_10
-  LDX #$DC
-runtime_map_scroll_up_row_0_11:
-  LDA $0506,X
-  STA $04DE,X
-  LDA $D906,X
-  STA $D8DE,X
-  INX
-  LDA $0506,X
-  STA $04DE,X
-  LDA $D906,X
-  STA $D8DE,X
-  INX
-  BNE runtime_map_scroll_up_row_0_11
-  LDX #$DC
-runtime_map_scroll_up_row_0_12:
-  LDA $052E,X
-  STA $0506,X
-  LDA $D92E,X
-  STA $D906,X
-  INX
-  LDA $052E,X
-  STA $0506,X
-  LDA $D92E,X
-  STA $D906,X
-  INX
-  BNE runtime_map_scroll_up_row_0_12
-  LDX #$DC
-runtime_map_scroll_up_row_0_13:
-  LDA $0556,X
-  STA $052E,X
-  LDA $D956,X
-  STA $D92E,X
-  INX
-  LDA $0556,X
-  STA $052E,X
-  LDA $D956,X
-  STA $D92E,X
-  INX
-  BNE runtime_map_scroll_up_row_0_13
-  LDX #$DC
-runtime_map_scroll_up_row_0_14:
-  LDA $057E,X
-  STA $0556,X
-  LDA $D97E,X
-  STA $D956,X
-  INX
-  LDA $057E,X
-  STA $0556,X
-  LDA $D97E,X
-  STA $D956,X
-  INX
-  BNE runtime_map_scroll_up_row_0_14
-  LDX #$DC
-runtime_map_scroll_up_row_0_15:
-  LDA $05A6,X
-  STA $057E,X
-  LDA $D9A6,X
-  STA $D97E,X
-  INX
-  LDA $05A6,X
-  STA $057E,X
-  LDA $D9A6,X
-  STA $D97E,X
-  INX
-  BNE runtime_map_scroll_up_row_0_15
-  LDX #$DC
-runtime_map_scroll_up_row_0_16:
-  LDA $05CE,X
-  STA $05A6,X
-  LDA $D9CE,X
-  STA $D9A6,X
-  INX
-  LDA $05CE,X
-  STA $05A6,X
-  LDA $D9CE,X
-  STA $D9A6,X
-  INX
-  BNE runtime_map_scroll_up_row_0_16
-  LDX #$DC
-runtime_map_scroll_up_row_0_17:
-  LDA $05F6,X
-  STA $05CE,X
-  LDA $D9F6,X
-  STA $D9CE,X
-  INX
-  LDA $05F6,X
-  STA $05CE,X
-  LDA $D9F6,X
-  STA $D9CE,X
-  INX
-  BNE runtime_map_scroll_up_row_0_17
-  LDX #$DC
-runtime_map_scroll_up_row_0_18:
-  LDA $061E,X
-  STA $05F6,X
-  LDA $DA1E,X
-  STA $D9F6,X
-  INX
-  LDA $061E,X
-  STA $05F6,X
-  LDA $DA1E,X
-  STA $D9F6,X
-  INX
-  BNE runtime_map_scroll_up_row_0_18
-  LDA $C12F
-  CLC
-  ADC #$13
-  STA $C7B3
-  LDA $C12D
-  STA $C7B2
-  LDA #$00
-  STA $C7B6
-  LDA #$00
-  STA $C7BA
-  LDA $C7B3
-  STA $C7B7
-  LDA #$00
-  STA $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC $C7B2
-  STA $C7B6
-  LDA $C7BA
-  ADC #$00
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC #$00
-  STA $FB
-  LDA $C7BA
-  ADC #$80
-  STA $FC
-  LDY #$00
-  LDY #$00
-runtime_map_scroll_up_line_0:
-  LDA ($FB),Y
-  TAX
-  LDA asset_map_chars_0,X
-  STA $06FA,Y
-  LDA asset_map_colors_0,X
-  STA $DAFA,Y
-  INY
-  CPY #$24
-  BNE runtime_map_scroll_up_line_0
-  RTS
-; Map 0: shift Screen RAM and Color RAM one character down
-runtime_map_scroll_shift_down_0:
-  LDX #$DC
-runtime_map_scroll_down_row_0_18:
-  LDA $05F6,X
-  STA $061E,X
-  LDA $D9F6,X
-  STA $DA1E,X
-  INX
-  LDA $05F6,X
-  STA $061E,X
-  LDA $D9F6,X
-  STA $DA1E,X
-  INX
-  BNE runtime_map_scroll_down_row_0_18
-  LDX #$DC
-runtime_map_scroll_down_row_0_17:
-  LDA $05CE,X
-  STA $05F6,X
-  LDA $D9CE,X
-  STA $D9F6,X
-  INX
-  LDA $05CE,X
-  STA $05F6,X
-  LDA $D9CE,X
-  STA $D9F6,X
-  INX
-  BNE runtime_map_scroll_down_row_0_17
-  LDX #$DC
-runtime_map_scroll_down_row_0_16:
-  LDA $05A6,X
-  STA $05CE,X
-  LDA $D9A6,X
-  STA $D9CE,X
-  INX
-  LDA $05A6,X
-  STA $05CE,X
-  LDA $D9A6,X
-  STA $D9CE,X
-  INX
-  BNE runtime_map_scroll_down_row_0_16
-  LDX #$DC
-runtime_map_scroll_down_row_0_15:
-  LDA $057E,X
-  STA $05A6,X
-  LDA $D97E,X
-  STA $D9A6,X
-  INX
-  LDA $057E,X
-  STA $05A6,X
-  LDA $D97E,X
-  STA $D9A6,X
-  INX
-  BNE runtime_map_scroll_down_row_0_15
-  LDX #$DC
-runtime_map_scroll_down_row_0_14:
-  LDA $0556,X
-  STA $057E,X
-  LDA $D956,X
-  STA $D97E,X
-  INX
-  LDA $0556,X
-  STA $057E,X
-  LDA $D956,X
-  STA $D97E,X
-  INX
-  BNE runtime_map_scroll_down_row_0_14
-  LDX #$DC
-runtime_map_scroll_down_row_0_13:
-  LDA $052E,X
-  STA $0556,X
-  LDA $D92E,X
-  STA $D956,X
-  INX
-  LDA $052E,X
-  STA $0556,X
-  LDA $D92E,X
-  STA $D956,X
-  INX
-  BNE runtime_map_scroll_down_row_0_13
-  LDX #$DC
-runtime_map_scroll_down_row_0_12:
-  LDA $0506,X
-  STA $052E,X
-  LDA $D906,X
-  STA $D92E,X
-  INX
-  LDA $0506,X
-  STA $052E,X
-  LDA $D906,X
-  STA $D92E,X
-  INX
-  BNE runtime_map_scroll_down_row_0_12
-  LDX #$DC
-runtime_map_scroll_down_row_0_11:
-  LDA $04DE,X
-  STA $0506,X
-  LDA $D8DE,X
-  STA $D906,X
-  INX
-  LDA $04DE,X
-  STA $0506,X
-  LDA $D8DE,X
-  STA $D906,X
-  INX
-  BNE runtime_map_scroll_down_row_0_11
-  LDX #$DC
-runtime_map_scroll_down_row_0_10:
-  LDA $04B6,X
-  STA $04DE,X
-  LDA $D8B6,X
-  STA $D8DE,X
-  INX
-  LDA $04B6,X
-  STA $04DE,X
-  LDA $D8B6,X
-  STA $D8DE,X
-  INX
-  BNE runtime_map_scroll_down_row_0_10
-  LDX #$DC
-runtime_map_scroll_down_row_0_9:
-  LDA $048E,X
-  STA $04B6,X
-  LDA $D88E,X
-  STA $D8B6,X
-  INX
-  LDA $048E,X
-  STA $04B6,X
-  LDA $D88E,X
-  STA $D8B6,X
-  INX
-  BNE runtime_map_scroll_down_row_0_9
-  LDX #$DC
-runtime_map_scroll_down_row_0_8:
-  LDA $0466,X
-  STA $048E,X
-  LDA $D866,X
-  STA $D88E,X
-  INX
-  LDA $0466,X
-  STA $048E,X
-  LDA $D866,X
-  STA $D88E,X
-  INX
-  BNE runtime_map_scroll_down_row_0_8
-  LDX #$DC
-runtime_map_scroll_down_row_0_7:
-  LDA $043E,X
-  STA $0466,X
-  LDA $D83E,X
-  STA $D866,X
-  INX
-  LDA $043E,X
-  STA $0466,X
-  LDA $D83E,X
-  STA $D866,X
-  INX
-  BNE runtime_map_scroll_down_row_0_7
-  LDX #$DC
-runtime_map_scroll_down_row_0_6:
-  LDA $0416,X
-  STA $043E,X
-  LDA $D816,X
-  STA $D83E,X
-  INX
-  LDA $0416,X
-  STA $043E,X
-  LDA $D816,X
-  STA $D83E,X
-  INX
-  BNE runtime_map_scroll_down_row_0_6
-  LDX #$DC
-runtime_map_scroll_down_row_0_5:
-  LDA $03EE,X
-  STA $0416,X
-  LDA $D7EE,X
-  STA $D816,X
-  INX
-  LDA $03EE,X
-  STA $0416,X
-  LDA $D7EE,X
-  STA $D816,X
-  INX
-  BNE runtime_map_scroll_down_row_0_5
-  LDX #$DC
-runtime_map_scroll_down_row_0_4:
-  LDA $03C6,X
-  STA $03EE,X
-  LDA $D7C6,X
-  STA $D7EE,X
-  INX
-  LDA $03C6,X
-  STA $03EE,X
-  LDA $D7C6,X
-  STA $D7EE,X
-  INX
-  BNE runtime_map_scroll_down_row_0_4
-  LDX #$DC
-runtime_map_scroll_down_row_0_3:
-  LDA $039E,X
-  STA $03C6,X
-  LDA $D79E,X
-  STA $D7C6,X
-  INX
-  LDA $039E,X
-  STA $03C6,X
-  LDA $D79E,X
-  STA $D7C6,X
-  INX
-  BNE runtime_map_scroll_down_row_0_3
-  LDX #$DC
-runtime_map_scroll_down_row_0_2:
-  LDA $0376,X
-  STA $039E,X
-  LDA $D776,X
-  STA $D79E,X
-  INX
-  LDA $0376,X
-  STA $039E,X
-  LDA $D776,X
-  STA $D79E,X
-  INX
-  BNE runtime_map_scroll_down_row_0_2
-  LDX #$DC
-runtime_map_scroll_down_row_0_1:
-  LDA $034E,X
-  STA $0376,X
-  LDA $D74E,X
-  STA $D776,X
-  INX
-  LDA $034E,X
-  STA $0376,X
-  LDA $D74E,X
-  STA $D776,X
-  INX
-  BNE runtime_map_scroll_down_row_0_1
-  LDX #$DC
-runtime_map_scroll_down_row_0_0:
-  LDA $0326,X
-  STA $034E,X
-  LDA $D726,X
-  STA $D74E,X
-  INX
-  LDA $0326,X
-  STA $034E,X
-  LDA $D726,X
-  STA $D74E,X
-  INX
-  BNE runtime_map_scroll_down_row_0_0
-  LDA $C12F
-  STA $C7B3
-  LDA $C12D
-  STA $C7B2
-  LDA #$00
-  STA $C7B6
-  LDA #$00
-  STA $C7BA
-  LDA $C7B3
-  STA $C7B7
-  LDA #$00
-  STA $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC $C7B2
-  STA $C7B6
-  LDA $C7BA
-  ADC #$00
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC #$00
-  STA $FB
-  LDA $C7BA
-  ADC #$80
-  STA $FC
-  LDY #$00
-  LDY #$00
-runtime_map_scroll_down_line_0:
-  LDA ($FB),Y
-  TAX
-  LDA asset_map_chars_0,X
-  STA $0402,Y
-  LDA asset_map_colors_0,X
-  STA $D802,Y
-  INY
-  CPY #$24
-  BNE runtime_map_scroll_down_line_0
-  RTS
 ; Dynamic map 0: redraw visible cells from runtime RAM
 runtime_map_redraw_0:
   JMP runtime_map_viewport_0
+runtime_map_pointer_0:
+  LDY $C7B3
+  CLC
+  LDA runtime_map_row_lo_0,Y
+  ADC $C7B2
+  STA $FB
+  LDA runtime_map_row_hi_0,Y
+  ADC #$00
+  STA $FC
+  LDY #$00
+  RTS
+runtime_map_row_lo_0:
+  .byte $00, $50, $A0, $F0, $40, $90, $E0, $30, $80, $D0, $20, $70, $C0, $10, $60, $B0, $00, $50, $A0, $F0, $40, $90, $E0, $30, $80, $D0, $20, $70, $C0, $10
+runtime_map_row_hi_0:
+  .byte $80, $80, $80, $80, $81, $81, $81, $82, $82, $82, $83, $83, $83, $84, $84, $84, $85, $85, $85, $85, $86, $86, $86, $87, $87, $87, $88, $88, $88, $89
 ; String pool
 str_screen_0:
   .byte $10, $0C, $01, $14, $06, $0F, $12, $0D, $05, $12, $20, $0D, $09, $0E, $09, $20, $20, $13, $03, $0F, $12, $05, $20, $30, $00

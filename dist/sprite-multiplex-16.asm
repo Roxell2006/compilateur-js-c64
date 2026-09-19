@@ -384,6 +384,14 @@ printat_loop_8:
   INX
   BNE printat_loop_8
 printat_done_9:
+  SEI
+  LDA #$7F
+  STA $DC0D
+  LDA #$7F
+  STA $DD0D
+  LDA $DC0D
+  LDA $DD0D
+  CLI
 ; Deterministic game frame loop
   LDA #$00
   STA $C76A
@@ -412,19 +420,25 @@ game_video_detect_pal:
 game_video_detect_done:
 game_frame_loop:
 game_frame_wait_leave:
+  LDA $D011
+  BMI game_frame_wait_leave
   LDA $D012
   CMP #$C8
-  BEQ game_frame_wait_leave
+  BCS game_frame_wait_leave
 game_frame_wait_target:
+  LDA $D011
+  BMI game_frame_target_reached
   LDA $D012
   CMP #$C8
-  BNE game_frame_wait_target
+  BCC game_frame_wait_target
+game_frame_target_reached:
   CLC
   LDA $C770
   ADC #$32
   STA $C770
   CMP $C76F
   BCS game_frame_logical_tick
+  JSR runtime_sprite_mux_render
   JMP game_frame_loop
 game_frame_logical_tick:
   SEC
@@ -757,8 +771,6 @@ runtime_sprite_mux_draw:
   TAX
   LDA $C500,Y
   STA $D000,X
-  LDA $C502,Y
-  STA $D001,X
   LDX $C595
   LDA runtime_sprite_mux_bit_masks,X
   STA $C599
@@ -771,61 +783,67 @@ runtime_sprite_mux_draw:
   LDA $D015
   ORA $C599
   STA $D015
-  LDA $D010
-  AND $C59A
-  STA $D010
-  LDY $C597
   LDA $C501,Y
   AND #$01
   BEQ runtime_sprite_mux_x_low
   LDA $D010
   ORA $C599
-  STA $D010
+  BNE runtime_sprite_mux_x_low_store
 runtime_sprite_mux_x_low:
-  LDA $D01C
+  LDA $D010
   AND $C59A
-  STA $D01C
-  LDY $C597
+runtime_sprite_mux_x_low_store:
+  STA $D010
   LDA $C406,Y
   AND #$01
   BEQ runtime_sprite_mux_no_multicolor
   LDA $D01C
   ORA $C599
-  STA $D01C
+  BNE runtime_sprite_mux_no_multicolor_store
 runtime_sprite_mux_no_multicolor:
-  LDA $D01D
+  LDA $D01C
   AND $C59A
-  STA $D01D
-  LDY $C597
+runtime_sprite_mux_no_multicolor_store:
+  STA $D01C
   LDA $C406,Y
   AND #$02
   BEQ runtime_sprite_mux_no_expand_x
   LDA $D01D
   ORA $C599
-  STA $D01D
+  BNE runtime_sprite_mux_no_expand_x_store
 runtime_sprite_mux_no_expand_x:
-  LDA $D017
+  LDA $D01D
   AND $C59A
-  STA $D017
-  LDY $C597
+runtime_sprite_mux_no_expand_x_store:
+  STA $D01D
   LDA $C406,Y
   AND #$04
   BEQ runtime_sprite_mux_no_expand_y
   LDA $D017
   ORA $C599
-  STA $D017
+  BNE runtime_sprite_mux_no_expand_y_store
 runtime_sprite_mux_no_expand_y:
-  LDA $D01B
+  LDA $D017
   AND $C59A
-  STA $D01B
-  LDY $C597
+runtime_sprite_mux_no_expand_y_store:
+  STA $D017
   LDA $C406,Y
   AND #$08
   BEQ runtime_sprite_mux_no_priority
   LDA $D01B
   ORA $C599
-  STA $D01B
+  BNE runtime_sprite_mux_no_priority_store
 runtime_sprite_mux_no_priority:
+  LDA $D01B
+  AND $C59A
+runtime_sprite_mux_no_priority_store:
+  STA $D01B
+  LDX $C595
+  TXA
+  ASL A
+  TAX
+  LDA $C502,Y
+  STA $D001,X
   LDX $C595
   LDY $C597
   LDA $C406,Y
@@ -849,9 +867,6 @@ runtime_sprite_mux_render:
 runtime_sprite_mux_wait_safe_raster:
   LDA $D011
   BMI runtime_sprite_mux_frame_ready
-  LDA $D012
-  CMP #$40
-  BCC runtime_sprite_mux_frame_ready
   JMP runtime_sprite_mux_wait_safe_raster
 runtime_sprite_mux_frame_ready:
   LDA #$00
@@ -871,6 +886,9 @@ runtime_sprite_mux_first_done:
   STX $C594
   CPX $C590
   BCS runtime_sprite_mux_render_done
+runtime_sprite_mux_wait_display_frame:
+  LDA $D011
+  BMI runtime_sprite_mux_wait_display_frame
 runtime_sprite_mux_schedule_next:
   LDX $C594
   CPX $C590
@@ -898,9 +916,16 @@ runtime_sprite_mux_find_next:
   CMP $C596
   BCC runtime_sprite_mux_skip_overflow
 runtime_sprite_mux_wait_release:
+  LDA $D011
+  BMI runtime_sprite_mux_render_done
   LDA $D012
   CMP $C596
   BCC runtime_sprite_mux_wait_release
+  CLC
+  ADC #$0A
+  BCS runtime_sprite_mux_skip_overflow
+  CMP $C502,Y
+  BCS runtime_sprite_mux_skip_overflow
   LDX $C595
   LDY $C597
   JSR runtime_sprite_mux_draw

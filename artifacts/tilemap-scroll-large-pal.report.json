@@ -1,0 +1,324 @@
+[
+  {
+    "type": "map-runtime",
+    "sourcePath": "<inline>",
+    "address": 32768,
+    "endAddress": 40895,
+    "bytes": 8128,
+    "indexBits": 16,
+    "objects": 0,
+    "activation": "eager-once",
+    "activeMapContract": false,
+    "storage": "inline",
+    "sharedMapRamSlot": false
+  },
+  {
+    "type": "map-scroll-blank-charset",
+    "address": 14336,
+    "endAddress": 16383,
+    "bytes": 2048
+  },
+  {
+    "type": "map-scroll",
+    "sourcePath": "<inline>",
+    "width": 28,
+    "height": 7,
+    "screenWidth": 28,
+    "screenHeight": 7,
+    "configuredHeight": 8,
+    "configuredScreenHeight": 8,
+    "panel": "bottom",
+    "panelRows": 11,
+    "panelScreenRow": 14,
+    "enterRasterLine": 30,
+    "exitRasterLine": 162,
+    "prepareRasterLine": 140,
+    "normalizeRasterLine": 149,
+    "blankRasterLine": 150,
+    "denOffRasterLine": 158,
+    "panelRasterLine": 160,
+    "recommendedFrameRasterLine": 166,
+    "strategy": "fine-scroll-xy-stream",
+    "verticalFineScrollSupported": true,
+    "fineStepCyclesEstimate": 48,
+    "horizontalWrapCyclesEstimate": 4520,
+    "verticalWrapCyclesEstimate": 4756,
+    "assumedRasterLine": 166,
+    "palSafeCyclesEstimate": 18396,
+    "ntscSafeCyclesEstimate": 15730,
+    "horizontalWrapFitsPal": true,
+    "horizontalWrapFitsNtsc": true,
+    "verticalUpWrapFitsPal": true,
+    "verticalUpWrapFitsNtsc": true,
+    "verticalDownWrapFitsPal": true,
+    "verticalDownWrapFitsNtsc": true,
+    "verticalWrapFitsPal": true,
+    "verticalWrapFitsNtsc": true,
+    "verticalPhaseTransitionLines": 23,
+    "guardRasterLines": 8,
+    "guardColor": "background",
+    "transitionRows": 1,
+    "panelMemoryRowOffset": -1,
+    "blankCharsetAddress": 14336,
+    "beamRacedRows": true,
+    "kernalTimerDisabled": true,
+    "irqTiming": "vic-only",
+    "stateBytes": 11
+  },
+  {
+    "type": "map-index",
+    "mapId": 0,
+    "strategy": "row-address-table",
+    "tableBytes": 128,
+    "callCyclesMax": 42
+  },
+  {
+    "type": "optimization-summary",
+    "mode": "balanced",
+    "programBytes": 3752,
+    "profiles": [
+      {
+        "mode": "size",
+        "assetProgramBytesEstimate": 1164,
+        "startupCyclesEstimate": 132588,
+        "compressedChunks": 32,
+        "runtimeStrategy": "shared-repeated-routines",
+        "estimatedProgramBytes": 3752
+      },
+      {
+        "mode": "balanced",
+        "assetProgramBytesEstimate": 1164,
+        "startupCyclesEstimate": 132588,
+        "compressedChunks": 32,
+        "runtimeStrategy": "shared-repeated-routines",
+        "estimatedProgramBytes": 3752,
+        "programBytes": 3752
+      },
+      {
+        "mode": "speed",
+        "assetProgramBytesEstimate": 8482,
+        "startupCyclesEstimate": 113856,
+        "compressedChunks": 0,
+        "runtimeStrategy": "inline-hot-paths",
+        "estimatedProgramBytes": 11070
+      }
+    ],
+    "rle": {
+      "candidates": 32,
+      "compressedChunks": 32,
+      "rawBytes": 8128,
+      "storedBytes": 268,
+      "estimatedNetSavedBytes": 7318
+    },
+    "sharedRoutines": {
+      "sidClick": false,
+      "spriteSync": 0,
+      "spriteAabb": false
+    },
+    "omittedRoutines": [
+      "sid-player",
+      "sid-fade",
+      "sprite-animator",
+      "sprite-multiplexer",
+      "map-activation",
+      "game-scenes",
+      "hires-runtime"
+    ],
+    "audio": {
+      "compactedRepeatTableBytes": 0,
+      "pooledIdenticalVoiceTableBytes": 0
+    },
+    "multiplexer": {
+      "enabled": false,
+      "logicalSprites": 0,
+      "sortComparisonsWorstCase": 0,
+      "sortCyclesEstimate": 0,
+      "projectionCyclesEstimate": 0,
+      "schedulingCyclesEstimate": 0,
+      "excludes": [
+        "raster-waits",
+        "vic-dma",
+        "interrupt-handlers",
+        "game-logic"
+      ],
+      "totalCyclesEstimate": 0
+    }
+  },
+  {
+    "type": "memory-layout",
+    "ranges": [
+      {
+        "name": "screen RAM",
+        "kind": "video",
+        "start": 1024,
+        "end": 2023,
+        "bytes": 1000
+      },
+      {
+        "name": "program",
+        "kind": "program",
+        "start": 2064,
+        "end": 5815,
+        "bytes": 3752
+      },
+      {
+        "name": "map scroll blank charset",
+        "kind": "charset",
+        "start": 14336,
+        "end": 16383,
+        "bytes": 2048
+      },
+      {
+        "name": "map 0",
+        "kind": "map",
+        "start": 32768,
+        "end": 40895,
+        "bytes": 8128,
+        "sourcePath": "<inline>"
+      },
+      {
+        "name": "IRQ state",
+        "kind": "runtime",
+        "start": 49406,
+        "end": 49406,
+        "bytes": 1
+      },
+      {
+        "name": "variable __mapScroller2_cameraX",
+        "kind": "variable",
+        "start": 49408,
+        "end": 49408,
+        "bytes": 1
+      },
+      {
+        "name": "variable __mapScroller2_fineX",
+        "kind": "variable",
+        "start": 49409,
+        "end": 49409,
+        "bytes": 1
+      },
+      {
+        "name": "variable __mapScroller2_cameraY",
+        "kind": "variable",
+        "start": 49410,
+        "end": 49410,
+        "bytes": 1
+      },
+      {
+        "name": "variable __mapScroller2_fineY",
+        "kind": "variable",
+        "start": 49411,
+        "end": 49411,
+        "bytes": 1
+      },
+      {
+        "name": "variable __mapScroller2_fixedD011",
+        "kind": "variable",
+        "start": 49412,
+        "end": 49412,
+        "bytes": 1
+      },
+      {
+        "name": "variable __mapScroller2_fixedD016",
+        "kind": "variable",
+        "start": 49413,
+        "end": 49413,
+        "bytes": 1
+      },
+      {
+        "name": "variable __mapScroller2_fixedD018",
+        "kind": "variable",
+        "start": 49414,
+        "end": 49414,
+        "bytes": 1
+      },
+      {
+        "name": "variable __mapScroller2_cameraPixelX",
+        "kind": "variable",
+        "start": 49415,
+        "end": 49416,
+        "bytes": 2
+      },
+      {
+        "name": "variable __mapScroller2_cameraPixelY",
+        "kind": "variable",
+        "start": 49417,
+        "end": 49418,
+        "bytes": 2
+      },
+      {
+        "name": "sprite animator",
+        "kind": "runtime",
+        "start": 49920,
+        "end": 49983,
+        "bytes": 64
+      },
+      {
+        "name": "sprite gameplay runtime",
+        "kind": "runtime",
+        "start": 50176,
+        "end": 50303,
+        "bytes": 128
+      },
+      {
+        "name": "sprite logical state",
+        "kind": "runtime",
+        "start": 50432,
+        "end": 50559,
+        "bytes": 128
+      },
+      {
+        "name": "Y-sorted sprite multiplexer",
+        "kind": "runtime",
+        "start": 50560,
+        "end": 50599,
+        "bytes": 40
+      },
+      {
+        "name": "non-blocking SID effects",
+        "kind": "runtime",
+        "start": 50608,
+        "end": 50614,
+        "bytes": 7
+      },
+      {
+        "name": "compiler runtime",
+        "kind": "runtime",
+        "start": 51000,
+        "end": 51071,
+        "bytes": 72
+      },
+      {
+        "name": "keyboard input runtime",
+        "kind": "runtime",
+        "start": 51072,
+        "end": 51103,
+        "bytes": 32
+      },
+      {
+        "name": "collision runtime",
+        "kind": "runtime",
+        "start": 51104,
+        "end": 51121,
+        "bytes": 18
+      },
+      {
+        "name": "dynamic map, viewport and entity temporary state",
+        "kind": "runtime",
+        "start": 51122,
+        "end": 51145,
+        "bytes": 24
+      },
+      {
+        "name": "color RAM",
+        "kind": "video",
+        "start": 55296,
+        "end": 56295,
+        "bytes": 1000
+      }
+    ],
+    "conflicts": [],
+    "programBytes": 3752,
+    "assetBytes": 10176
+  }
+]

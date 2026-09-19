@@ -168,13 +168,18 @@ game_video_detect_done:
   JSR game_scene_enter_dispatch
 game_frame_loop:
 game_frame_wait_leave:
+  LDA $D011
+  BMI game_frame_wait_leave
   LDA $D012
   CMP #$F0
-  BEQ game_frame_wait_leave
+  BCS game_frame_wait_leave
 game_frame_wait_target:
+  LDA $D011
+  BMI game_frame_target_reached
   LDA $D012
   CMP #$F0
-  BNE game_frame_wait_target
+  BCC game_frame_wait_target
+game_frame_target_reached:
   CLC
   LDA $C770
   ADC #$32
@@ -712,49 +717,7 @@ runtime_map_draw_tile_0:
   LDA $C7B3
   STA $C7C3
 runtime_map_draw_tile_body_0:
-  LDA #$00
-  STA $C7B6
-  LDA #$00
-  STA $C7BA
-  LDA $C7B3
-  STA $C7B7
-  LDA #$00
-  STA $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC $C7B2
-  STA $C7B6
-  LDA $C7BA
-  ADC #$00
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC #$00
-  STA $FB
-  LDA $C7BA
-  ADC #$80
-  STA $FC
-  LDY #$00
+  JSR runtime_map_pointer_0
   LDA ($FB),Y
   STA $C7B4
   LDA $C7B4
@@ -954,6 +917,51 @@ runtime_map_redraw_column_0:
   CMP #$0A
   BNE runtime_map_redraw_row_0
   RTS
+runtime_map_pointer_0:
+  LDA #$00
+  STA $C7B6
+  LDA #$00
+  STA $C7BA
+  LDA $C7B3
+  STA $C7B7
+  LDA #$00
+  STA $C7BF
+  ASL $C7B7
+  ROL $C7BF
+  CLC
+  LDA $C7B6
+  ADC $C7B7
+  STA $C7B6
+  LDA $C7BA
+  ADC $C7BF
+  STA $C7BA
+  ASL $C7B7
+  ROL $C7BF
+  ASL $C7B7
+  ROL $C7BF
+  CLC
+  LDA $C7B6
+  ADC $C7B7
+  STA $C7B6
+  LDA $C7BA
+  ADC $C7BF
+  STA $C7BA
+  CLC
+  LDA $C7B6
+  ADC $C7B2
+  STA $C7B6
+  LDA $C7BA
+  ADC #$00
+  STA $C7BA
+  CLC
+  LDA $C7B6
+  ADC #$00
+  STA $FB
+  LDA $C7BA
+  ADC #$80
+  STA $FC
+  LDY #$00
+  RTS
 ; Map 1: restore its embedded cells into runtime RAM
 runtime_map_activate_1:
   LDX #$00
@@ -1015,49 +1023,7 @@ runtime_map_draw_tile_1:
   LDA $C7B3
   STA $C7C3
 runtime_map_draw_tile_body_1:
-  LDA #$00
-  STA $C7B6
-  LDA #$00
-  STA $C7BA
-  LDA $C7B3
-  STA $C7B7
-  LDA #$00
-  STA $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC $C7B2
-  STA $C7B6
-  LDA $C7BA
-  ADC #$00
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC #$64
-  STA $FB
-  LDA $C7BA
-  ADC #$80
-  STA $FC
-  LDY #$00
+  JSR runtime_map_pointer_1
   LDA ($FB),Y
   STA $C7B4
   LDA $C7B4
@@ -1257,6 +1223,51 @@ runtime_map_redraw_column_1:
   CMP #$0A
   BNE runtime_map_redraw_row_1
   RTS
+runtime_map_pointer_1:
+  LDA #$00
+  STA $C7B6
+  LDA #$00
+  STA $C7BA
+  LDA $C7B3
+  STA $C7B7
+  LDA #$00
+  STA $C7BF
+  ASL $C7B7
+  ROL $C7BF
+  CLC
+  LDA $C7B6
+  ADC $C7B7
+  STA $C7B6
+  LDA $C7BA
+  ADC $C7BF
+  STA $C7BA
+  ASL $C7B7
+  ROL $C7BF
+  ASL $C7B7
+  ROL $C7BF
+  CLC
+  LDA $C7B6
+  ADC $C7B7
+  STA $C7B6
+  LDA $C7BA
+  ADC $C7BF
+  STA $C7BA
+  CLC
+  LDA $C7B6
+  ADC $C7B2
+  STA $C7B6
+  LDA $C7BA
+  ADC #$00
+  STA $C7BA
+  CLC
+  LDA $C7B6
+  ADC #$64
+  STA $FB
+  LDA $C7BA
+  ADC #$80
+  STA $FC
+  LDY #$00
+  RTS
 ; Map 2: restore its embedded cells into runtime RAM
 runtime_map_activate_2:
   LDX #$00
@@ -1318,49 +1329,7 @@ runtime_map_draw_tile_2:
   LDA $C7B3
   STA $C7C3
 runtime_map_draw_tile_body_2:
-  LDA #$00
-  STA $C7B6
-  LDA #$00
-  STA $C7BA
-  LDA $C7B3
-  STA $C7B7
-  LDA #$00
-  STA $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC $C7B2
-  STA $C7B6
-  LDA $C7BA
-  ADC #$00
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC #$C8
-  STA $FB
-  LDA $C7BA
-  ADC #$80
-  STA $FC
-  LDY #$00
+  JSR runtime_map_pointer_2
   LDA ($FB),Y
   STA $C7B4
   LDA $C7B4
@@ -1559,6 +1528,51 @@ runtime_map_redraw_column_2:
   LDA $C7B3
   CMP #$0A
   BNE runtime_map_redraw_row_2
+  RTS
+runtime_map_pointer_2:
+  LDA #$00
+  STA $C7B6
+  LDA #$00
+  STA $C7BA
+  LDA $C7B3
+  STA $C7B7
+  LDA #$00
+  STA $C7BF
+  ASL $C7B7
+  ROL $C7BF
+  CLC
+  LDA $C7B6
+  ADC $C7B7
+  STA $C7B6
+  LDA $C7BA
+  ADC $C7BF
+  STA $C7BA
+  ASL $C7B7
+  ROL $C7BF
+  ASL $C7B7
+  ROL $C7BF
+  CLC
+  LDA $C7B6
+  ADC $C7B7
+  STA $C7B6
+  LDA $C7BA
+  ADC $C7BF
+  STA $C7BA
+  CLC
+  LDA $C7B6
+  ADC $C7B2
+  STA $C7B6
+  LDA $C7BA
+  ADC #$00
+  STA $C7BA
+  CLC
+  LDA $C7B6
+  ADC #$C8
+  STA $FB
+  LDA $C7BA
+  ADC #$80
+  STA $FC
+  LDY #$00
   RTS
 ; String pool
 str_screen_0:

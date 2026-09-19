@@ -1,0 +1,42 @@
+{
+  "tilemap-scroll-x": {
+    "before": 3342,
+    "after": 2809,
+    "delta": -533
+  },
+  "sprite-multiplex-16": {
+    "before": 2237,
+    "after": 2267,
+    "delta": 30
+  },
+  "sid-beep": {
+    "before": 575,
+    "after": 575,
+    "delta": 0
+  },
+  "sid-game-audio": {
+    "before": 989,
+    "after": 999,
+    "delta": 10
+  },
+  "platformer-mini": {
+    "before": 11102,
+    "after": 10174,
+    "delta": -928
+  },
+  "snake": {
+    "before": 4110,
+    "after": 2859,
+    "delta": -1251
+  },
+  "breakout-mini": {
+    "before": 3361,
+    "after": 3371,
+    "delta": 10
+  },
+  "maze-game": {
+    "before": 1807,
+    "after": 1361,
+    "delta": -446
+  }
+}

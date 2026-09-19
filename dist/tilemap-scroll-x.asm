@@ -257,13 +257,18 @@ game_video_detect_pal:
 game_video_detect_done:
 game_frame_loop:
 game_frame_wait_leave:
+  LDA $D011
+  BMI game_frame_wait_leave
   LDA $D012
   CMP #$A6
-  BEQ game_frame_wait_leave
+  BCS game_frame_wait_leave
 game_frame_wait_target:
+  LDA $D011
+  BMI game_frame_target_reached
   LDA $D012
   CMP #$A6
-  BNE game_frame_wait_target
+  BCC game_frame_wait_target
+game_frame_target_reached:
   CLC
   LDA $C770
   ADC #$32
@@ -302,9 +307,9 @@ map_scroll_can_move_7:
   JMP map_scroll_moved_7
 map_scroll_wrap_7:
   DEC $C100
-  JSR runtime_map_scroll_shift_right_0
   LDA #$00
   STA $C101
+  JSR runtime_map_scroll_shift_right_0
 map_scroll_moved_7:
   LDA $C107
   BNE map_scroll_pixel_x_dec_7_low
@@ -330,9 +335,9 @@ map_scroll_can_move_10:
   JMP map_scroll_moved_10
 map_scroll_wrap_10:
   INC $C100
-  JSR runtime_map_scroll_shift_left_0
   LDA #$07
   STA $C101
+  JSR runtime_map_scroll_shift_left_0
 map_scroll_moved_10:
   INC $C107
   BNE map_scroll_pixel_x_inc_10_done
@@ -360,9 +365,9 @@ map_scroll_y_can_move_13:
   JMP map_scroll_y_moved_13
 map_scroll_y_wrap_13:
   DEC $C102
-  JSR runtime_map_scroll_shift_down_0
   LDA #$00
   STA $C103
+  JSR runtime_map_scroll_shift_down_0
 map_scroll_y_moved_13:
   LDA $C109
   BNE map_scroll_pixel_y_dec_13_low
@@ -388,9 +393,9 @@ map_scroll_y_can_move_16:
   JMP map_scroll_y_moved_16
 map_scroll_y_wrap_16:
   INC $C102
-  JSR runtime_map_scroll_shift_up_0
   LDA #$07
   STA $C103
+  JSR runtime_map_scroll_shift_up_0
 map_scroll_y_moved_16:
   INC $C109
   BNE map_scroll_pixel_y_inc_16_done
@@ -408,53 +413,7 @@ runtime_map_draw_tile_0:
   LDA $C7B3
   STA $C7C3
 runtime_map_draw_tile_body_0:
-  LDA #$00
-  STA $C7B6
-  LDA #$00
-  STA $C7BA
-  LDA $C7B3
-  STA $C7B7
-  LDA #$00
-  STA $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC $C7B2
-  STA $C7B6
-  LDA $C7BA
-  ADC #$00
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC #$00
-  STA $FB
-  LDA $C7BA
-  ADC #$80
-  STA $FC
-  LDY #$00
+  JSR runtime_map_pointer_0
   LDA ($FB),Y
   STA $C7B4
   LDA $C7B4
@@ -609,53 +568,7 @@ runtime_map_scroll_shift_left_0:
   STA $C7B2
   LDA $C102
   STA $C7B3
-  LDA #$00
-  STA $C7B6
-  LDA #$00
-  STA $C7BA
-  LDA $C7B3
-  STA $C7B7
-  LDA #$00
-  STA $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC $C7B2
-  STA $C7B6
-  LDA $C7BA
-  ADC #$00
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC #$00
-  STA $FB
-  LDA $C7BA
-  ADC #$80
-  STA $FC
-  LDY #$00
+  JSR runtime_map_pointer_0
   LDA $04F7
   STA $04F6
   LDA $D8F7
@@ -873,53 +786,7 @@ runtime_map_scroll_shift_right_0:
   STA $C7B2
   LDA $C102
   STA $C7B3
-  LDA #$00
-  STA $C7B6
-  LDA #$00
-  STA $C7BA
-  LDA $C7B3
-  STA $C7B7
-  LDA #$00
-  STA $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC $C7B2
-  STA $C7B6
-  LDA $C7BA
-  ADC #$00
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC #$00
-  STA $FB
-  LDA $C7BA
-  ADC #$80
-  STA $FC
-  LDY #$00
+  JSR runtime_map_pointer_0
   LDA $0510
   STA $0511
   LDA $D910
@@ -1217,53 +1084,7 @@ runtime_map_scroll_up_row_0_5:
   STA $C7B3
   LDA $C100
   STA $C7B2
-  LDA #$00
-  STA $C7B6
-  LDA #$00
-  STA $C7BA
-  LDA $C7B3
-  STA $C7B7
-  LDA #$00
-  STA $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC $C7B2
-  STA $C7B6
-  LDA $C7BA
-  ADC #$00
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC #$00
-  STA $FB
-  LDA $C7BA
-  ADC #$80
-  STA $FC
-  LDY #$00
+  JSR runtime_map_pointer_0
   LDY #$00
 runtime_map_scroll_up_line_0:
   LDA ($FB),Y
@@ -1360,53 +1181,7 @@ runtime_map_scroll_down_row_0_0:
   STA $C7B3
   LDA $C100
   STA $C7B2
-  LDA #$00
-  STA $C7B6
-  LDA #$00
-  STA $C7BA
-  LDA $C7B3
-  STA $C7B7
-  LDA #$00
-  STA $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  ASL $C7B7
-  ROL $C7BF
-  CLC
-  LDA $C7B6
-  ADC $C7B7
-  STA $C7B6
-  LDA $C7BA
-  ADC $C7BF
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC $C7B2
-  STA $C7B6
-  LDA $C7BA
-  ADC #$00
-  STA $C7BA
-  CLC
-  LDA $C7B6
-  ADC #$00
-  STA $FB
-  LDA $C7BA
-  ADC #$80
-  STA $FC
-  LDY #$00
+  JSR runtime_map_pointer_0
   LDY #$00
 runtime_map_scroll_down_line_0:
   LDA ($FB),Y
@@ -1422,6 +1197,21 @@ runtime_map_scroll_down_line_0:
 ; Dynamic map 0: redraw visible cells from runtime RAM
 runtime_map_redraw_0:
   JMP runtime_map_viewport_0
+runtime_map_pointer_0:
+  LDY $C7B3
+  CLC
+  LDA runtime_map_row_lo_0,Y
+  ADC $C7B2
+  STA $FB
+  LDA runtime_map_row_hi_0,Y
+  ADC #$00
+  STA $FC
+  LDY #$00
+  RTS
+runtime_map_row_lo_0:
+  .byte $00, $30, $60, $90, $C0, $F0, $20, $50, $80, $B0, $E0, $10, $40, $70, $A0, $D0, $00, $30, $60, $90
+runtime_map_row_hi_0:
+  .byte $80, $80, $80, $80, $80, $80, $81, $81, $81, $81, $81, $82, $82, $82, $82, $82, $83, $83, $83, $83
 ; String pool
 str_screen_0:
   .byte $16, $30, $2E, $31, $30, $20, $06, $09, $0E, $05, $20, $13, $03, $12, $0F, $0C, $0C, $20, $18, $2F, $19, $00

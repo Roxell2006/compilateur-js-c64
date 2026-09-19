@@ -42,6 +42,23 @@ describe("assembler opcodes", () => {
     asm.bne(rel("start"));
     expect(() => asm.toBytes()).toThrow(/out of range/i);
   });
+
+  it.each(["zp", "zpx", "zpy", "indx", "indy"])("resolves a %s label without overwriting the following opcode", mode => {
+    const asm = new Assembler6502(0x20);
+    if (mode === "zpy") asm.ldx({ mode, value: "target" });
+    else asm.lda({ mode, value: "target" });
+    asm.label("target");
+    asm.rts();
+    expect(Array.from(asm.toBytes()).slice(1)).toEqual([0x22, 0x60]);
+    expect(Array.from(asm.toBytes()).slice(1)).toEqual([0x22, 0x60]);
+  });
+
+  it("rejects zero-page labels that resolve outside zero page", () => {
+    const asm = new Assembler6502(0x810);
+    asm.lda({ mode: "zp", value: "target" });
+    asm.label("target"); asm.rts();
+    expect(() => asm.toBytes()).toThrow(/Zero-page label.*outside/);
+  });
 });
 
 describe("writers", () => {
@@ -531,7 +548,7 @@ describe("v0.8.2 virtual sprite multiplexer", () => {
 
     expect(result.prgBytes.length).toBeLessThan(2500);
     expect(result.asm.match(/runtime_sprite_mux_render:/g)).toHaveLength(1);
-    expect(result.asm.match(/JSR runtime_sprite_mux_render/g)).toHaveLength(1);
+    expect(result.asm.match(/JSR runtime_sprite_mux_render/g)).toHaveLength(2);
     expect(result.asm).toMatch(/runtime_sprite_mux_sort:/);
     expect(result.asm).toMatch(/runtime_sprite_mux_schedule_next:/);
     expect(result.asm).toMatch(/runtime_sprite_mux_wait_safe_raster:/);
@@ -1349,8 +1366,8 @@ describe("v0.10.1 map entities foundation", () => {
     expect(result.prgBytes[0]).toBe(0x01);
     expect(result.prgBytes[1]).toBe(0x08);
     expect(result.asm).toMatch(/runtime_map_entity_point_value_0:/);
-    expect(result.asm).toMatch(/Dynamic 16-to-8 sprite multiplexer/);
-    expect(result.asm).toMatch(/runtime_sprite_mux_wait_safe_raster:/);
+    expect(result.asm).toMatch(/runtime_sprite_mux_present:/);
+    expect(result.asm).not.toMatch(/runtime_sprite_mux_wait_safe_raster:/);
     expect(result.asm).not.toMatch(/runtime_sprite_mux_wait_low_raster:/);
     expect(result.asm).toMatch(/Raster IRQ dispatcher/);
     expect(result.assetReport).toEqual(expect.arrayContaining([

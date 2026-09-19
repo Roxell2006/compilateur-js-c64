@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Fixed Platformer Mini's late horizontal row copies: prepare camera movement early, defer copying to the scroll-band end, and present up to eight logical sprites in fixed IRQ slots; added PAL row-fetch regression coverage across the complete map in both directions
+- Replaced blocking SID effect delays with an on-demand 50 Hz PAL/NTSC IRQ sequencer, pooled effect tables, atomic retriggers and preserved map pointers; warn on synchronous legacy note/rest durations
+- Fixed frame waits missing scanlines covered by IRQs, respected the scroll band with multiplexing, and published fine-scroll phases before coarse copies
+- Fixed multiplexed sprite recycling across raster 255/256, replayed display lists on skipped NTSC logic ticks, committed Y after sprite attributes and guarded late channel writes
+- Shared map address routines, used bounded row-address lookups for scrolling maps and omitted unused scroll directions
+- Added execution tests for emitted 6502 code, including 8,128-cell maps, PAL/NTSC frame boundaries and SID effect lifetimes
+- Fixed zero-page label fixups overwriting the following machine instruction and rejected labels outside zero page
 - Made ROM-backed screen codes 0–63 automatic for every custom charset; `romCharacters` is no longer required in user assets
 - Updated the asset studio to export only custom glyphs in JSON, JS, BIN and ASM while keeping the system area visible and protected in the editor
 - Updated Snake with readable ROM-backed text and score, FIRE-to-start, and FIRE/SPACE restart with a complete map and score reset

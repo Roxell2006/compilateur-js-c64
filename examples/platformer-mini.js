@@ -91,7 +91,8 @@ const camera = c64.map.scroller(level, {
   // Les lignes 2 a 20 contiennent les deux hauteurs jouables et le sol.
   sourceY: 2,
   // 36 colonnes laissent deux colonnes de garde de chaque cote au VIC-II.
-  // Le recopiage d'une colonne complete reste ainsi dans le budget NTSC.
+  // Le compilateur prepare le suivi avant de copier les lignes apres la zone
+  // visible ; les trois sprites sont presentes par IRQ. Timing teste en PAL.
   width: 36,
   x: 2,
   panel: { bottom: 5 }

@@ -17,16 +17,14 @@
     "./irq/raster": "./src/irq/raster.js"
   },
   "files": [
-    "src",
-    "schemas",
-    "examples",
+    "src/**/*.js",
+    "schemas/*.schema.json",
+    "examples/*.js",
+    "examples/assets/*.json",
     "README.md",
     "LICENSE",
     "CHANGELOG.md",
-    "RELEASE_CHECKLIST.md",
-    "release-budgets.json",
     "MODE_EMPLOI_DEBUTANT.txt",
-    "MODE_EMPLOI_PUBLICATION_NPM.txt",
     "index.d.ts"
   ],
   "scripts": {
@@ -36,6 +34,7 @@
     "build:demos": "node scripts/build-examples.js",
     "build:release": "node scripts/build-release.js",
     "release:check": "node scripts/release-check.js",
+    "package:check": "node scripts/check-package.js",
     "test": "vitest run",
     "prepublishOnly": "npm run release:check"
   },

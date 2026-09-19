@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { validatePackageContents } from "./check-package.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const npmCommand = process.platform === "win32" ? process.execPath : "npm";
@@ -28,14 +29,7 @@ function run(command, args, options = {}) {
   });
 }
 
-function exportTargets(exportsField) {
-  return Object.values(exportsField).flatMap((value) => typeof value === "string"
-    ? [value]
-    : Object.values(value).filter((entry) => typeof entry === "string"));
-}
-
 const pkg = JSON.parse(await fs.readFile(path.join(ROOT, "package.json"), "utf8"));
-if (pkg.version !== "1.0.0") throw new Error(`package version must be 1.0.0, found ${pkg.version}`);
 if (!pkg.author || JSON.stringify(pkg.repository).includes("yourname")) throw new Error("package publication metadata is incomplete");
 
 await run(process.execPath, [path.join(ROOT, "node_modules", "vitest", "vitest.mjs"), "run"]);
@@ -45,20 +39,7 @@ const temporaryRoot = await fs.mkdtemp(path.join(os.tmpdir(), "js-c64-release-")
 try {
   const packed = await run(npmCommand, [...npmPrefix, "pack", "--json", "--pack-destination", temporaryRoot], { capture: true });
   const packResult = JSON.parse(packed.stdout).at(0);
-  const publishedFiles = new Set(packResult.files.map((entry) => entry.path.replaceAll("\\", "/")));
-  for (const target of [pkg.main, pkg.types, pkg.bin.c64js, ...exportTargets(pkg.exports)]) {
-    const normalized = target.replace(/^\.\//, "");
-    if (!publishedFiles.has(normalized)) throw new Error(`published package is missing ${normalized}`);
-  }
-  const frozenFiles = [
-    "README.md", "LICENSE", "CHANGELOG.md", "index.d.ts",
-    "RELEASE_CHECKLIST.md", "release-budgets.json",
-    "MODE_EMPLOI_DEBUTANT.txt",
-    "schemas/map-asset-v1.schema.json", "schemas/sprite-asset-v1.schema.json"
-  ];
-  for (const file of frozenFiles) {
-    if (!publishedFiles.has(file)) throw new Error(`published package is missing ${file}`);
-  }
+  const publishedFiles = validatePackageContents(packResult, pkg);
 
   const project = path.join(temporaryRoot, "consumer");
   await fs.mkdir(project);
@@ -81,4 +62,4 @@ try {
   await fs.rm(temporaryRoot, { recursive: true, force: true });
 }
 
-console.log("js-c64 1.0.0 release check passed.");
+console.log(`js-c64 ${pkg.version} release check passed.`);

@@ -362,7 +362,7 @@
         ]
       }
     ],
-    "mainProgramBytes": 3434,
+    "mainProgramBytes": 3456,
     "assetBytes": 856,
     "sharedMapRamSlot": true,
     "activeMapSlotAddress": 32768,
@@ -371,7 +371,7 @@
   {
     "type": "optimization-summary",
     "mode": "balanced",
-    "programBytes": 3434,
+    "programBytes": 3456,
     "profiles": [
       {
         "mode": "size",
@@ -379,7 +379,7 @@
         "startupCyclesEstimate": 0,
         "compressedChunks": 0,
         "runtimeStrategy": "shared-repeated-routines",
-        "estimatedProgramBytes": 3434
+        "estimatedProgramBytes": 3456
       },
       {
         "mode": "balanced",
@@ -387,8 +387,8 @@
         "startupCyclesEstimate": 0,
         "compressedChunks": 0,
         "runtimeStrategy": "shared-repeated-routines",
-        "estimatedProgramBytes": 3434,
-        "programBytes": 3434
+        "estimatedProgramBytes": 3456,
+        "programBytes": 3456
       },
       {
         "mode": "speed",
@@ -396,7 +396,7 @@
         "startupCyclesEstimate": 0,
         "compressedChunks": 0,
         "runtimeStrategy": "inline-hot-paths",
-        "estimatedProgramBytes": 3434
+        "estimatedProgramBytes": 3456
       }
     ],
     "rle": {
@@ -428,6 +428,13 @@
       "sortComparisonsWorstCase": 0,
       "sortCyclesEstimate": 0,
       "projectionCyclesEstimate": 0,
+      "schedulingCyclesEstimate": 0,
+      "excludes": [
+        "raster-waits",
+        "vic-dma",
+        "interrupt-handlers",
+        "game-logic"
+      ],
       "totalCyclesEstimate": 0
     }
   },
@@ -445,8 +452,8 @@
         "name": "program",
         "kind": "program",
         "start": 2064,
-        "end": 5497,
-        "bytes": 3434
+        "end": 5519,
+        "bytes": 3456
       },
       {
         "name": "sprite frames",
@@ -522,6 +529,13 @@
         "bytes": 40
       },
       {
+        "name": "non-blocking SID effects",
+        "kind": "runtime",
+        "start": 50608,
+        "end": 50614,
+        "bytes": 7
+      },
+      {
         "name": "compiler runtime",
         "kind": "runtime",
         "start": 51000,
@@ -558,7 +572,7 @@
       }
     ],
     "conflicts": [],
-    "programBytes": 3434,
+    "programBytes": 3456,
     "assetBytes": 2408
   },
   {
@@ -573,7 +587,7 @@
       {
         "name": "MULTILEVEL",
         "type": "prg",
-        "bytes": 3451,
+        "bytes": 3473,
         "blocks": 14,
         "startTrack": 1,
         "startSector": 0

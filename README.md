@@ -441,8 +441,10 @@ is therefore not cut and does not need to be duplicated in two fixed banks.
 Its limits are:
 
 - one `c64.game.frame()` loop is required;
-- the logical update starts near raster line 200; only logical RAM is changed,
-  and VIC registers are left untouched until the real start of the next frame;
+- the logical update starts near raster line 200, or after the scrolling band
+  when a map scroller is present; an explicit `rasterLine` overrides this;
+- the first channels are prepared in the lower border; recycling waits for
+  the actual frame wrap and checks that register writes can finish before Y;
 - all indexes `0..15` may move freely between the top, middle and bottom;
 - no more than eight sprites can overlap the same raster lines;
 - when a ninth sprite overlaps the same vertical interval, that sprite is
@@ -454,6 +456,13 @@ Its limits are:
   related hardware API; use the returned sprite objects;
 - frame work must stay bounded so sorting and the first eight channel writes
   finish before the next visible frame.
+
+The display list is replayed on every video frame, including NTSC frames that
+skip the 50 Hz gameplay update. KERNAL CIA timer interrupts are disabled by
+default for multiplexing, as they are for scrolling; direct input snapshots
+continue to work. An explicit `c64.irq.enableKernalTimer()` opts back in.
+The budget report includes a conservative 14-line reprogramming gap after the
+previous sprite's height. CPU estimates exclude VIC DMA, IRQ work and waits.
 
 See [examples/sprite-multiplex-16.js](./examples/sprite-multiplex-16.js).
 
@@ -621,9 +630,29 @@ dispatcher jitter between closely spaced register writes.
 Current limits are deliberate: tiles must be 1x1 character, the visible window
 must stay in columns 1 through 38, and movement should run inside
 `c64.game.frame()`. Coarse X copies finish each row from top to bottom and copy
-two cells per branch. When `rasterLine` is omitted, the compiler automatically
+two cells per branch (four on the large deferred left-copy path). When `rasterLine` is omitted, the compiler automatically
 synchronizes the game loop just after the scrolling band. The initial `draw()`
 remains a full viewport draw.
+
+Fine-scroll wrap values are published before row copies so the next raster
+entry sees the phase matching the newly streamed characters. In `balanced` and
+`speed` modes, scrolling maps share a table of row addresses (two bytes per map
+row), keeping a tile-address calculation within 42 CPU cycles including `JSR`.
+`size` mode shares an arithmetic address routine instead. Only referenced
+scroll directions are included in the PRG. The frame loop detects crossing
+the target raster, so an IRQ spanning that line does not force an extra frame
+of waiting.
+
+For a large horizontal viewport with one direct `camera.follow()` per frame
+and at most eight logical sprites, the automatic frame loop prepares movement
+after the scroll-entry IRQ, defers character/color copies until the end of the
+scrolling band, and presents sprites in fixed hardware slots at raster 256.
+A pending-frame flag retains a tick received during a copy. This avoids the
+late-copy artifacts and extra polling frame reproduced in `platformer-mini`.
+Explicit frame rasters, manual scroll moves, scene/asset transitions and calls
+to user routines retain the existing scheduling path. The example's PAL
+regression executes both scroll directions across all 45 camera columns with
+three sprites and checks screen/color rows at their raster fetch deadlines.
 
 The build `assetReport` contains `map-scroll` with separate horizontal and
 vertical wrap estimates, raster split lines, PAL/NTSC safety windows and eleven
@@ -632,6 +661,11 @@ runtime state bytes when Y scrolling is used. It also reports `transitionRows`,
 beam-raced row strategy and PAL/NTSC budgets. The coarse `drawViewport()` API
 remains available and still reports `map-viewport`. See
 [examples/tilemap-scroll-x.js](./examples/tilemap-scroll-x.js).
+
+The wrap estimates cover copy CPU work; they do not include user logic, IRQ
+handlers or VIC DMA stalls. A `FitsPal`/`FitsNtsc` estimate alone is therefore
+not a guarantee of tear-free rendering for a complete game. The focused
+`platformer-mini` timing regression currently models PAL, not NTSC.
 
 If an actually used vertical direction cannot finish before the PAL raster beam
 returns, compilation now fails instead of emitting a visibly unstable wrap.
@@ -777,6 +811,19 @@ The SID layer now includes the completed `v0.11.0` game-audio foundation:
 - `c64.sid.explosion()`
 - `c64.sid.laser()`
 - `c64.sid.pickup()`
+
+All six effect helpers return immediately. `beep`, `noise`, `explosion`,
+`laser` and `pickup` use a shared IRQ sequencer; `click` joins it when it is
+present, otherwise it retains its compact envelope-only implementation.
+Effects use the reserved SFX voice, or voice 1 by default. A new effect replaces
+the previous one on that voice; consecutive calls do not form a queue.
+`noise(duration)` counts 1/50-second ticks on both PAL and NTSC (`0` means one
+tick). The release envelope continues in the SID after the last gate-off.
+Effect timbres retain their waveforms/envelopes, but their durations now follow
+the video clock rather than CPU busy loops. Onset is on the next logical audio
+tick. `note()` and `rest()` with a positive duration remain synchronous legacy
+calls and produce a `SID_BLOCKING_DELAY` build warning; use `playSong()` for
+background note sequences.
 
 Supported waveforms:
 

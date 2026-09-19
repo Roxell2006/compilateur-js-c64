@@ -91,6 +91,7 @@ const GAME_SCENE_NONE = 0xff;
 const GAME_SCENE_IDS = Object.freeze({ title: 0, game: 1, pause: 2, gameOver: 3 });
 const DISK_LOAD_ERROR = 0xc77c;
 const GAME_RANDOM_STATE = 0xc77d;
+const GAME_FRAME_PENDING = 0xc77e;
 const KEYBOARD_CURRENT_BASE = 0xc780;
 const KEYBOARD_PREVIOUS_BASE = 0xc790;
 const MAX_KEYBOARD_ACTIONS = 16;
@@ -111,8 +112,16 @@ const SPRITE_MUX_LOGICAL_OFFSET = 0xc597;
 const SPRITE_MUX_COORD_OFFSET = 0xc598;
 const SPRITE_MUX_BIT_MASK = 0xc599;
 const SPRITE_MUX_INVERSE_MASK = 0xc59a;
+const SPRITE_MUX_PRESENT_READY = 0xc59b;
 const SPRITE_MUX_SLOT_END_BASE = 0xc5a0;
 const SPRITE_MUX_FRAME_RASTER = 200;
+const SID_SFX_POINTER_LO = 0xc5b0;
+const SID_SFX_POINTER_HI = 0xc5b1;
+const SID_SFX_TICKS = 0xc5b2;
+const SID_SFX_CURSOR = 0xc5b3;
+const SID_SFX_CONTROL = 0xc5b4;
+const SID_SFX_ACTIVE = 0xc5b5;
+const SID_SFX_RATE = 0xc5b6;
 // Large mutable maps live in the free RAM window below BASIC ROM. Indexing is
 // 16-bit, so a level is no longer limited to a single 256-byte page.
 const MAP_RUNTIME_BASE = 0x8000;
@@ -166,6 +175,7 @@ const RESERVED_RUNTIME_RANGES = Object.freeze([
   { start: SPRITE_RUNTIME_BASE, end: SPRITE_RUNTIME_BASE + SPRITE_RUNTIME_STRIDE * SPRITE_LOGICAL_COUNT - 1, name: "sprite gameplay runtime" },
   { start: SPRITE_LOGICAL_STATE_BASE, end: SPRITE_LOGICAL_STATE_BASE + SPRITE_LOGICAL_STATE_STRIDE * SPRITE_LOGICAL_COUNT - 1, name: "sprite logical state" },
   { start: SPRITE_MUX_SORTED_BASE, end: SPRITE_MUX_SLOT_END_BASE + 7, name: "Y-sorted sprite multiplexer" },
+  { start: SID_SFX_POINTER_LO, end: SID_SFX_RATE, name: "non-blocking SID effects" },
   { start: COLLISION_TEMP_BASE, end: VIC_BACKGROUND_COLLISION_SNAPSHOT, name: "collision runtime" },
   { start: MAP_TEMP_X, end: MAP_ENTITY_COLLISION_MODE, name: "dynamic map, viewport and entity temporary state" }
 ]);
@@ -658,6 +668,10 @@ function emitSidDelay(asm, compileState, duration) {
   if (duration === 0) {
     return;
   }
+  if (!compileState.assets.report.some(entry => entry.code === "SID_BLOCKING_DELAY")) {
+    compileState.assets.report.push({ type: "warning", code: "SID_BLOCKING_DELAY",
+      message: "sid.note()/rest() with a positive duration waits synchronously. Use playSong() or the non-blocking effect helpers in real-time code." });
+  }
 
   const outerLabel = `sid_delay_outer_${compileState.loopCounter++}`;
   const middleLabel = `sid_delay_middle_${compileState.loopCounter++}`;
@@ -825,17 +839,52 @@ function sidEffectVoice(compileState) {
   return compileState.sid.player.sfxVoice ?? 1;
 }
 
+// Each step is duration (50 Hz ticks), frequency lo/hi, control, AD, SR.
+// A zero duration ends the effect. Only used effect tables enter the PRG.
+function emitSidEffect(asm, state, steps) {
+  const bytes = [...steps.flat(), 0];
+  const key = bytes.join(",");
+  let label = state.sfx.tables.get(key);
+  if (!label) {
+    label = 'sid_sfx_data_' + state.sfx.tables.size;
+    state.sfx.tables.set(key, label);
+    state.dataPool.set(label, bytes);
+  }
+  asm.lda(immLo(label)); asm.ldx(immHi(label));
+  if (state.optimization.mode !== "speed" && state.optimization.sidEffectCount > 1) {
+    state.sfx.sharedStart = true;
+    asm.jsr(abs("runtime_sid_sfx_start"));
+  } else {
+    emitSidSfxStartBody(asm);
+  }
+}
+
+function emitSidSfxStartBody(asm) {
+  // Publish a complete request atomically. Preserve I, including IRQ callers.
+  asm.php(); asm.sei();
+  asm.sta(abs(SID_SFX_POINTER_LO)); asm.stx(abs(SID_SFX_POINTER_HI));
+  emitStoreImmediate(asm, SID_SFX_CURSOR, 0);
+  emitStoreImmediate(asm, SID_SFX_TICKS, 1);
+  asm.sta(abs(SID_SFX_ACTIVE));
+  asm.plp();
+}
+
+function sidEffectStep(duration, frequency, control, ad, sr) {
+  const raw = typeof frequency === "string" ? sidNoteNameToRaw(frequency) : frequency;
+  return [duration, raw & 255, raw >> 8, control, ad, sr];
+}
+
 function emitSidBeep(asm, compileState) {
-  const voice = sidEffectVoice(compileState);
   emitSidVolume(asm, compileState, 15);
-  emitSidVoiceWaveform(asm, compileState, voice, "pulse");
-  emitSidVoicePulseWidth(asm, voice, 0x0800);
-  emitSidVoiceAttackDecay(asm, voice, 0x11);
-  emitSidVoiceSustainRelease(asm, voice, 0xf0);
-  emitSidNote(asm, compileState, voice, "C5", 10);
+  emitSidEffect(asm, compileState, [sidEffectStep(10, "C5", 0x41, 0x11, 0xf0)]);
 }
 
 function emitSidClick(asm, compileState) {
+  if (compileState.sfx.enabled) {
+    emitSidVolume(asm, compileState, 15);
+    emitSidEffect(asm, compileState, [sidEffectStep(1, 0x8b39, 0x11, 0, 0)]);
+    return;
+  }
   const voice = sidEffectVoice(compileState);
   emitSidVolume(asm, compileState, 15);
   compileState.sid.voiceControls[voice - 1] = 0x11;
@@ -869,17 +918,9 @@ function emitSharedSidClickRoutine(asm, state) {
 }
 
 function emitSidNoise(asm, compileState, duration = 12) {
-  const voice = sidEffectVoice(compileState);
   ensureSidDuration(duration);
   emitSidVolume(asm, compileState, 15);
-  emitSidVoiceWaveform(asm, compileState, voice, "noise");
-  emitSidVoiceAttackDecay(asm, voice, 0x24);
-  emitSidVoiceSustainRelease(asm, voice, 0xf4);
-  emitSidVoiceFrequency(asm, voice, 0x1800);
-  emitSidVoiceGate(asm, compileState, voice, true);
-  emitSidDelay(asm, compileState, duration);
-  emitSidVoiceGate(asm, compileState, voice, false);
-  emitSidReleaseDelay(asm, compileState, duration);
+  emitSidEffect(asm, compileState, [sidEffectStep(Math.max(1, duration), 0x1800, 0x81, 0x24, 0xf4)]);
 }
 
 function emitSidExplosion(asm, compileState) {
@@ -887,23 +928,66 @@ function emitSidExplosion(asm, compileState) {
 }
 
 function emitSidLaser(asm, compileState) {
-  const voice = sidEffectVoice(compileState);
   emitSidVolume(asm, compileState, 15);
-  emitSidVoiceWaveform(asm, compileState, voice, "saw");
-  emitSidVoiceAttackDecay(asm, voice, 0x01);
-  emitSidVoiceSustainRelease(asm, voice, 0x82);
-  emitSidNote(asm, compileState, voice, "C6", 6);
-  emitSidNote(asm, compileState, voice, "G5", 8);
+  emitSidEffect(asm, compileState, [
+    sidEffectStep(6, "C6", 0x21, 0x01, 0x82),
+    sidEffectStep(8, "G5", 0x21, 0x01, 0x82)
+  ]);
 }
 
 function emitSidPickup(asm, compileState) {
-  const voice = sidEffectVoice(compileState);
   emitSidVolume(asm, compileState, 15);
-  emitSidVoiceWaveform(asm, compileState, voice, "triangle");
-  emitSidVoiceAttackDecay(asm, voice, 0x11);
-  emitSidVoiceSustainRelease(asm, voice, 0xb2);
-  emitSidNote(asm, compileState, voice, "C5", 5);
-  emitSidNote(asm, compileState, voice, "G5", 5);
+  emitSidEffect(asm, compileState, [
+    sidEffectStep(5, "C5", 0x11, 0x11, 0xb2),
+    sidEffectStep(5, "G5", 0x11, 0x11, 0xb2)
+  ]);
+}
+
+function emitSidSfxTick(asm, state) {
+  if (state.sfx.enabled) asm.jsr(abs("runtime_sid_sfx_tick"));
+}
+
+function emitSidSfxRoutine(asm, state) {
+  if (!state.sfx.enabled) return;
+  const base = sidVoiceBase(sidEffectVoice(state));
+  if (state.sfx.sharedStart) {
+    asm.label("runtime_sid_sfx_start"); emitSidSfxStartBody(asm); asm.rts();
+  }
+  asm.comment("Non-blocking SID effects, one bounded tick per video IRQ");
+  asm.label("runtime_sid_sfx_tick");
+  asm.clc(); asm.lda(abs(SID_SFX_RATE)); asm.adc(imm(50));
+  asm.cmp(abs(GAME_VIDEO_HZ)); asm.bcs(rel("runtime_sid_sfx_clock"));
+  asm.sta(abs(SID_SFX_RATE)); asm.rts();
+  asm.label("runtime_sid_sfx_clock");
+  asm.sbc(abs(GAME_VIDEO_HZ)); asm.sta(abs(SID_SFX_RATE));
+  asm.lda(abs(SID_SFX_ACTIVE)); asm.beq(rel("runtime_sid_sfx_idle"));
+  asm.dec(abs(SID_SFX_TICKS)); asm.beq(rel("runtime_sid_sfx_step"));
+  asm.label("runtime_sid_sfx_idle"); asm.rts();
+  asm.label("runtime_sid_sfx_step");
+  // Scroll/map code also uses this pointer: preserve it across the IRQ.
+  asm.lda(zp(HIRES_ZP_PTR_LO)); asm.pha();
+  asm.lda(zp(HIRES_ZP_PTR_HI)); asm.pha();
+  asm.lda(abs(SID_SFX_POINTER_LO)); asm.sta(zp(HIRES_ZP_PTR_LO));
+  asm.lda(abs(SID_SFX_POINTER_HI)); asm.sta(zp(HIRES_ZP_PTR_HI));
+  asm.ldy(abs(SID_SFX_CURSOR));
+  asm.lda(indy(HIRES_ZP_PTR_LO)); asm.beq(rel("runtime_sid_sfx_stop"));
+  asm.sta(abs(SID_SFX_TICKS));
+  // Clear GATE before changing frequency/envelope, even on retrigger.
+  asm.lda(abs(SID_SFX_CONTROL)); asm.and(imm(0xfe)); asm.sta(abs(base + 4));
+  for (const address of [base, base + 1, SID_SFX_CONTROL, base + 5, base + 6]) {
+    asm.iny(); asm.lda(indy(HIRES_ZP_PTR_LO)); asm.sta(abs(address));
+  }
+  asm.iny(); asm.sty(abs(SID_SFX_CURSOR));
+  emitStoreImmediate(asm, base + 2, 0);
+  emitStoreImmediate(asm, base + 3, 8);
+  asm.lda(abs(SID_SFX_CONTROL)); asm.sta(abs(base + 4));
+  asm.jmp(abs("runtime_sid_sfx_restore"));
+  asm.label("runtime_sid_sfx_stop");
+  asm.sta(abs(SID_SFX_ACTIVE));
+  asm.lda(abs(SID_SFX_CONTROL)); asm.and(imm(0xfe)); asm.sta(abs(base + 4));
+  asm.label("runtime_sid_sfx_restore");
+  asm.pla(); asm.sta(zp(HIRES_ZP_PTR_HI));
+  asm.pla(); asm.sta(zp(HIRES_ZP_PTR_LO)); asm.rts();
 }
 
 function emitSidSongPlayer(asm, compileState, songDefinition) {
@@ -1270,6 +1354,7 @@ function emitSidPlayerRoutine(asm, state) {
   emitSidPlayerCore(asm, runtime);
   asm.jmp(abs(runtime.doneLabel));
   asm.label(runtime.doneLabel);
+  emitSidSfxTick(asm, state);
   setRasterLine(asm, state.sid.player.line);
   emitIrqExit(asm, false, true);
   registerSidPlayerData(state, runtime);
@@ -3126,8 +3211,30 @@ function emitMapCoordinatesOrJumpInvalid(asm, compileState, asset, x, y, invalid
   emitRuntimeValueToA(asm, compileState, y, "tile y"); asm.cmp(imm(asset.map.height)); asm.bcc(rel(`map_y_ok_${id}`)); asm.jmp(abs(invalidLabel)); asm.label(`map_y_ok_${id}`); asm.sta(abs(MAP_TEMP_Y));
 }
 
-function emitMapIndexToPointer(asm, info, id) {
+function emitMapIndexToPointer(asm, info) {
+  info.pointerNeeded = true;
+  asm.jsr(abs('runtime_map_pointer_' + info.id));
+}
+
+function emitMapPointerRoutine(asm, state, info) {
+  if (!info.pointerNeeded) return;
+  asm.label('runtime_map_pointer_' + info.id);
   const asset = info.asset;
+  if (info.horizontalScroller && state.optimization.mode !== "size") {
+    // Absolute row bases make the scrolling hot path independent of map width
+    // and camera Y. Tables cost two bytes per map row, shared by every caller.
+    const low = 'runtime_map_row_lo_' + info.id;
+    const high = 'runtime_map_row_hi_' + info.id;
+    asm.ldy(abs(MAP_TEMP_Y));
+    asm.clc(); asm.lda(absy(low)); asm.adc(abs(MAP_TEMP_X)); asm.sta(zp(HIRES_ZP_PTR_LO));
+    asm.lda(absy(high)); asm.adc(imm(0)); asm.sta(zp(HIRES_ZP_PTR_HI));
+    asm.ldy(imm(0)); asm.rts();
+    const rows = Array.from({ length: asset.map.height }, (_, y) => info.runtimeAddress + y * asset.map.width);
+    asm.label(low); asm.byte(rows.map(address => address & 255));
+    asm.label(high); asm.byte(rows.map(address => address >> 8));
+    state.assets.report.push({ type: "map-index", mapId: info.id, strategy: "row-address-table", tableBytes: rows.length * 2, callCyclesMax: 42 });
+    return;
+  }
   // Compute y * mapWidth with a constant shift/add multiply. The former
   // repeated-add loop cost increasingly more cycles on lower map rows, which
   // made collision probes and coarse-scroll frames miss their raster budget.
@@ -3151,7 +3258,7 @@ function emitMapIndexToPointer(asm, info, id) {
   asm.lda(abs(MAP_TEMP_INDEX_HI)); asm.adc(imm(0)); asm.sta(abs(MAP_TEMP_INDEX_HI));
   asm.clc(); asm.lda(abs(MAP_TEMP_INDEX)); asm.adc(imm(info.runtimeAddress & 0xff)); asm.sta(zp(HIRES_ZP_PTR_LO));
   asm.lda(abs(MAP_TEMP_INDEX_HI)); asm.adc(imm((info.runtimeAddress >> 8) & 0xff)); asm.sta(zp(HIRES_ZP_PTR_HI));
-  asm.ldy(imm(0));
+  asm.ldy(imm(0)); asm.rts();
 }
 
 function configureMapDraw(compileState, info, options) {
@@ -3473,6 +3580,7 @@ function emitMapHorizontalScrollerCreate(asm, compileState, ref, asset, options)
     strategy: panel === "bottom" ? "fine-scroll-xy-stream" : "fine-scroll-x-column-stream",
     verticalFineScrollSupported: panel === "bottom",
     fineStepCyclesEstimate: 48,
+    timingEstimateScope: "copy-cpu-only",
     horizontalWrapCyclesEstimate: horizontalShiftCyclesEstimate,
     verticalWrapCyclesEstimate: verticalShiftCyclesEstimate,
     assumedRasterLine: recommendedFrameRasterLine,
@@ -3513,6 +3621,7 @@ function emitMapHorizontalScrollerDraw(asm, compileState, ref) {
 }
 
 function emitMapHorizontalScrollerSingleStep(asm, compileState, scroller, direction) {
+  (scroller.usedShifts ??= new Set()).add(direction > 0 ? "left" : "right");
   const id = compileState.loopCounter++;
   const canMove = `map_scroll_can_move_${id}`;
   const wrap = `map_scroll_wrap_${id}`;
@@ -3528,8 +3637,9 @@ function emitMapHorizontalScrollerSingleStep(asm, compileState, scroller, direct
     asm.jmp(abs(moved));
     asm.label(wrap);
     asm.inc(abs(scroller.cameraAddress));
-    asm.jsr(abs(`runtime_map_scroll_shift_left_${scroller.info.id}`));
     emitStoreImmediate(asm, scroller.fineAddress, 7);
+    if (scroller.deferredHorizontal) emitStoreImmediate(asm, scroller.pendingHorizontalAddress, 1);
+    else asm.jsr(abs(`runtime_map_scroll_shift_left_${scroller.info.id}`));
     asm.label(moved);
     emitEntityWordStep(asm, scroller.cameraPixelXAddress, 1, `map_scroll_pixel_x_inc_${id}`);
   } else {
@@ -3541,8 +3651,9 @@ function emitMapHorizontalScrollerSingleStep(asm, compileState, scroller, direct
     asm.jmp(abs(moved));
     asm.label(wrap);
     asm.dec(abs(scroller.cameraAddress));
-    asm.jsr(abs(`runtime_map_scroll_shift_right_${scroller.info.id}`));
     emitStoreImmediate(asm, scroller.fineAddress, 0);
+    if (scroller.deferredHorizontal) emitStoreImmediate(asm, scroller.pendingHorizontalAddress, 255);
+    else asm.jsr(abs(`runtime_map_scroll_shift_right_${scroller.info.id}`));
     asm.label(moved);
     emitEntityWordStep(asm, scroller.cameraPixelXAddress, -1, `map_scroll_pixel_x_dec_${id}`);
   }
@@ -3560,6 +3671,7 @@ function emitMapHorizontalScrollerMove(asm, compileState, ref, delta) {
 }
 
 function emitMapVerticalScrollerSingleStep(asm, compileState, scroller, direction) {
+  (scroller.usedShifts ??= new Set()).add(direction > 0 ? "up" : "down");
   if (scroller.maxY > 0) {
     const safe = direction > 0 ? scroller.verticalTiming?.upFitsPal : scroller.verticalTiming?.downFitsPal;
     if (!safe) {
@@ -3580,8 +3692,8 @@ function emitMapVerticalScrollerSingleStep(asm, compileState, scroller, directio
     asm.jmp(abs(moved));
     asm.label(wrap);
     asm.inc(abs(scroller.cameraYAddress));
-    asm.jsr(abs(`runtime_map_scroll_shift_up_${scroller.info.id}`));
     emitStoreImmediate(asm, scroller.fineYAddress, 7);
+    asm.jsr(abs(`runtime_map_scroll_shift_up_${scroller.info.id}`));
     asm.label(moved);
     emitEntityWordStep(asm, scroller.cameraPixelYAddress, 1, `map_scroll_pixel_y_inc_${id}`);
   } else {
@@ -3593,8 +3705,8 @@ function emitMapVerticalScrollerSingleStep(asm, compileState, scroller, directio
     asm.jmp(abs(moved));
     asm.label(wrap);
     asm.dec(abs(scroller.cameraYAddress));
-    asm.jsr(abs(`runtime_map_scroll_shift_down_${scroller.info.id}`));
     emitStoreImmediate(asm, scroller.fineYAddress, 0);
+    asm.jsr(abs(`runtime_map_scroll_shift_down_${scroller.info.id}`));
     asm.label(moved);
     emitEntityWordStep(asm, scroller.cameraPixelYAddress, -1, `map_scroll_pixel_y_dec_${id}`);
   }
@@ -4406,6 +4518,20 @@ function emitMapHorizontalScrollerRoutines(asm, info) {
     const count = viewport.screenWidth - 1;
     const rowScreen = screenBase + row * 40;
     const rowColor = colorBase + row * 40;
+    if (scroller.deferredHorizontal) {
+      const tail = count % 4;
+      for (let cell = 0; cell < tail; cell++) emitShiftCell(rowScreen + cell + 1, rowScreen + cell, rowColor + cell + 1, rowColor + cell);
+      if (count === tail) return;
+      const loop = `runtime_map_scroll_left_row_${info.id}_${row}`;
+      asm.ldx(imm(0)); asm.label(loop);
+      for (let cell = 0; cell < 4; cell++) {
+        const offset = tail + cell;
+        emitShiftCell(rowScreen + offset + 1, rowScreen + offset, rowColor + offset + 1, rowColor + offset, true);
+      }
+      for (let cell = 0; cell < 4; cell++) asm.inx();
+      asm.cpx(imm(count - tail)); asm.bne(rel(loop));
+      return;
+    }
     let start = 0;
     if ((count & 1) !== 0) {
       emitShiftCell(rowScreen + 1, rowScreen, rowColor + 1, rowColor);
@@ -4521,65 +4647,71 @@ function emitMapHorizontalScrollerRoutines(asm, info) {
   }
   asm.rts();
 
-  asm.comment(`Map ${info.id}: shift Screen RAM and Color RAM one character left`);
-  asm.label(`runtime_map_scroll_shift_left_${info.id}`);
-  asm.lda(abs(scroller.cameraAddress)); asm.clc(); asm.adc(imm(viewport.width - 1)); asm.sta(abs(MAP_TEMP_X));
-  asm.lda(abs(scroller.cameraYAddress)); asm.sta(abs(MAP_TEMP_Y));
-  emitMapIndexToPointer(asm, info, `scroll_left_stream_${info.id}`);
-  for (let row = 0; row < viewport.height; row += 1) {
-    emitShiftRowLeft(row);
-    emitStreamCell(screenBase + row * 40 + viewport.screenWidth - 1, colorBase + row * 40 + viewport.screenWidth - 1);
-    if (row + 1 < viewport.height) emitAddWordImmediateToZeroPagePointer(asm, HIRES_ZP_PTR_LO, info.asset.map.width);
+  if (scroller.usedShifts?.has("left")) {
+    asm.comment(`Map ${info.id}: shift Screen RAM and Color RAM one character left`);
+    asm.label(`runtime_map_scroll_shift_left_${info.id}`);
+    asm.lda(abs(scroller.cameraAddress)); asm.clc(); asm.adc(imm(viewport.width - 1)); asm.sta(abs(MAP_TEMP_X));
+    asm.lda(abs(scroller.cameraYAddress)); asm.sta(abs(MAP_TEMP_Y));
+    emitMapIndexToPointer(asm, info, `scroll_left_stream_${info.id}`);
+    for (let row = 0; row < viewport.height; row += 1) {
+      emitShiftRowLeft(row);
+      emitStreamCell(screenBase + row * 40 + viewport.screenWidth - 1, colorBase + row * 40 + viewport.screenWidth - 1);
+      if (row + 1 < viewport.height) emitAddWordImmediateToZeroPagePointer(asm, HIRES_ZP_PTR_LO, info.asset.map.width);
+    }
+    asm.rts();
   }
-  asm.rts();
+  if (scroller.usedShifts?.has("right")) {
+    asm.comment(`Map ${info.id}: shift Screen RAM and Color RAM one character right`);
+    asm.label(`runtime_map_scroll_shift_right_${info.id}`);
+    asm.lda(abs(scroller.cameraAddress)); asm.sta(abs(MAP_TEMP_X));
+    asm.lda(abs(scroller.cameraYAddress)); asm.sta(abs(MAP_TEMP_Y));
+    emitMapIndexToPointer(asm, info, `scroll_right_stream_${info.id}`);
+    for (let row = 0; row < viewport.height; row += 1) {
+      emitShiftRowRight(row);
+      emitStreamCell(screenBase + row * 40, colorBase + row * 40);
+      if (row + 1 < viewport.height) emitAddWordImmediateToZeroPagePointer(asm, HIRES_ZP_PTR_LO, info.asset.map.width);
+    }
+    asm.rts();
+  }
+  if (scroller.usedShifts?.has("up")) {
+    asm.comment(`Map ${info.id}: shift Screen RAM and Color RAM one character up`);
+    asm.label(`runtime_map_scroll_shift_up_${info.id}`);
+    for (let row = 0; row < viewport.screenHeight - 1; row += 1) {
+      emitShiftRowVertical(row + 1, row, `runtime_map_scroll_up_row_${info.id}_${row}`);
+    }
+    asm.lda(abs(scroller.cameraYAddress)); asm.clc(); asm.adc(imm(viewport.height - 1)); asm.sta(abs(MAP_TEMP_Y));
+    asm.lda(abs(scroller.cameraAddress)); asm.sta(abs(MAP_TEMP_X));
+    emitMapIndexToPointer(asm, info, `scroll_up_stream_${info.id}`);
+    asm.ldy(imm(0));
+    asm.label(`runtime_map_scroll_up_line_${info.id}`);
+    asm.lda(indy(HIRES_ZP_PTR_LO)); asm.tax();
+    asm.lda(absx(info.charsLabel)); asm.sta(absy(screenBase + (viewport.screenHeight - 1) * 40));
+    asm.lda(absx(info.colorsLabel));
+    if (info.asset.charset.mode === "multicolor") asm.ora(imm(0x08));
+    asm.sta(absy(colorBase + (viewport.screenHeight - 1) * 40));
+    asm.iny(); asm.cpy(imm(viewport.width)); asm.bne(rel(`runtime_map_scroll_up_line_${info.id}`));
+    asm.rts();
+  }
+  if (scroller.usedShifts?.has("down")) {
+    asm.comment(`Map ${info.id}: shift Screen RAM and Color RAM one character down`);
+    asm.label(`runtime_map_scroll_shift_down_${info.id}`);
+    for (let row = viewport.screenHeight - 2; row >= 0; row -= 1) {
+      emitShiftRowVertical(row, row + 1, `runtime_map_scroll_down_row_${info.id}_${row}`);
+    }
+    asm.lda(abs(scroller.cameraYAddress)); asm.sta(abs(MAP_TEMP_Y));
+    asm.lda(abs(scroller.cameraAddress)); asm.sta(abs(MAP_TEMP_X));
+    emitMapIndexToPointer(asm, info, `scroll_down_stream_${info.id}`);
+    asm.ldy(imm(0));
+    asm.label(`runtime_map_scroll_down_line_${info.id}`);
+    asm.lda(indy(HIRES_ZP_PTR_LO)); asm.tax();
+    asm.lda(absx(info.charsLabel)); asm.sta(absy(screenBase));
+    asm.lda(absx(info.colorsLabel));
+    if (info.asset.charset.mode === "multicolor") asm.ora(imm(0x08));
+    asm.sta(absy(colorBase));
+    asm.iny(); asm.cpy(imm(viewport.width)); asm.bne(rel(`runtime_map_scroll_down_line_${info.id}`));
+    asm.rts();
+  }
 
-  asm.comment(`Map ${info.id}: shift Screen RAM and Color RAM one character right`);
-  asm.label(`runtime_map_scroll_shift_right_${info.id}`);
-  asm.lda(abs(scroller.cameraAddress)); asm.sta(abs(MAP_TEMP_X));
-  asm.lda(abs(scroller.cameraYAddress)); asm.sta(abs(MAP_TEMP_Y));
-  emitMapIndexToPointer(asm, info, `scroll_right_stream_${info.id}`);
-  for (let row = 0; row < viewport.height; row += 1) {
-    emitShiftRowRight(row);
-    emitStreamCell(screenBase + row * 40, colorBase + row * 40);
-    if (row + 1 < viewport.height) emitAddWordImmediateToZeroPagePointer(asm, HIRES_ZP_PTR_LO, info.asset.map.width);
-  }
-  asm.rts();
-
-  asm.comment(`Map ${info.id}: shift Screen RAM and Color RAM one character up`);
-  asm.label(`runtime_map_scroll_shift_up_${info.id}`);
-  for (let row = 0; row < viewport.screenHeight - 1; row += 1) {
-    emitShiftRowVertical(row + 1, row, `runtime_map_scroll_up_row_${info.id}_${row}`);
-  }
-  asm.lda(abs(scroller.cameraYAddress)); asm.clc(); asm.adc(imm(viewport.height - 1)); asm.sta(abs(MAP_TEMP_Y));
-  asm.lda(abs(scroller.cameraAddress)); asm.sta(abs(MAP_TEMP_X));
-  emitMapIndexToPointer(asm, info, `scroll_up_stream_${info.id}`);
-  asm.ldy(imm(0));
-  asm.label(`runtime_map_scroll_up_line_${info.id}`);
-  asm.lda(indy(HIRES_ZP_PTR_LO)); asm.tax();
-  asm.lda(absx(info.charsLabel)); asm.sta(absy(screenBase + (viewport.screenHeight - 1) * 40));
-  asm.lda(absx(info.colorsLabel));
-  if (info.asset.charset.mode === "multicolor") asm.ora(imm(0x08));
-  asm.sta(absy(colorBase + (viewport.screenHeight - 1) * 40));
-  asm.iny(); asm.cpy(imm(viewport.width)); asm.bne(rel(`runtime_map_scroll_up_line_${info.id}`));
-  asm.rts();
-
-  asm.comment(`Map ${info.id}: shift Screen RAM and Color RAM one character down`);
-  asm.label(`runtime_map_scroll_shift_down_${info.id}`);
-  for (let row = viewport.screenHeight - 2; row >= 0; row -= 1) {
-    emitShiftRowVertical(row, row + 1, `runtime_map_scroll_down_row_${info.id}_${row}`);
-  }
-  asm.lda(abs(scroller.cameraYAddress)); asm.sta(abs(MAP_TEMP_Y));
-  asm.lda(abs(scroller.cameraAddress)); asm.sta(abs(MAP_TEMP_X));
-  emitMapIndexToPointer(asm, info, `scroll_down_stream_${info.id}`);
-  asm.ldy(imm(0));
-  asm.label(`runtime_map_scroll_down_line_${info.id}`);
-  asm.lda(indy(HIRES_ZP_PTR_LO)); asm.tax();
-  asm.lda(absx(info.charsLabel)); asm.sta(absy(screenBase));
-  asm.lda(absx(info.colorsLabel));
-  if (info.asset.charset.mode === "multicolor") asm.ora(imm(0x08));
-  asm.sta(absy(colorBase));
-  asm.iny(); asm.cpy(imm(viewport.width)); asm.bne(rel(`runtime_map_scroll_down_line_${info.id}`));
-  asm.rts();
 }
 
 function emitMapRendererRoutine(asm, info) {
@@ -4729,6 +4861,7 @@ function emitMapRoutines(asm, state) {
       if (!info.draw) throw new Error("dynamic map renderer is missing c64.map.draw() screen configuration");
       emitMapRendererRoutine(asm, info);
     }
+    emitMapPointerRoutine(asm, state, info);
   }
 }
 
@@ -5159,22 +5292,24 @@ function emitSharedSpriteAabbCompareRoutine(asm, state) {
 
 function emitBalancedSharedRoutines(asm, state) {
   emitSharedSidClickRoutine(asm, state);
+  emitSidSfxRoutine(asm, state);
   emitSharedSpriteSyncRoutines(asm, state);
   emitSharedSpriteAabbCompareRoutine(asm, state);
   emitSpriteMultiplexerRoutine(asm, state);
 }
 
 function emitSpriteMuxRegisterBit(asm, register, logicalAddress, flagBit, label) {
-  asm.lda(abs(register)); asm.and(abs(SPRITE_MUX_INVERSE_MASK)); asm.sta(abs(register));
-  asm.ldy(abs(SPRITE_MUX_LOGICAL_OFFSET));
   asm.lda(absy(logicalAddress)); asm.and(imm(flagBit)); asm.beq(rel(label));
-  asm.lda(abs(register)); asm.ora(abs(SPRITE_MUX_BIT_MASK)); asm.sta(abs(register));
+  asm.lda(abs(register)); asm.ora(abs(SPRITE_MUX_BIT_MASK)); asm.bne(rel(`${label}_store`));
   asm.label(label);
+  asm.lda(abs(register)); asm.and(abs(SPRITE_MUX_INVERSE_MASK));
+  asm.label(`${label}_store`); asm.sta(abs(register));
 }
 
 function emitSpriteMultiplexerRoutine(asm, state) {
   if (!state.multiplexer.enabled) return;
 
+  if (!state.multiplexer.irqDriven) {
   asm.comment("Dynamic 16-to-8 sprite multiplexer: sort active sprites by Y");
   asm.label("runtime_sprite_mux_sort");
   emitStoreImmediate(asm, SPRITE_MUX_SORTED_COUNT, 0);
@@ -5202,13 +5337,13 @@ function emitSpriteMultiplexerRoutine(asm, state) {
   asm.sta(abs(SPRITE_MUX_OUTER_OFFSET)); asm.cmp(imm(SPRITE_LOGICAL_COUNT * SPRITE_LOGICAL_STATE_STRIDE));
   asm.bne(rel("runtime_sprite_mux_sort_outer"));
   asm.rts();
+  }
 
   asm.comment("Copy one logical sprite to one VIC-II hardware channel");
   asm.label("runtime_sprite_mux_draw");
   asm.stx(abs(SPRITE_MUX_HARDWARE_SLOT)); asm.sty(abs(SPRITE_MUX_LOGICAL_OFFSET));
   asm.txa(); asm.asl(acc()); asm.tax();
   asm.lda(absy(SPRITE_LOGICAL_STATE_BASE)); asm.sta(absx(c64.VIC_SPRITE0_X));
-  asm.lda(absy(SPRITE_LOGICAL_STATE_BASE + 2)); asm.sta(absx(c64.VIC_SPRITE0_Y));
   asm.ldx(abs(SPRITE_MUX_HARDWARE_SLOT));
   asm.lda(absx("runtime_sprite_mux_bit_masks")); asm.sta(abs(SPRITE_MUX_BIT_MASK));
   asm.lda(absx("runtime_sprite_mux_inverse_masks")); asm.sta(abs(SPRITE_MUX_INVERSE_MASK));
@@ -5220,6 +5355,9 @@ function emitSpriteMultiplexerRoutine(asm, state) {
   emitSpriteMuxRegisterBit(asm, c64.VIC_SPRITE_EXPAND_X, SPRITE_RUNTIME_BASE + 6, 0x02, "runtime_sprite_mux_no_expand_x");
   emitSpriteMuxRegisterBit(asm, c64.VIC_SPRITE_EXPAND_Y, SPRITE_RUNTIME_BASE + 6, 0x04, "runtime_sprite_mux_no_expand_y");
   emitSpriteMuxRegisterBit(asm, c64.VIC_SPRITE_PRIORITY, SPRITE_RUNTIME_BASE + 6, 0x08, "runtime_sprite_mux_no_priority");
+  // Publish Y after the pointer, color and flags; Y can start sprite DMA.
+  asm.ldx(abs(SPRITE_MUX_HARDWARE_SLOT)); asm.txa(); asm.asl(acc()); asm.tax();
+  asm.lda(absy(SPRITE_LOGICAL_STATE_BASE + 2)); asm.sta(absx(c64.VIC_SPRITE0_Y));
   asm.ldx(abs(SPRITE_MUX_HARDWARE_SLOT)); asm.ldy(abs(SPRITE_MUX_LOGICAL_OFFSET));
   asm.lda(absy(SPRITE_RUNTIME_BASE + 6)); asm.and(imm(0x04)); asm.beq(rel("runtime_sprite_mux_normal_height"));
   asm.lda(imm(45)); asm.jmp(abs("runtime_sprite_mux_add_height"));
@@ -5229,18 +5367,38 @@ function emitSpriteMultiplexerRoutine(asm, state) {
   asm.label("runtime_sprite_mux_end_ready"); asm.sta(absx(SPRITE_MUX_SLOT_END_BASE));
   asm.rts();
 
+  if (state.multiplexer.irqDriven) {
+    // Up to eight logical sprites need no channel recycling. Present their
+    // complete state in the lower-border IRQ while the CPU streams map rows.
+    asm.label("runtime_sprite_mux_present");
+    asm.lda(abs(SPRITE_MUX_PRESENT_READY)); asm.bne(rel("runtime_sprite_mux_present_ready"));
+    asm.rts();
+    asm.label("runtime_sprite_mux_present_ready");
+    emitStoreImmediate(asm, c64.VIC_SPRITE_ENABLE, 0);
+    let slot = 0;
+    state.spriteRuntime.forEach((sprite, logicalIndex) => {
+      if (!sprite) return;
+      const next = `runtime_sprite_mux_present_next_${logicalIndex}`;
+      asm.ldy(imm(logicalIndex * SPRITE_LOGICAL_STATE_STRIDE));
+      asm.lda(absy(SPRITE_LOGICAL_STATE_BASE + 5)); asm.beq(rel(next));
+      asm.ldx(imm(slot++)); asm.jsr(abs("runtime_sprite_mux_draw"));
+      asm.label(next);
+    });
+    emitStoreImmediate(asm, SPRITE_MUX_PRESENT_READY, 0);
+    asm.label("runtime_sprite_mux_present_done"); asm.rts();
+    asm.label("runtime_sprite_mux_bit_masks"); asm.byte(1, 2, 4, 8, 16, 32, 64, 128);
+    asm.label("runtime_sprite_mux_inverse_masks"); asm.byte(254, 253, 251, 247, 239, 223, 191, 127);
+    return;
+  }
+
   asm.comment("Render the sorted display list and recycle channels after sprite end");
   asm.label("runtime_sprite_mux_render");
   asm.jsr(abs("runtime_sprite_mux_sort"));
 
-  // Raster 256 is already below the visible sprite area. The previous code
-  // waited for bit 8 to rise and then fall again, wasting the complete lower
-  // border and making debuggers appear parked in a $D011 loop. Program the
-  // next frame as soon as the raster enters its high range; if we are already
-  // near the top (line < 64), no wait is needed.
+  // Prepare the next display list in the lower border. The former line < 64
+  // shortcut could rewrite a channel while a sprite near the top was active.
   asm.label("runtime_sprite_mux_wait_safe_raster");
   asm.lda(abs(c64.VIC_CONTROL_1)); asm.bmi(rel("runtime_sprite_mux_frame_ready"));
-  asm.lda(abs(c64.VIC_RASTER)); asm.cmp(imm(64)); asm.bcc(rel("runtime_sprite_mux_frame_ready"));
   asm.jmp(abs("runtime_sprite_mux_wait_safe_raster"));
   asm.label("runtime_sprite_mux_frame_ready");
   emitStoreImmediate(asm, c64.VIC_SPRITE_ENABLE, 0);
@@ -5253,6 +5411,10 @@ function emitSpriteMultiplexerRoutine(asm, state) {
   asm.label("runtime_sprite_mux_first_done"); asm.stx(abs(SPRITE_MUX_LIST_POSITION));
   asm.cpx(abs(SPRITE_MUX_SORTED_COUNT)); asm.bcs(rel("runtime_sprite_mux_render_done"));
 
+  // D012 wraps at 256, before the video frame wraps. No channel from the new
+  // list can be recycled until we have entered its actual display frame.
+  asm.label("runtime_sprite_mux_wait_display_frame");
+  asm.lda(abs(c64.VIC_CONTROL_1)); asm.bmi(rel("runtime_sprite_mux_wait_display_frame"));
   asm.label("runtime_sprite_mux_schedule_next");
   asm.ldx(abs(SPRITE_MUX_LIST_POSITION)); asm.cpx(abs(SPRITE_MUX_SORTED_COUNT)); asm.bcs(rel("runtime_sprite_mux_render_done"));
   asm.ldx(imm(0)); asm.stx(abs(SPRITE_MUX_HARDWARE_SLOT));
@@ -5264,7 +5426,13 @@ function emitSpriteMultiplexerRoutine(asm, state) {
   asm.label("runtime_sprite_mux_find_next"); asm.inx(); asm.cpx(imm(8)); asm.bne(rel("runtime_sprite_mux_find_slot"));
   asm.ldx(abs(SPRITE_MUX_LIST_POSITION)); asm.lda(absx(SPRITE_MUX_SORTED_BASE)); asm.sta(abs(SPRITE_MUX_LOGICAL_OFFSET)); asm.tay();
   asm.lda(absy(SPRITE_LOGICAL_STATE_BASE + 2)); asm.cmp(abs(SPRITE_MUX_MIN_END)); asm.bcc(rel("runtime_sprite_mux_skip_overflow"));
-  asm.label("runtime_sprite_mux_wait_release"); asm.lda(abs(c64.VIC_RASTER)); asm.cmp(abs(SPRITE_MUX_MIN_END)); asm.bcc(rel("runtime_sprite_mux_wait_release"));
+  asm.label("runtime_sprite_mux_wait_release");
+  asm.lda(abs(c64.VIC_CONTROL_1)); asm.bmi(rel("runtime_sprite_mux_render_done"));
+  asm.lda(abs(c64.VIC_RASTER)); asm.cmp(abs(SPRITE_MUX_MIN_END)); asm.bcc(rel("runtime_sprite_mux_wait_release"));
+  // Leave time for all register writes, including a badline and sprite DMA.
+  // If an IRQ consumed the remaining time, omit the late sprite this frame.
+  asm.clc(); asm.adc(imm(10)); asm.bcs(rel("runtime_sprite_mux_skip_overflow"));
+  asm.cmp(absy(SPRITE_LOGICAL_STATE_BASE + 2)); asm.bcs(rel("runtime_sprite_mux_skip_overflow"));
   asm.ldx(abs(SPRITE_MUX_HARDWARE_SLOT)); asm.ldy(abs(SPRITE_MUX_LOGICAL_OFFSET)); asm.jsr(abs("runtime_sprite_mux_draw"));
   asm.label("runtime_sprite_mux_skip_overflow"); asm.inc(abs(SPRITE_MUX_LIST_POSITION)); asm.jmp(abs("runtime_sprite_mux_schedule_next"));
   asm.label("runtime_sprite_mux_render_done"); asm.rts();
@@ -5421,6 +5589,7 @@ function emitSpriteAnimatorRoutine(asm, state) {
     }
   }
 
+  emitSidSfxTick(asm, state);
   setRasterLine(asm, state.spriteAnimator.line);
   emitIrqExit(asm, false, true);
 }
@@ -5477,6 +5646,7 @@ function emitCombinedRuntimeRoutine(asm, state) {
 
   emitSidPlayerBody(asm, state);
   emitSpriteAnimatorBody(asm, state);
+  emitSidSfxTick(asm, state);
 
   setRasterLine(asm, combinedLine);
   emitIrqExit(asm, false, true);
@@ -5594,6 +5764,7 @@ function createInstructionCompileState(baseState) {
     spriteFrameAssets: baseState.spriteFrameAssets,
     spriteDataAssets: baseState.spriteDataAssets,
     sharedRoutines: baseState.sharedRoutines,
+    sfx: baseState.sfx,
     assets: baseState.assets,
     optimization: baseState.optimization,
     multiplexer: baseState.multiplexer,
@@ -5632,11 +5803,16 @@ function collectBalancedOptimizationStats(instructionGroups) {
   const stats = {
     sidClickCount: 0,
     sidEffectCount: 0,
+    usesTimedSfx: false,
     sidFadeCount: 0,
     spriteSyncCallCounts: new Map(),
+    spriteIndices: new Set(),
     usesSpriteMultiplexer: false,
     usesLegacySpriteApi: false,
     usesVerticalMapScroll: false,
+    cameraFollowCount: 0,
+    usesExplicitScrollMove: false,
+    usesControlCall: false,
     usesMapActivation: false,
     usesGameScenes: false,
     usesRng: false
@@ -5649,6 +5825,7 @@ function collectBalancedOptimizationStats(instructionGroups) {
   const visit = (instructions) => {
     for (const instruction of instructions ?? []) {
       if (instruction.op === "sidClick") stats.sidClickCount += 1;
+      if (["sidBeep", "sidNoise", "sidExplosion", "sidLaser", "sidPickup"].includes(instruction.op)) stats.usesTimedSfx = true;
       if (["sidBeep", "sidNoise", "sidClick", "sidExplosion", "sidLaser", "sidPickup"].includes(instruction.op)) {
         stats.sidEffectCount += 1;
       }
@@ -5657,11 +5834,15 @@ function collectBalancedOptimizationStats(instructionGroups) {
       if (["randomSeed", "randomByte", "randomRange"].includes(instruction.op)) stats.usesRng = true;
       if (["gameScene", "gameSceneStart", "gameSceneGo"].includes(instruction.op)) stats.usesGameScenes = true;
       if (instruction.op === "mapVerticalScrollerMove") stats.usesVerticalMapScroll = true;
+      if (instruction.op === "mapScrollerFollow") stats.cameraFollowCount += 1;
+      if (["mapHorizontalScrollerMove", "mapVerticalScrollerMove"].includes(instruction.op)) stats.usesExplicitScrollMove = true;
+      if (instruction.op === "controlCall") stats.usesControlCall = true;
       if (instruction.op === "mapScrollerFollow" && ["y", "both"].includes(instruction.args[2]?.axis)) {
         stats.usesVerticalMapScroll = true;
       }
       if (MULTIPLEX_CONFLICTING_LEGACY_OPS.has(instruction.op)) stats.usesLegacySpriteApi = true;
       if (["spriteCreateRuntime", "spriteRuntimeSync", "spriteRuntimeUpdate"].includes(instruction.op)) addSpriteSync(instruction);
+      if (instruction.op === "spriteCreateRuntime") stats.spriteIndices.add(instruction.args[0].index);
       if (instruction.op === "spriteCreateRuntime" && instruction.args[0]?.index >= 8) stats.usesSpriteMultiplexer = true;
       if (["gameInit", "gameFrame"].includes(instruction.op)) visit(instruction.args[0]);
       if (instruction.op === "gameScene") {
@@ -7225,6 +7406,13 @@ function emitRasterHandlers(asm, state) {
     asm.label(`irq_handler_${index}`);
     const handlerState = createInstructionCompileState(state);
 
+    for (const instruction of handler.instructions) {
+      compileHighLevelInstruction(asm, instruction, handlerState);
+    }
+    syncInstructionCompileState(state, handlerState);
+    if (state.game.irqFrameLine === handler.line) emitStoreImmediate(asm, GAME_FRAME_PENDING, 1);
+    if (state.multiplexer.irqDriven && handler.line === 256) asm.jsr(abs("runtime_sprite_mux_present"));
+
     // Background runtimes piggyback on the first raster hit so they still run
     // once per frame even when several raster handlers are installed.
     if (index === 0) {
@@ -7236,10 +7424,7 @@ function emitRasterHandlers(asm, state) {
       }
     }
 
-    for (const instruction of handler.instructions) {
-      compileHighLevelInstruction(asm, instruction, handlerState);
-    }
-    syncInstructionCompileState(state, handlerState);
+    if (index === 0) emitSidSfxTick(asm, state);
 
     const nextIndex = (index + 1) % handlers.length;
     const nextLine = handlers[nextIndex].line;
@@ -7343,18 +7528,69 @@ function emitGameSceneRoutines(asm, state) {
   }
 }
 
+function configureScrollPresentation(asm, state) {
+  const frame = state.game.frame;
+  const scroller = [...state.assets.scrollers.values()][0];
+  const follow = frame?.instructions?.filter(instruction => instruction.op === "mapScrollerFollow");
+  if (!frame || frame.sceneManaged || frame.options?.rasterLine !== undefined
+      || !scroller || scroller.verticalUsed || scroller.viewport.screenWidth * scroller.viewport.screenHeight <= 256
+      || !state.multiplexer.enabled || state.optimization.spriteIndices.size > 8
+      || state.assets.scrollers.size !== 1 || state.optimization.usesMapActivation
+      || state.optimization.cameraFollowCount !== 1 || state.optimization.usesExplicitScrollMove
+      || state.optimization.usesControlCall || follow?.length !== 1) return;
+
+  // Wide horizontal maps cannot fit physics + in-place copies + a polling
+  // sprite presenter into the lower-border budget. Compute logical state
+  // early, copy rows after the map band, and present sprites independently.
+  scroller.pendingHorizontalAddress = allocateVariableAddress(state, 1);
+  registerVariable(state, `__mapScroller${scroller.ref.id}_pendingHorizontal`, scroller.pendingHorizontalAddress, 1);
+  scroller.deferredHorizontal = true;
+  state.game.irqFrameLine = scroller.enterRasterLine;
+  state.multiplexer.irqDriven = true;
+  for (const address of [scroller.pendingHorizontalAddress, GAME_FRAME_PENDING, SPRITE_MUX_PRESENT_READY]) emitStoreImmediate(asm, address, 0);
+  if (!state.irq.handlers.some(handler => handler.line === 256)) {
+    state.irq.handlers.push({ line: 256, instructions: [] });
+    state.irq.handlers.sort((a, b) => a.line - b.line);
+  }
+  state.irq.autoInstallRequested = true;
+  const report = state.assets.report.find(entry => entry.type === "map-scroll");
+  Object.assign(report, { logicRasterLine: state.game.irqFrameLine, frameClock: "irq-latched",
+    deferredHorizontalCopy: true, spritePresentationRasterLine: 256, presentationStateBytes: 2,
+    stateBytes: report.stateBytes + 1 });
+}
+
+function emitDeferredScrollCopy(asm, state) {
+  const scroller = [...state.assets.scrollers.values()][0];
+  if (!scroller?.deferredHorizontal) return;
+  const id = scroller.info.id;
+  const done = `map_scroll_deferred_done_${id}`;
+  const wait = `map_scroll_deferred_wait_${id}`;
+  const ready = `map_scroll_deferred_ready_${id}`;
+  const right = `map_scroll_deferred_right_${id}`;
+  asm.lda(abs(scroller.pendingHorizontalAddress)); asm.beq(rel(done));
+  // A coarse copy may cross the next frame IRQ. Its latched tick stays pending
+  // until this copy completes, so it cannot cost an extra whole video frame.
+  asm.label(wait);
+  asm.lda(abs(c64.VIC_CONTROL_1)); asm.bmi(rel(ready));
+  asm.lda(abs(c64.VIC_RASTER)); asm.cmp(imm(scroller.recommendedFrameRasterLine)); asm.bcc(rel(wait));
+  asm.label(ready);
+  asm.lda(abs(scroller.pendingHorizontalAddress)); asm.bmi(rel(right));
+  asm.jsr(abs(`runtime_map_scroll_shift_left_${id}`)); asm.jmp(abs(done));
+  asm.label(right); asm.jsr(abs(`runtime_map_scroll_shift_right_${id}`));
+  asm.label(done); emitStoreImmediate(asm, scroller.pendingHorizontalAddress, 0);
+}
+
 function emitGameFrameLoop(asm, state) {
   const frame = state.game.frame;
   if (!frame) {
     return;
   }
   validateGameScenes(state);
-  // Multiplexed games update logical state late in the visible frame. Sorting
-  // follows, but VIC registers are not touched until the next raster wrap.
+  // Update scrolling games after their display band, including multiplexed
+  // games. Starting at a fixed line 200 could modify a still-visible tile row.
   const scrollingFrameLine = [...state.assets.scrollers.values()][0]?.recommendedFrameRasterLine;
-  const rasterLine = state.multiplexer.enabled
-    ? SPRITE_MUX_FRAME_RASTER
-    : (frame.options?.rasterLine ?? scrollingFrameLine ?? 240);
+  const rasterLine = frame.options?.rasterLine ?? scrollingFrameLine
+    ?? (state.multiplexer.enabled ? SPRITE_MUX_FRAME_RASTER : 240);
   const hz = frame.options?.hz ?? 50;
   ensureByte(rasterLine, "game frame raster line");
   if (hz !== 50 && hz !== "video") {
@@ -7377,7 +7613,7 @@ function emitGameFrameLoop(asm, state) {
     emitStoreImmediate(asm, addresses.previous, 1);
   }
 
-  emitVideoStandardDetection(asm);
+  if (!state.sid.player.installRequested && !state.sfx.enabled) emitVideoStandardDetection(asm);
   if (frame.sceneManaged) {
     emitStoreImmediate(asm, GAME_SCENE_CURRENT, gameSceneId(state.game.sceneStart.name));
     emitStoreImmediate(asm, GAME_SCENE_PENDING, GAME_SCENE_NONE);
@@ -7388,17 +7624,28 @@ function emitGameFrameLoop(asm, state) {
   const waitLeaveLabel = "game_frame_wait_leave";
   const waitTargetLabel = "game_frame_wait_target";
   asm.label(loopLabel);
-  // First leave the target line, then wait until it is reached again. This
-  // guarantees one logical update per video frame rather than many iterations
-  // while $D012 still contains the same line number.
+  // Cross the target once per frame. Testing equality loses an entire frame
+  // whenever a raster IRQ or DMA stalls the CPU across that exact scanline.
   asm.label(waitLeaveLabel);
-  asm.lda(abs(c64.VIC_RASTER));
-  asm.cmp(imm(rasterLine));
-  asm.beq(rel(waitLeaveLabel));
-  asm.label(waitTargetLabel);
-  asm.lda(abs(c64.VIC_RASTER));
-  asm.cmp(imm(rasterLine));
-  asm.bne(rel(waitTargetLabel));
+  if (state.game.irqFrameLine !== undefined) {
+    asm.lda(abs(GAME_FRAME_PENDING)); asm.beq(rel(waitLeaveLabel));
+    emitStoreImmediate(asm, GAME_FRAME_PENDING, 0);
+  } else if (rasterLine === 0) {
+    asm.lda(abs(c64.VIC_CONTROL_1)); asm.bpl(rel(waitLeaveLabel));
+    asm.label(waitTargetLabel);
+    asm.lda(abs(c64.VIC_CONTROL_1)); asm.bmi(rel(waitTargetLabel));
+  } else {
+    asm.lda(abs(c64.VIC_CONTROL_1)); asm.bmi(rel(waitLeaveLabel));
+    asm.lda(abs(c64.VIC_RASTER));
+    asm.cmp(imm(rasterLine));
+    asm.bcs(rel(waitLeaveLabel));
+    asm.label(waitTargetLabel);
+    asm.lda(abs(c64.VIC_CONTROL_1)); asm.bmi(rel("game_frame_target_reached"));
+    asm.lda(abs(c64.VIC_RASTER));
+    asm.cmp(imm(rasterLine));
+    asm.bcc(rel(waitTargetLabel));
+  }
+  asm.label("game_frame_target_reached");
 
   if (hz === 50) {
     const logicalFrameLabel = "game_frame_logical_tick";
@@ -7408,6 +7655,8 @@ function emitGameFrameLoop(asm, state) {
     asm.sta(abs(GAME_RATE_ACCUMULATOR));
     asm.cmp(abs(GAME_VIDEO_HZ));
     asm.bcs(rel(logicalFrameLabel));
+    // The display list must also be replayed on NTSC's skipped logic frame.
+    if (state.multiplexer.enabled && !state.multiplexer.irqDriven) asm.jsr(abs("runtime_sprite_mux_render"));
     asm.jmp(abs(loopLabel));
     asm.label(logicalFrameLabel);
     asm.sec();
@@ -7487,6 +7736,7 @@ function emitGameFrameLoop(asm, state) {
   asm.inc(abs(GAME_FRAME_COUNTER_HI));
   asm.label(counterDoneLabel);
 
+  if (state.multiplexer.irqDriven) emitStoreImmediate(asm, SPRITE_MUX_PRESENT_READY, 0);
   if (frame.sceneManaged) {
     asm.jsr(abs("game_scene_update_dispatch"));
     asm.jsr(abs("game_scene_apply_transition"));
@@ -7496,7 +7746,9 @@ function emitGameFrameLoop(asm, state) {
 
   emitPendingMapActivation(asm, state);
 
-  if (state.multiplexer.enabled) {
+  if (state.multiplexer.irqDriven) emitStoreImmediate(asm, SPRITE_MUX_PRESENT_READY, 1);
+  emitDeferredScrollCopy(asm, state);
+  if (state.multiplexer.enabled && !state.multiplexer.irqDriven) {
     asm.jsr(abs("runtime_sprite_mux_render"));
   }
   asm.jmp(abs(loopLabel));
@@ -7674,7 +7926,8 @@ function appendGameplayBudgetReports(state) {
     minimumGap = minimumGap === null ? gap : Math.min(minimumGap, gap);
     slots[slot] = entry.y + entry.height;
   }
-  const requiredGap = 3;
+  // Three release lines plus the ten-line deadline guard and strict Y test.
+  const requiredGap = 14;
   const unsafeGap = minimumGap !== null && minimumGap < requiredGap;
   const report = {
     type: "sprite-multiplexer-budget",
@@ -7686,6 +7939,7 @@ function appendGameplayBudgetReports(state) {
     requiredReprogramGapLines: requiredGap,
     predictedOverflowSprites: overflowCount,
     overflowPolicy: "stable-y-sort-then-skip-later-sprites-until-a-hardware-slot-is-free",
+    lateSpritePolicy: "skip-if-register-writes-cannot-finish-before-y",
     deterministic: true,
     status: overflowCount > 0 || unsafeGap ? "warning" : "ok"
   };
@@ -7782,6 +8036,10 @@ function appendSidAudioReport(state) {
     musicVoices,
     reservedSfxVoice,
     effectCalls,
+    effectsBlocking: false,
+    effectTickRateHz: state.sfx.enabled ? 50 : null,
+    effectStateBytes: state.sfx.enabled ? 7 : 0,
+    effectPolicy: "latest-effect-wins",
     fadeCalls: state.optimization.sidFadeCount,
     patterns: song?.patterns.map((pattern) => ({
       name: pattern.name,
@@ -7866,10 +8124,12 @@ function appendOptimizationReport(state, finalBytes) {
     enabled: state.multiplexer.enabled,
     logicalSprites: logicalSpriteCount,
     sortComparisonsWorstCase: muxSortComparisonsWorstCase,
-    sortCyclesEstimate: state.multiplexer.enabled ? muxSortComparisonsWorstCase * 34 : 0,
-    projectionCyclesEstimate: state.multiplexer.enabled ? logicalSpriteCount * 96 : 0,
+    sortCyclesEstimate: state.multiplexer.enabled ? muxSortComparisonsWorstCase * 36 + logicalSpriteCount * 96 : 0,
+    projectionCyclesEstimate: state.multiplexer.enabled ? logicalSpriteCount * 280 : 0,
+    schedulingCyclesEstimate: state.multiplexer.enabled ? Math.max(0, logicalSpriteCount - 8) * 300 : 0,
+    excludes: ["raster-waits", "vic-dma", "interrupt-handlers", "game-logic"],
     totalCyclesEstimate: state.multiplexer.enabled
-      ? muxSortComparisonsWorstCase * 34 + logicalSpriteCount * 96
+      ? muxSortComparisonsWorstCase * 36 + logicalSpriteCount * 376 + Math.max(0, logicalSpriteCount - 8) * 300
       : 0
   };
 
@@ -7978,6 +8238,7 @@ export function compileInstructions(instructions, options = {}) {
     spriteFrameAssets: new Map(),
     spriteDataAssets: new Map(),
     nextSpriteFrameAddress: assetStorage === "disk" ? 0x2000 : 0x3000,
+    sfx: { enabled: optimization.usesTimedSfx, tables: new Map() },
     sharedRoutines: {
       sidClick: false,
       spriteSyncIndexes: new Set(),
@@ -8059,13 +8320,16 @@ export function compileInstructions(instructions, options = {}) {
         line: handler.line,
         instructions: [...handler.instructions]
       })),
-      disableKernalTimer: false,
+      disableKernalTimer: optimization.usesSpriteMultiplexer,
       chainToKernal: false,
       installRequested: false,
       autoInstallRequested: false
     }
   };
 
+  if (state.sfx.enabled) {
+    for (const address of [SID_SFX_ACTIVE, SID_SFX_RATE, SID_SFX_CONTROL]) emitStoreImmediate(asm, address, 0);
+  }
   emitSpriteMultiplexerStateInit(asm, state);
   if (optimization.usesMapActivation || state.disk.enabled) {
     emitStoreImmediate(asm, MAP_ACTIVE_ID, GAME_SCENE_NONE);
@@ -8109,12 +8373,28 @@ export function compileInstructions(instructions, options = {}) {
   // at the safe transition point at the end of that frame.
   emitPendingMapActivation(asm, state);
 
-  if (state.sid.player.installRequested && !state.game.frame) {
-    emitVideoStandardDetection(asm, "sid_video");
+  configureScrollPresentation(asm, state);
+
+  if (state.sfx.enabled && state.irq.handlers.length === 0
+      && !state.sid.player.installRequested && !state.spriteAnimator.installRequested) {
+    state.irq.handlers.push({ line: 250, instructions: [] });
+    state.irq.autoInstallRequested = true;
+    state.irq.chainToKernal = true;
+  }
+  if (state.sid.player.installRequested || state.sfx.enabled) {
+    emitVideoStandardDetection(asm, state.game.frame ? "game_video" : "sid_video");
   }
 
   if (state.irq.installRequested || state.irq.autoInstallRequested) {
     emitIrqInstall(asm, state);
+  } else if (state.multiplexer.enabled && state.irq.disableKernalTimer) {
+    // Polling multiplexers also need protection from variable KERNAL timer
+    // work, even if no custom raster dispatcher is installed.
+    asm.sei();
+    emitStoreImmediate(asm, c64.CIA1_IRQ_CONTROL, 0x7f);
+    emitStoreImmediate(asm, c64.CIA2_IRQ_CONTROL, 0x7f);
+    asm.lda(abs(c64.CIA1_IRQ_CONTROL)); asm.lda(abs(c64.CIA2_IRQ_CONTROL));
+    asm.cli();
   }
 
   if (state.multiplexer.enabled && !state.game.frame) {

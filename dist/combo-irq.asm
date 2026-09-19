@@ -143,6 +143,8 @@ irq_dispatch_match_1:
 irq_dispatch_next_1:
   JMP irq_handler_0
 irq_handler_0:
+  LDA #$02
+  STA $D020
   LDA $C765
   CMP #$01
   BNE sid_irq_body_done_jump_3
@@ -245,8 +247,6 @@ sid_irq_body_stop_3:
   LDA #$20
   STA $D412
 sid_irq_body_done_3:
-  LDA #$02
-  STA $D020
   LDA #$01
   STA $C0FE
   LDA #$96

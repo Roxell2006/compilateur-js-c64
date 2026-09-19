@@ -1,0 +1,34 @@
+{
+  "tilemap-scroll-x": {
+    "programBytes": 3325,
+    "prgBytes": 3342
+  },
+  "sprite-multiplex-16": {
+    "programBytes": 2220,
+    "prgBytes": 2237
+  },
+  "sid-beep": {
+    "programBytes": 558,
+    "prgBytes": 575
+  },
+  "sid-game-audio": {
+    "programBytes": 972,
+    "prgBytes": 989
+  },
+  "platformer-mini": {
+    "programBytes": 11034,
+    "prgBytes": 11102
+  },
+  "snake": {
+    "programBytes": 4093,
+    "prgBytes": 4110
+  },
+  "breakout-mini": {
+    "programBytes": 3344,
+    "prgBytes": 3361
+  },
+  "maze-game": {
+    "programBytes": 1790,
+    "prgBytes": 1807
+  }
+}
