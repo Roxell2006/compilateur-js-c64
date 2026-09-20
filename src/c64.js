@@ -118,6 +118,12 @@ export const C64_CONSTANTS = {
 
 export const c64 = createRuntimeFacade(C64_CONSTANTS);
 
+// These constructors are recognized by the source frontend, not by the
+// recording DSL. Fail explicitly when a source is run without opting in.
+for (const type of ["byte", "word"]) {
+  c64[type] = () => { throw new Error(`c64.${type}() requires a source beginning with "use c64", built with c64js or compileJsToC64Outputs()`); };
+}
+
 // Large games can place generated code outside VIC bank 0 so screen, charset
 // and sprite data keep their contiguous video-memory windows.
 c64.program = {
@@ -143,7 +149,10 @@ c64.textColor = (color) => {
 c64.clearScreen = () => pushInstruction("clearScreen");
 c64.waitKey = () => pushInstruction("waitKey");
 c64.print = (text) => pushInstruction("print", String(text));
-c64.printAt = (x, y, text) => pushInstruction("printAt", x, y, String(text), getProgramState().currentTextColor);
+c64.printAt = (x, y, text, color = getProgramState().currentTextColor) => pushInstruction("printAt", x, y, String(text), color);
+c64.printNumber = (x, y, value, options = {}) => pushInstruction("printNumber", x, y, value, {
+  digits: options.digits ?? 5, color: options.color ?? getProgramState().currentTextColor
+});
 c64.printCentered = (y, text) => pushInstruction("printCentered", y, String(text), getProgramState().currentTextColor);
 c64.poke = (address, value) => pushInstruction("poke", address, value);
 c64.peek = (address) => ({ type: "peek", address });
@@ -158,6 +167,23 @@ c64.clearLine = (y, char = 32, color = getProgramState().currentTextColor) => pu
 c64.screen = (address = 0x0400) => {
   setScreenBase(address);
   pushInstruction("screen", address);
+};
+c64.screen.setup = (options = {}) => {
+  const { mode = "text", background = c64.COLOR_BLACK, border = background,
+    color = c64.COLOR_WHITE, clear = true } = options;
+  if (!["text", "hires"].includes(mode) || typeof clear !== "boolean") {
+    throw new Error("screen.setup needs a constant text/hires mode and boolean clear option");
+  }
+  c64.borderColor(border);
+  c64.backgroundColor(background);
+  c64.textColor(color);
+  if (mode === "hires") {
+    c64.hires.enabled();
+    if (clear) c64.hires.clear(background);
+  } else {
+    c64.hires.disabled();
+    if (clear) c64.clearScreen();
+  }
 };
 c64.colorRam = (address = 0xd800) => {
   setColorBase(address);
@@ -559,16 +585,20 @@ function createHorizontalScroller(asset, options = {}) {
       pushInstruction("mapHorizontalScrollerDraw", ref);
     },
     left(pixels = 1) {
-      pushInstruction("mapHorizontalScrollerMove", ref, -horizontalScrollPixels(pixels));
+      if (pixels?.type === "varRef") pushInstruction("mapHorizontalScrollerMove", ref, pixels, -1);
+      else pushInstruction("mapHorizontalScrollerMove", ref, -horizontalScrollPixels(pixels));
     },
     right(pixels = 1) {
-      pushInstruction("mapHorizontalScrollerMove", ref, horizontalScrollPixels(pixels));
+      if (pixels?.type === "varRef") pushInstruction("mapHorizontalScrollerMove", ref, pixels, 1);
+      else pushInstruction("mapHorizontalScrollerMove", ref, horizontalScrollPixels(pixels));
     },
     up(pixels = 1) {
-      pushInstruction("mapVerticalScrollerMove", ref, -horizontalScrollPixels(pixels));
+      if (pixels?.type === "varRef") pushInstruction("mapVerticalScrollerMove", ref, pixels, -1);
+      else pushInstruction("mapVerticalScrollerMove", ref, -horizontalScrollPixels(pixels));
     },
     down(pixels = 1) {
-      pushInstruction("mapVerticalScrollerMove", ref, horizontalScrollPixels(pixels));
+      if (pixels?.type === "varRef") pushInstruction("mapVerticalScrollerMove", ref, pixels, 1);
+      else pushInstruction("mapVerticalScrollerMove", ref, horizontalScrollPixels(pixels));
     },
     follow(entity, followOptions = {}) {
       if (!entity || entity.type !== "mapEntityRef") throw new Error("camera.follow() needs an entity returned by c64.map.spawn()");
@@ -1020,6 +1050,12 @@ c64.input = {
       api[`${direction}Pressed`] = () => joystickCondition(port, direction, "pressed");
       api[`${direction}Released`] = () => joystickCondition(port, direction, "released");
     }
+    api.scroll = (camera, speed = 1) => {
+      if (camera?.type !== "mapHorizontalScrollerRef") throw new Error("joystick.scroll needs a map scroller");
+      for (const direction of ["left", "right", "up", "down"]) {
+        c64.control.if(api[direction](), () => camera[direction](speed));
+      }
+    };
     return api;
   },
   keyboard(bindings) {
@@ -1089,6 +1125,13 @@ function createGameCounter(name, options = {}) {
 }
 
 c64.game = {
+  run(handlers = {}, options = {}) {
+    if (typeof handlers.update !== "function" || (handlers.init !== undefined && typeof handlers.init !== "function")) {
+      throw new Error("game.run needs an update callback and an optional init callback");
+    }
+    if (handlers.init) c64.game.init(handlers.init);
+    c64.game.frame(handlers.update, options);
+  },
   init(handler) {
     pushInstruction("gameInit", captureBlock(handler));
   },
@@ -1227,8 +1270,17 @@ function createSpriteHandle(index, options = {}) {
 
   return {
     ...state,
+    color(value) { pushInstruction("spriteRuntimeColor", state, value); },
+    multicolor(enabled) { pushInstruction("spriteRuntimeFlag", state, "multicolor", enabled); },
+    expandX(enabled) { pushInstruction("spriteRuntimeFlag", state, "expandX", enabled); },
+    expandY(enabled) { pushInstruction("spriteRuntimeFlag", state, "expandY", enabled); },
+    priority(enabled) { pushInstruction("spriteRuntimeFlag", state, "priority", enabled); },
     setPosition(x, y) {
       validateSpriteXLiteral(x, "sprite x");
+      if (y?.type === "varRef" && y.valueType === "word") {
+        pushInstruction("spriteRuntimePosition", state, x, y);
+        return;
+      }
       state.x.set(x);
       state.y.set(y);
       pushInstruction("spriteRuntimeSync", state);
@@ -1375,4 +1427,10 @@ c64.sprite = {
   }
 };
 
-export { getProgramState, resetRuntime };
+export { getProgramState };
+export function resetCompilerRuntime() {
+  horizontalScrollerCounter = 0;
+  mapEntityCounter = 0;
+  resetRuntime();
+}
+export { resetCompilerRuntime as resetRuntime };

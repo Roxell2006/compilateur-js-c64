@@ -3,8 +3,8 @@ import { compileFile } from "../src/compiler.js";
 import { PalRasterCpu } from "./helpers/pal-raster.js";
 
 describe("platformer PAL raster presentation", () => {
-  it("fetches coherent characters/colors across the whole map in both directions with three sprites", async () => {
-    const result = await compileFile("examples/platformer-mini.js");
+  it.each(["platformer-mini", "natural-platformer"])("%s fetches coherent characters/colors across the whole map in both directions with three sprites", async example => {
+    const result = await compileFile(`examples/${example}.js`);
     const cpu = new PalRasterCpu(result);
     cpu.runUntil(c => c.pc === result.symbols.game_frame_loop, 2000000);
     const ranges = result.assetReport.find(r => r.type === "memory-layout").ranges;

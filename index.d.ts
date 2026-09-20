@@ -154,10 +154,10 @@ export interface MapTileRef {
 export interface MapHorizontalScrollerRef {
   readonly type: "mapHorizontalScrollerRef";
   draw(): void;
-  left(pixels?: number): void;
-  right(pixels?: number): void;
-  up(pixels?: number): void;
-  down(pixels?: number): void;
+  left(pixels?: C64Number): void;
+  right(pixels?: C64Number): void;
+  up(pixels?: C64Number): void;
+  down(pixels?: C64Number): void;
   follow(entity: MapEntityRef, options?: {
     axis?: "x" | "y" | "both";
     deadZone?: { x: number; y: number; width: number; height: number };
@@ -293,9 +293,12 @@ export interface RuntimeWordRef {
   readonly type: "varRef";
   readonly valueType: "word";
   readonly name: string;
-  set(value: number | RuntimeWordRef): void;
-  add(value: number | RuntimeWordRef): void;
-  sub(value: number | RuntimeWordRef): void;
+  set(value: C64Number): void;
+  add(value: C64Number): void;
+  sub(value: C64Number): void;
+  and(value: C64Number): void;
+  or(value: C64Number): void;
+  xor(value: C64Number): void;
   inc(): void;
   dec(): void;
   eq(value: number | RuntimeWordRef): RuntimeCondition;
@@ -316,17 +319,20 @@ export interface RuntimeBoolRef {
   ne(value: boolean | RuntimeBoolRef): RuntimeCondition;
 }
 
+export type C64Number = number | RuntimeByteRef | RuntimeWordRef;
+export type C64Flag = boolean | RuntimeBoolRef | C64Number;
+
 export interface GameCounterRef {
   readonly type: "gameCounterRef";
   readonly name: string;
   readonly digits: number;
   readonly digitRefs: ReadonlyArray<RuntimeByteRef>;
-  set(value: number): void;
-  add(value?: number): void;
-  sub(value?: number): void;
+  set(value: C64Number): void;
+  add(value?: C64Number): void;
+  sub(value?: C64Number): void;
   inc(): void;
   dec(): void;
-  draw(x: number, y: number, options?: { color?: number }): void;
+  draw(x: C64Number, y: C64Number, options?: { color?: C64Number }): void;
 }
 
 export interface FixedPoolRef<T> {
@@ -345,6 +351,8 @@ export interface InputButton {
 }
 
 export interface JoystickInput {
+  /** Scroll on held directions; speed uses the scroller's 1..8 pixel range. */
+  scroll(camera: MapHorizontalScrollerRef, speed?: C64Number): void;
   up(): RuntimeCondition;
   down(): RuntimeCondition;
   left(): RuntimeCondition;
@@ -406,7 +414,12 @@ export interface SpriteRef {
   readonly vy: RuntimeByteRef;
   readonly active: RuntimeBoolRef;
   readonly hitbox: Required<SpriteHitbox>;
-  setPosition(x: number | RuntimeWordRef, y: number | RuntimeByteRef): void;
+  setPosition(x: C64Number, y: C64Number): void;
+  color(value: C64Number): void;
+  multicolor(enabled: C64Flag): void;
+  expandX(enabled: C64Flag): void;
+  expandY(enabled: C64Flag): void;
+  priority(enabled: C64Flag): void;
   setVelocity(vx: number | RuntimeByteRef, vy: number | RuntimeByteRef): void;
   setBounds(minX: number, maxX: number, minY: number, maxY: number, options?: { bounceX?: boolean; bounceY?: boolean }): void;
   update(): void;
@@ -425,6 +438,33 @@ export interface SpriteRef {
 }
 
 export interface C64Api {
+  screen: {
+    (address?: number): void;
+    setup(options?: { mode?: "text" | "hires"; background?: C64Number; border?: C64Number; color?: C64Number; clear?: boolean }): void;
+  };
+  /** Natural-source compiler intrinsic; requires the "use c64" directive. Unsigned, wraps modulo 256. */
+  byte(value: number): number;
+  /** Natural-source compiler intrinsic; requires the "use c64" directive. Unsigned, wraps modulo 65536. */
+  word(value: number): number;
+  textColor(color: C64Number): void;
+  printAt(x: C64Number, y: C64Number, text: string, color?: C64Number): void;
+  printNumber(x: C64Number, y: C64Number, value: C64Number, options?: { digits?: number; color?: C64Number }): void;
+  writeChar(x: C64Number, y: C64Number, char: string | C64Number, color?: C64Number): void;
+  fillRect(x: C64Number, y: C64Number, width: C64Number, height: C64Number, char?: string | C64Number, color?: C64Number): void;
+  drawFrame(x: C64Number, y: C64Number, width: C64Number, height: C64Number, char?: string | C64Number, color?: C64Number): void;
+  hires: {
+    screen(address?: number): void;
+    bitmap(address?: number): void;
+    enabled(): void;
+    disabled(): void;
+    clear(color?: C64Number): void;
+    point(x: C64Number, y: C64Number, color?: C64Number): void;
+    line(x1: C64Number, y1: C64Number, x2: C64Number, y2: C64Number, color?: C64Number): void;
+    rect(x: C64Number, y: C64Number, width: C64Number, height: C64Number, color?: C64Number): void;
+    fillRect(x: C64Number, y: C64Number, width: C64Number, height: C64Number, color?: C64Number): void;
+    circle(x: C64Number, y: C64Number, radius: C64Number, color?: C64Number): void;
+    fillCircle(x: C64Number, y: C64Number, radius: C64Number, color?: C64Number): void;
+  };
   program: {
     start(address: number): void;
   };
@@ -461,6 +501,7 @@ export interface C64Api {
     [key: string]: any;
   };
   game: {
+    run(handlers: { init?: () => void; update: () => void }, options?: { rasterLine?: number; hz?: 50 | "video" }): void;
     init(handler: () => void): void;
     every(count: number, handler: () => void): void;
     frame(handler: () => void, options?: { rasterLine?: number; hz?: 50 | "video" }): void;

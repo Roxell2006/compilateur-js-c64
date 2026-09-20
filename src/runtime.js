@@ -54,10 +54,12 @@ export function pushInstruction(op, ...args) {
 export function captureBlock(callback) {
   const previous = state.instructions;
   state.instructions = [];
-  callback();
-  const captured = state.instructions;
-  state.instructions = previous;
-  return captured;
+  try {
+    callback();
+    return state.instructions;
+  } finally {
+    state.instructions = previous;
+  }
 }
 
 export function getProgramState() {
@@ -120,7 +122,7 @@ export function claimSpriteSharedColors(multicolor1, multicolor2, sourcePath) {
 }
 
 export function setTextColor(color) {
-  state.currentTextColor = color & 0xff;
+  state.currentTextColor = ["varRef", "currentTextColor"].includes(color?.type) ? { type: "currentTextColor" } : color & 0xff;
 }
 
 export function setScreenBase(address) {

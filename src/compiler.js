@@ -1,10 +1,12 @@
 import path from "node:path";
+import fs from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { Assembler6502, abs, absx, absy, acc, imm, immHi, immLo, indy, rel, zp, exportBasicData } from "./assembler6502.js";
 import { c64, getProgramState, resetRuntime } from "./c64.js";
 import { createBasicDataProgram, createPrg } from "./prgWriter.js";
 import { expandMapAsset } from "./assets.js";
 import { setAssetBaseDirectory } from "./runtime.js";
+import { hasNaturalDirective, recordNaturalSource } from "./natural.js";
 
 // The compiler is the bridge between the user DSL and the final C64 outputs.
 // It receives a list of recorded instructions and turns them into:
@@ -1451,12 +1453,121 @@ function fixedBottomPanelMemoryOffset(compileState, y) {
   return 0;
 }
 
+// Shared scalar lowering for public APIs. Coordinates are range checked before
+// narrowing; colors intentionally use their low nibble. Scratch slots are
+// reused across calls and included in the normal memory-layout report.
+function isApiValue(value) { return isVarRef(value) || value?.type === "currentTextColor"; }
+
+function apiOperand(state, value, part = 0) {
+  if (value?.type === "currentTextColor") return part ? imm(0) : abs(0x0286);
+  if (isVarRef(value)) {
+    const variable = resolveRuntimeVariable(state, value, "API value");
+    return part < variable.size ? addressMode(variable.address + part) : imm(0);
+  }
+  if (typeof value === "boolean") value = Number(value);
+  ensureWord(value, "API value");
+  return imm((value >> (8 * part)) & 255);
+}
+
+function apiScratch(state, name, size = 1) {
+  const key = `__api_${name}`;
+  if (!state.variables.has(key)) registerVariable(state, key, allocateVariableAddress(state, size), size);
+  return { type: "varRef", name: key, valueType: size === 2 ? "word" : "byte" };
+}
+
+function apiAddress(state, ref) { return resolveRuntimeVariable(state, ref).address; }
+
+function emitApiStore(asm, state, value, address, size = 1, mask = undefined) {
+  for (let part = 0; part < size; part++) {
+    asm.lda(apiOperand(state, value, part));
+    if (mask !== undefined) asm.and(imm(mask));
+    asm.sta(addressMode(address + part));
+  }
+}
+
+function emitApiRange(asm, state, value, minimum, maximum, done, label = "API argument") {
+  if (!isApiValue(value)) {
+    if (!Number.isInteger(value) || value < minimum || value > maximum) throw new Error(`${label} must be between ${minimum} and ${maximum}`);
+    return;
+  }
+  const valid = `api_range_valid_${state.loopCounter++}`;
+  const invalid = `api_range_invalid_${state.loopCounter++}`;
+  const upperValid = `${valid}_upper`;
+  asm.lda(apiOperand(state, value, 1));
+  asm.cmp(imm(maximum >> 8));
+  asm.bcc(rel(upperValid));
+  asm.bne(rel(invalid));
+  if ((maximum & 255) !== 255) {
+    asm.lda(apiOperand(state, value));
+    asm.cmp(imm((maximum & 255) + 1));
+    asm.bcs(rel(invalid));
+  }
+  asm.label(upperValid);
+  if (minimum > 0) {
+    asm.lda(apiOperand(state, value, 1));
+    asm.cmp(imm(minimum >> 8));
+    asm.bcc(rel(invalid));
+    asm.bne(rel(valid));
+    asm.lda(apiOperand(state, value));
+    asm.cmp(imm(minimum & 255));
+    asm.bcc(rel(invalid));
+  }
+  asm.jmp(abs(valid));
+  asm.label(invalid); asm.jmp(abs(done)); asm.label(valid);
+}
+
+function emitApiSum(asm, state, target, left, right, subtract = false) {
+  const address = apiAddress(state, target);
+  subtract ? asm.sec() : asm.clc();
+  for (let part = 0; part < 2; part++) {
+    asm.lda(apiOperand(state, left, part));
+    subtract ? asm.sbc(apiOperand(state, right, part)) : asm.adc(apiOperand(state, right, part));
+    asm.sta(abs(address + part));
+  }
+}
+
+function emitTextPointers(asm, state, x, y, length, done) {
+  emitApiRange(asm, state, x, 0, 40 - length, done, "text x");
+  emitApiRange(asm, state, y, 0, 24, done, "text y");
+  const offsets = Array.from({ length: 25 }, (_, row) => row * 40 + fixedBottomPanelMemoryOffset(state, row));
+  const key = `api_text_${state.screenBase}_${state.colorBase}_${offsets.findIndex((offset, row) => offset !== row * 40) + 1}`;
+  const tables = [state.screenBase, state.colorBase].flatMap(base => [
+    offsets.map(offset => (base + offset) & 255), offsets.map(offset => (base + offset) >> 8)
+  ]);
+  const labels = tables.map((table, i) => {
+    const label = `${key}_${i}`;
+    if (!state.dataPool.has(label)) registerData(state, label, table);
+    return label;
+  });
+  asm.lda(apiOperand(state, y)); asm.tax();
+  for (let i = 0; i < 2; i++) {
+    const pointer = i === 0 ? HIRES_ZP_PTR_LO : HIRES_ZP_WORK_LO;
+    asm.lda(absx(labels[i * 2])); asm.clc(); asm.adc(apiOperand(state, x)); asm.sta(zp(pointer));
+    asm.lda(absx(labels[i * 2 + 1])); asm.adc(imm(0)); asm.sta(zp(pointer + 1));
+  }
+}
+
+function emitDynamicPrintAt(asm, state, x, y, text, color) {
+  const length = Array.from(String(text)).length;
+  if (length > 40) throw new Error("dynamic printAt text must fit on one 40-character row");
+  if (length === 0) return;
+  const done = `api_print_done_${state.loopCounter++}`;
+  const loop = `api_print_loop_${state.loopCounter++}`;
+  const textLabel = requestStringLabel(state, "screen", text, asciiToScreenCode);
+  emitTextPointers(asm, state, x, y, length, done);
+  asm.ldy(imm(0)); asm.label(loop);
+  asm.lda(absy(textLabel)); asm.sta(indy(HIRES_ZP_PTR_LO));
+  asm.lda(apiOperand(state, color)); asm.and(imm(15)); asm.sta(indy(HIRES_ZP_WORK_LO));
+  asm.iny(); asm.cpy(imm(length)); asm.bne(rel(loop)); asm.label(done);
+}
+
 function emitPrintAt(asm, x, y, text, color, screenBase, colorBase, compileState) {
+  if ([x, y].some(isApiValue)) return emitDynamicPrintAt(asm, compileState, x, y, text, color);
   // printAt() writes directly to screen RAM and color RAM instead of using
   // CHROUT. This is faster and gives exact control over the target position.
   ensureByte(x, "x");
   ensureByte(y, "y");
-  ensureByte(color, "color");
+  if (!isApiValue(color)) ensureByte(color, "color");
   const rowOffset = y * 40 + fixedBottomPanelMemoryOffset(compileState, y);
   const screen = screenBase + rowOffset + x;
   const colors = colorBase + rowOffset + x;
@@ -1469,7 +1580,8 @@ function emitPrintAt(asm, x, y, text, color, screenBase, colorBase, compileState
   asm.lda(absx(textLabel));
   asm.beq(rel(doneLabel));
   asm.sta(absx(screen));
-  asm.lda(imm(color));
+  asm.lda(apiOperand(compileState, color));
+  if (isApiValue(color)) asm.and(imm(15));
   asm.sta(absx(colors));
   asm.inx();
   asm.bne(rel(loopLabel));
@@ -1477,19 +1589,31 @@ function emitPrintAt(asm, x, y, text, color, screenBase, colorBase, compileState
 }
 
 function emitWriteChar(asm, x, y, char, color, screenBase, colorBase, compileState) {
+  if ([x, y].some(isApiValue)) {
+    const done = `api_char_done_${compileState.loopCounter++}`;
+    emitTextPointers(asm, compileState, x, y, 1, done);
+    asm.ldy(imm(0));
+    asm.lda(apiOperand(compileState, typeof char === "string" ? asciiToScreenCode(char[0] ?? " ") : char));
+    asm.sta(indy(HIRES_ZP_PTR_LO));
+    asm.lda(apiOperand(compileState, color)); asm.and(imm(15)); asm.sta(indy(HIRES_ZP_WORK_LO));
+    asm.label(done); return;
+  }
   ensureByte(x, "x");
   ensureByte(y, "y");
-  ensureByte(color, "color");
+  if (!isApiValue(color)) ensureByte(color, "color");
   const rowOffset = y * 40 + fixedBottomPanelMemoryOffset(compileState, y);
   const screen = screenBase + rowOffset + x;
   const colors = colorBase + rowOffset + x;
   const screenCode = typeof char === "string" ? asciiToScreenCode(char[0] ?? " ") : char;
 
-  emitStoreImmediate(asm, screen, screenCode);
-  emitStoreImmediate(asm, colors, color);
+  if (isApiValue(screenCode)) emitApiStore(asm, compileState, screenCode, screen);
+  else emitStoreImmediate(asm, screen, screenCode);
+  if (isApiValue(color)) emitApiStore(asm, compileState, color, colors, 1, 15);
+  else emitStoreImmediate(asm, colors, color);
 }
 
 function emitFillRect(asm, x, y, w, h, char, color, screenBase, colorBase, currentTextColor = color, compileState = null) {
+  if ([x, y, w, h, char, color].some(isApiValue)) return emitDynamicTextRect(asm, compileState, x, y, w, h, char, color, false);
   // Several special cases are optimized here to keep generated programs small.
   // Example: a full screen clear can become a single KERNAL call instead of
   // hundreds of LDA/STA instructions.
@@ -1537,6 +1661,7 @@ function emitFillRect(asm, x, y, w, h, char, color, screenBase, colorBase, curre
 }
 
 function emitDrawFrame(asm, x, y, w, h, char, color, screenBase, colorBase, currentTextColor = color, compileState = null) {
+  if ([x, y, w, h, char, color].some(isApiValue)) return emitDynamicTextRect(asm, compileState, x, y, w, h, char, color, true);
   ensureByte(x, "x");
   ensureByte(y, "y");
   ensureByte(w, "w");
@@ -1555,6 +1680,43 @@ function emitDrawFrame(asm, x, y, w, h, char, color, screenBase, colorBase, curr
       emitWriteChar(asm, x + w - 1, y + row, char, color, screenBase, colorBase, compileState);
     }
   }
+}
+
+function emitDynamicTextRect(asm, state, x, y, w, h, char, color, frame) {
+  const done = `api_text_rect_done_${state.loopCounter++}`;
+  emitApiRange(asm, state, x, 0, 39, done, "text x");
+  emitApiRange(asm, state, y, 0, 24, done, "text y");
+  // Empty rectangles are no-ops, just as in the constant path.
+  emitApiRange(asm, state, w, 0, 40, done, "text width");
+  emitApiRange(asm, state, h, 0, 25, done, "text height");
+  const nonempty = `api_text_rect_nonempty_${state.loopCounter++}`;
+  asm.lda(apiOperand(state, w)); asm.beq(rel(nonempty));
+  asm.lda(apiOperand(state, h)); asm.bne(rel(`${nonempty}_ok`));
+  asm.label(nonempty); asm.jmp(abs(done)); asm.label(`${nonempty}_ok`);
+  const right = apiScratch(state, "text_right", 2), bottom = apiScratch(state, "text_bottom", 2);
+  emitApiSum(asm, state, right, x, w); emitApiRange(asm, state, right, 1, 40, done);
+  emitApiSum(asm, state, bottom, y, h); emitApiRange(asm, state, bottom, 1, 25, done);
+  emitRuntimeIncDec(asm, state, bottom, false);
+  const row = apiScratch(state, "text_row"), count = apiScratch(state, "text_columns");
+  const rowAddress = apiAddress(state, row), countAddress = apiAddress(state, count);
+  emitApiStore(asm, state, y, rowAddress); emitApiStore(asm, state, w, countAddress);
+  const loop = `api_text_rect_row_${state.loopCounter++}`, pixels = `${loop}_pixels`, next = `${loop}_next`;
+  asm.label(loop);
+  emitTextPointers(asm, state, x, row, 1, done);
+  const put = () => {
+    asm.lda(apiOperand(state, typeof char === "string" ? asciiToScreenCode(char[0] ?? " ") : char));
+    asm.sta(indy(HIRES_ZP_PTR_LO));
+    asm.lda(apiOperand(state, color)); asm.and(imm(15)); asm.sta(indy(HIRES_ZP_WORK_LO));
+  };
+  asm.ldy(imm(0));
+  if (frame) {
+    asm.lda(abs(rowAddress)); asm.cmp(apiOperand(state, y)); asm.beq(rel(pixels));
+    asm.cmp(apiOperand(state, bottom)); asm.beq(rel(pixels));
+    put(); asm.ldy(abs(countAddress)); asm.dey(); put(); asm.jmp(abs(next));
+  }
+  asm.label(pixels); put(); asm.iny(); asm.cpy(abs(countAddress)); asm.bne(rel(pixels));
+  asm.label(next); asm.lda(abs(rowAddress)); asm.cmp(apiOperand(state, bottom)); asm.beq(rel(`${next}_done`));
+  asm.inc(abs(rowAddress)); asm.jmp(abs(loop)); asm.label(`${next}_done`); asm.label(done);
 }
 
 function emitEnsureHiresMode(asm, compileState) {
@@ -1604,9 +1766,9 @@ function emitDisableHiresMode(asm, compileState) {
 }
 
 function emitHiresClear(asm, compileState, color) {
-  ensureByte(color, "hires clear color");
+  if (!isApiValue(color)) ensureByte(color, "hires clear color");
   emitEnsureHiresMode(asm, compileState);
-  compileState.hires.backgroundColor = color & 0x0f;
+  compileState.hires.backgroundColor = isApiValue(color) ? null : color & 0x0f;
 
   const layout = buildHiresLayout(compileState.hires.screenBase, compileState.hires.bitmapBase);
   const bitmapLoopLabel = `hires_bitmap_page_${compileState.loopCounter++}`;
@@ -1631,7 +1793,8 @@ function emitHiresClear(asm, compileState, color) {
   emitStoreImmediate(asm, HIRES_ZP_PTR_HI, layout.screenStartHi);
   emitStoreImmediate(asm, HIRES_ZP_PTR_LO, 0x00);
   asm.label(screenLoopLabel);
-  asm.lda(imm(color & 0x0f));
+  if (isApiValue(color)) { asm.lda(apiOperand(compileState, color)); asm.and(imm(15)); }
+  else asm.lda(imm(color & 0x0f));
   asm.ldy(imm(0x00));
   asm.label(screenWriteLabel);
   asm.sta(indy(HIRES_ZP_PTR_LO));
@@ -1705,7 +1868,68 @@ function emitWaitKey(asm, compileState) {
   asm.byte([0xfe, 0xfd, 0xfb, 0xf7, 0xef, 0xdf, 0xbf, 0x7f]);
 }
 
+// Dynamic coordinates use the existing shared bitmap routines. Guard runtime
+// endpoints before writing bitmap RAM; constant-only calls keep their fast path.
+function emitHiresDynamicArguments(asm, state, coordinates, color, done) {
+  for (const [value, maximum] of coordinates) {
+    if (!isVarRef(value)) {
+      if (maximum === 319) ensureHiresX(value); else ensureHiresY(value);
+      continue;
+    }
+    const variable = resolveRuntimeVariable(state, value, "hires coordinate");
+    const next = `hires_coordinate_valid_${state.loopCounter++}`;
+    const invalid = `hires_coordinate_invalid_${state.loopCounter++}`;
+    if (variable.size === 2) {
+      asm.lda(addressMode(variable.address + 1));
+      asm.cmp(imm(maximum >> 8));
+      asm.bcc(rel(next));
+      asm.bne(rel(invalid));
+    } else if (maximum > 255) continue;
+    asm.lda(addressMode(variable.address));
+    asm.cmp(imm((maximum & 255) + 1));
+    asm.bcc(rel(next));
+    asm.label(invalid);
+    asm.jmp(abs(done));
+    asm.label(next);
+  }
+  if (isVarRef(color)) resolveRuntimeVariable(state, color, "hires color");
+  else ensureByte(color, "hires color");
+}
+
+function emitHiresDynamicStore(asm, state, value, lowAddress, highAddress) {
+  if (isVarRef(value)) {
+    const variable = resolveRuntimeVariable(state, value);
+    emitLoadAndStore(asm, variable.address, lowAddress);
+    if (highAddress !== undefined) {
+      if (variable.size === 2) emitLoadAndStore(asm, variable.address + 1, highAddress);
+      else emitStoreImmediate(asm, highAddress, 0);
+    }
+  } else {
+    emitStoreImmediate(asm, lowAddress, value & 255);
+    if (highAddress !== undefined) emitStoreImmediate(asm, highAddress, value >> 8);
+  }
+}
+
+function emitHiresDynamicColor(asm, state, color, address) {
+  if (!isApiValue(color)) { ensureByte(color, "hires color"); emitStoreImmediate(asm, address, (color & 15) << 4); return; }
+  asm.lda(apiOperand(state, color));
+  for (let i = 0; i < 4; i++) asm.asl(acc());
+  asm.sta(abs(address));
+}
+
 function emitHiresPoint(asm, compileState, x, y, color) {
+  if ([x, y, color].some(isVarRef)) {
+    const done = `hires_point_done_${compileState.loopCounter++}`;
+    emitEnsureHiresMode(asm, compileState);
+    compileState.hires.runtimeNeeded = true;
+    emitHiresDynamicArguments(asm, compileState, [[x, 319], [y, 199]], color, done);
+    emitHiresDynamicStore(asm, compileState, x, HIRES_POINT_X_LO, HIRES_POINT_X_HI);
+    emitHiresDynamicStore(asm, compileState, y, HIRES_POINT_Y);
+    emitHiresDynamicColor(asm, compileState, color, HIRES_POINT_COLOR);
+    asm.jsr(abs("hires_point_runtime"));
+    asm.label(done);
+    return;
+  }
   ensureHiresX(x);
   ensureHiresY(y);
   ensureByte(color, "hires point color");
@@ -1720,6 +1944,21 @@ function emitHiresPoint(asm, compileState, x, y, color) {
 }
 
 function emitHiresLine(asm, compileState, x1, y1, x2, y2, color) {
+  if ([x1, y1, x2, y2, color].some(isVarRef)) {
+    const done = `hires_line_done_${compileState.loopCounter++}`;
+    emitEnsureHiresMode(asm, compileState);
+    compileState.hires.runtimeNeeded = true;
+    compileState.hires.lineRuntimeNeeded = true;
+    emitHiresDynamicArguments(asm, compileState, [[x1, 319], [y1, 199], [x2, 319], [y2, 199]], color, done);
+    emitHiresDynamicStore(asm, compileState, x1, HIRES_LINE_X1_LO, HIRES_LINE_X1_HI);
+    emitHiresDynamicStore(asm, compileState, y1, HIRES_LINE_Y1);
+    emitHiresDynamicStore(asm, compileState, x2, HIRES_LINE_X2_LO, HIRES_LINE_X2_HI);
+    emitHiresDynamicStore(asm, compileState, y2, HIRES_LINE_Y2);
+    emitHiresDynamicColor(asm, compileState, color, HIRES_LINE_COLOR);
+    asm.jsr(abs("hires_line_runtime"));
+    asm.label(done);
+    return;
+  }
   ensureHiresX(x1);
   ensureHiresY(y1);
   ensureHiresX(x2);
@@ -1769,6 +2008,7 @@ function emitHiresLine(asm, compileState, x1, y1, x2, y2, color) {
 }
 
 function emitHiresRect(asm, compileState, x, y, width, height, color) {
+  if ([x, y, width, height, color].some(isApiValue)) return emitDynamicHiresRect(asm, compileState, x, y, width, height, color, false);
   ensureHiresX(x);
   ensureHiresY(y);
   ensureByte(color, "hires rect color");
@@ -1797,6 +2037,7 @@ function emitHiresRect(asm, compileState, x, y, width, height, color) {
 }
 
 function emitHiresFillRect(asm, compileState, x, y, width, height, color) {
+  if ([x, y, width, height, color].some(isApiValue)) return emitDynamicHiresRect(asm, compileState, x, y, width, height, color, true);
   ensureHiresX(x);
   ensureHiresY(y);
   ensureByte(color, "hires fillRect color");
@@ -1828,6 +2069,7 @@ function emitHiresFillRect(asm, compileState, x, y, width, height, color) {
 }
 
 function emitHiresCircleCommon(asm, compileState, x, y, radius, color, fill) {
+  if ([x, y, radius, color].some(isApiValue)) return emitDynamicHiresCircle(asm, compileState, x, y, radius, color, fill);
   ensureHiresX(x);
   ensureHiresY(y);
   ensureHiresRadius(radius);
@@ -1856,6 +2098,66 @@ function emitHiresCircle(asm, compileState, x, y, radius, color) {
 
 function emitHiresFillCircle(asm, compileState, x, y, radius, color) {
   emitHiresCircleCommon(asm, compileState, x, y, radius, color, true);
+}
+
+function emitDynamicHiresRect(asm, state, x, y, width, height, color, fill) {
+  const done = `api_hires_rect_done_${state.loopCounter++}`;
+  emitEnsureHiresMode(asm, state);
+  emitApiRange(asm, state, x, 0, 319, done, "hires x");
+  emitApiRange(asm, state, y, 0, 199, done, "hires y");
+  emitApiRange(asm, state, width, 1, 320, done, "hires width");
+  emitApiRange(asm, state, height, 1, 200, done, "hires height");
+  const right = apiScratch(state, "hires_right", 2);
+  const bottom = apiScratch(state, "hires_bottom", 2);
+  emitApiSum(asm, state, right, x, width); emitRuntimeIncDec(asm, state, right, false);
+  emitApiSum(asm, state, bottom, y, height); emitRuntimeIncDec(asm, state, bottom, false);
+  emitApiRange(asm, state, right, 0, 319, done);
+  emitApiRange(asm, state, bottom, 0, 199, done);
+  state.hires.runtimeNeeded = true;
+  state.hires.hlineRuntimeNeeded = true;
+  emitHiresDynamicStore(asm, state, x, HIRES_LINE_X1_LO, HIRES_LINE_X1_HI);
+  emitHiresDynamicStore(asm, state, right, HIRES_LINE_X2_LO, HIRES_LINE_X2_HI);
+  emitHiresDynamicStore(asm, state, y, HIRES_LINE_Y1);
+  emitHiresDynamicColor(asm, state, color, HIRES_LINE_COLOR);
+  if (fill) {
+    state.hires.fillRectRuntimeNeeded = true;
+    emitHiresDynamicStore(asm, state, bottom, HIRES_FILL_Y_END);
+    asm.jsr(abs("hires_fillrect_runtime"));
+  } else {
+    state.hires.vlineRuntimeNeeded = true;
+    asm.jsr(abs("hires_hline_runtime"));
+    emitHiresDynamicStore(asm, state, bottom, HIRES_LINE_Y1);
+    asm.jsr(abs("hires_hline_runtime"));
+    emitHiresDynamicStore(asm, state, y, HIRES_LINE_Y1);
+    emitHiresDynamicStore(asm, state, bottom, HIRES_LINE_Y2);
+    asm.jsr(abs("hires_vline_runtime"));
+    emitHiresDynamicStore(asm, state, right, HIRES_LINE_X1_LO, HIRES_LINE_X1_HI);
+    asm.jsr(abs("hires_vline_runtime"));
+  }
+  asm.label(done);
+}
+
+function emitDynamicHiresCircle(asm, state, x, y, radius, color, fill) {
+  const done = `api_hires_circle_done_${state.loopCounter++}`;
+  emitEnsureHiresMode(asm, state);
+  emitApiRange(asm, state, x, 0, 319, done, "hires x");
+  emitApiRange(asm, state, y, 0, 199, done, "hires y");
+  emitApiRange(asm, state, radius, 0, 199, done, "hires radius");
+  const edge = apiScratch(state, "hires_edge", 2);
+  // Unsigned subtraction wraps an off-screen left/top edge above the maximum.
+  for (const [center, maximum] of [[x, 319], [y, 199]]) {
+    emitApiSum(asm, state, edge, center, radius, true); emitApiRange(asm, state, edge, 0, maximum, done);
+    emitApiSum(asm, state, edge, center, radius); emitApiRange(asm, state, edge, 0, maximum, done);
+  }
+  state.hires.runtimeNeeded = true;
+  state.hires.hlineRuntimeNeeded = true;
+  state.hires.circleRuntimeNeeded = true;
+  emitHiresDynamicStore(asm, state, x, HIRES_CIRCLE_CX_LO, HIRES_CIRCLE_CX_HI);
+  emitHiresDynamicStore(asm, state, y, HIRES_CIRCLE_CY);
+  emitHiresDynamicStore(asm, state, radius, HIRES_CIRCLE_RADIUS);
+  emitHiresDynamicColor(asm, state, color, HIRES_CIRCLE_COLOR);
+  emitStoreImmediate(asm, HIRES_CIRCLE_FILL, Number(fill));
+  asm.jsr(abs("hires_circle_runtime")); asm.label(done);
 }
 
 function emitHiresRoutines(asm, state) {
@@ -2124,6 +2426,9 @@ function emitHiresRoutines(asm, state) {
   asm.bcc(rel(`${pointScreenOkLabel}_hi_done`));
   asm.inc(zp(HIRES_ZP_PTR_HI));
   asm.label(`${pointScreenOkLabel}_hi_done`);
+  // Low-byte overflow was already propagated with INC above. INC preserves
+  // carry: clear it before adding the screen base or we advance another page.
+  asm.clc();
   asm.lda(zp(HIRES_ZP_PTR_HI));
   asm.adc(imm(layout.screenStartHi));
   asm.sta(zp(HIRES_ZP_PTR_HI));
@@ -2548,7 +2853,8 @@ function emitMemset(asm, address, value, length) {
     emitStoreImmediate(asm, address, value);
     return;
   }
-  const loop = `memset_${address.toString(16)}_${value}_${length}`;
+  const base = `memset_${address.toString(16)}_${value}_${length}`;
+  const loop = asm.symbols.has(base) ? `${base}_${asm.symbols.size}` : base;
   asm.lda(imm(value));
   asm.ldx(imm(0));
   asm.label(loop);
@@ -2644,6 +2950,14 @@ function emitSetBitState(asm, address, bitIndex, enabled) {
   asm.sta(abs(address));
 }
 
+function emitApiBitState(asm, state, address, bitIndex, enabled) {
+  if (!isApiValue(enabled)) { emitSetBitState(asm, address, bitIndex, Boolean(enabled)); return; }
+  const off = `api_flag_off_${state.loopCounter++}`, done = `${off}_done`;
+  asm.lda(apiOperand(state, enabled)); asm.ora(apiOperand(state, enabled, 1)); asm.beq(rel(off));
+  emitSetBitState(asm, address, bitIndex, true); asm.jmp(abs(done));
+  asm.label(off); emitSetBitState(asm, address, bitIndex, false); asm.label(done);
+}
+
 function emitSpriteSetX(asm, compileState, index, x) {
   ensureSpriteIndex(index);
   if (isVarRef(x)) {
@@ -2677,6 +2991,12 @@ function emitSpriteSetX(asm, compileState, index, x) {
 function emitSpriteSetY(asm, compileState, index, y) {
   ensureSpriteIndex(index);
   if (isVarRef(y)) {
+    if (resolveRuntimeVariable(compileState, y).size === 2) {
+      const done = `api_sprite_y_done_${compileState.loopCounter++}`;
+      emitApiRange(asm, compileState, y, 0, 255, done, "sprite y");
+      emitApiStore(asm, compileState, y, spriteYAddress(index));
+      asm.label(done); compileState.spriteState[index].y = null; return;
+    }
     asm.lda(addressMode(resolveRuntimeByteAddress(compileState, y, "sprite y")));
     asm.sta(abs(spriteYAddress(index)));
     compileState.spriteState[index].y = null;
@@ -3660,8 +3980,9 @@ function emitMapHorizontalScrollerSingleStep(asm, compileState, scroller, direct
   asm.label(done);
 }
 
-function emitMapHorizontalScrollerMove(asm, compileState, ref, delta) {
+function emitMapHorizontalScrollerMove(asm, compileState, ref, delta, direction) {
   const scroller = requireHorizontalScroller(compileState, ref);
+  if (isVarRef(delta)) return emitDynamicScroll(asm, compileState, scroller, delta, direction, false);
   if (!Number.isInteger(delta) || delta === 0 || Math.abs(delta) > 8) {
     throw new Error("horizontal scroll movement must be between 1 and 8 pixels");
   }
@@ -3713,18 +4034,31 @@ function emitMapVerticalScrollerSingleStep(asm, compileState, scroller, directio
   asm.label(done);
 }
 
-function emitMapVerticalScrollerMove(asm, compileState, ref, delta) {
+function emitMapVerticalScrollerMove(asm, compileState, ref, delta, direction) {
   const scroller = requireHorizontalScroller(compileState, ref);
   if (scroller.panel !== "bottom") {
     throw new Error("vertical fine scrolling currently requires panel: \"bottom\"; a fixed top character panel needs FLD/badline compensation");
   }
   scroller.verticalUsed = true;
+  if (isVarRef(delta)) return emitDynamicScroll(asm, compileState, scroller, delta, direction, true);
   if (!Number.isInteger(delta) || delta === 0 || Math.abs(delta) > 8) {
     throw new Error("vertical scroll movement must be between 1 and 8 pixels");
   }
   for (let pixel = 0; pixel < Math.abs(delta); pixel += 1) {
     emitMapVerticalScrollerSingleStep(asm, compileState, scroller, Math.sign(delta));
   }
+}
+
+function emitDynamicScroll(asm, state, scroller, pixels, direction, vertical) {
+  if (direction !== 1 && direction !== -1) throw new Error("dynamic scroll needs a fixed direction");
+  const loop = `api_scroll_${state.loopCounter++}`, done = `${loop}_done`;
+  const count = apiAddress(state, apiScratch(state, vertical ? "scroll_y_count" : "scroll_x_count"));
+  emitApiRange(asm, state, pixels, 0, 8, done, "scroll pixels");
+  emitApiStore(asm, state, pixels, count);
+  asm.lda(abs(count)); asm.bne(rel(`${loop}_start`)); asm.jmp(abs(done));
+  asm.label(`${loop}_start`); asm.label(loop);
+  (vertical ? emitMapVerticalScrollerSingleStep : emitMapHorizontalScrollerSingleStep)(asm, state, scroller, direction);
+  asm.dec(abs(count)); asm.beq(rel(done)); asm.jmp(abs(loop)); asm.label(done);
 }
 
 function emitWordGreaterChoice(asm, leftAddress, rightAddress, trueLabel, falseLabel, prefix) {
@@ -4937,7 +5271,7 @@ const SPRITE_RUNTIME_FLAG_BITS = Object.freeze({ multicolor: 0, expandX: 1, expa
 function emitRuntimeSpriteFlag(asm, compileState, spriteRef, flagName, enabled) {
   const bit = SPRITE_RUNTIME_FLAG_BITS[flagName];
   if (bit === undefined) throw new Error(`Unknown runtime sprite flag: ${flagName}`);
-  emitSetBitState(asm, spriteRuntimeInternal(spriteRef.index).flags, bit, enabled);
+  emitApiBitState(asm, compileState, spriteRuntimeInternal(spriteRef.index).flags, bit, enabled);
   if (compileState.multiplexer.enabled) return;
   const hardwareRegister = {
     multicolor: c64.VIC_SPRITE_MULTICOLOR,
@@ -4945,7 +5279,7 @@ function emitRuntimeSpriteFlag(asm, compileState, spriteRef, flagName, enabled) 
     expandY: c64.VIC_SPRITE_EXPAND_Y,
     priority: c64.VIC_SPRITE_PRIORITY
   }[flagName];
-  emitSetBitState(asm, hardwareRegister, spriteRef.index, enabled);
+  emitApiBitState(asm, compileState, hardwareRegister, spriteRef.index, enabled);
 }
 
 function getSpriteRuntime(compileState, spriteRef) {
@@ -5813,6 +6147,7 @@ function collectBalancedOptimizationStats(instructionGroups) {
     cameraFollowCount: 0,
     usesExplicitScrollMove: false,
     usesControlCall: false,
+    controlCalls: new Set(),
     usesMapActivation: false,
     usesGameScenes: false,
     usesRng: false
@@ -5836,12 +6171,15 @@ function collectBalancedOptimizationStats(instructionGroups) {
       if (instruction.op === "mapVerticalScrollerMove") stats.usesVerticalMapScroll = true;
       if (instruction.op === "mapScrollerFollow") stats.cameraFollowCount += 1;
       if (["mapHorizontalScrollerMove", "mapVerticalScrollerMove"].includes(instruction.op)) stats.usesExplicitScrollMove = true;
-      if (instruction.op === "controlCall") stats.usesControlCall = true;
+      if (instruction.op === "controlCall") {
+        stats.usesControlCall = true;
+        stats.controlCalls.add(instruction.args[0]);
+      }
       if (instruction.op === "mapScrollerFollow" && ["y", "both"].includes(instruction.args[2]?.axis)) {
         stats.usesVerticalMapScroll = true;
       }
       if (MULTIPLEX_CONFLICTING_LEGACY_OPS.has(instruction.op)) stats.usesLegacySpriteApi = true;
-      if (["spriteCreateRuntime", "spriteRuntimeSync", "spriteRuntimeUpdate"].includes(instruction.op)) addSpriteSync(instruction);
+      if (["spriteCreateRuntime", "spriteRuntimeSync", "spriteRuntimeUpdate", "spriteRuntimePosition"].includes(instruction.op)) addSpriteSync(instruction);
       if (instruction.op === "spriteCreateRuntime") stats.spriteIndices.add(instruction.args[0].index);
       if (instruction.op === "spriteCreateRuntime" && instruction.args[0]?.index >= 8) stats.usesSpriteMultiplexer = true;
       if (["gameInit", "gameFrame"].includes(instruction.op)) visit(instruction.args[0]);
@@ -6033,9 +6371,9 @@ function emitRuntimeSet(asm, compileState, target, value) {
   }
   if (isVarRef(value)) {
     const source = resolveRuntimeVariable(compileState, value, "assignment value");
-    if (source.size !== 2) throw new Error("word assignment needs a word source");
     emitLoadAndStore(asm, source.address, targetVariable.address);
-    emitLoadAndStore(asm, source.address + 1, targetVariable.address + 1);
+    if (source.size === 2) emitLoadAndStore(asm, source.address + 1, targetVariable.address + 1);
+    else emitStoreImmediate(asm, targetVariable.address + 1, 0);
     return;
   }
   const literal = normalizeRuntimeLiteral(value, 2, "assignment value");
@@ -6056,7 +6394,6 @@ function emitRuntimeMath(asm, compileState, target, value, operation) {
   if (targetVariable.size === 2) {
     if (isVarRef(value)) {
       const source = resolveRuntimeVariable(compileState, value, "math value");
-      if (source.size !== 2) throw new Error("word math needs a word source");
       lowOperand = addressMode(source.address);
     } else {
       lowOperand = imm(normalizeRuntimeLiteral(value, 2, "math value") & 0xff);
@@ -6078,8 +6415,7 @@ function emitRuntimeMath(asm, compileState, target, value, operation) {
     let highOperand;
     if (isVarRef(value)) {
       const source = resolveRuntimeVariable(compileState, value, "math value");
-      if (source.size !== 2) throw new Error("word math needs a word source");
-      highOperand = addressMode(source.address + 1);
+      highOperand = source.size === 2 ? addressMode(source.address + 1) : imm(0);
     } else {
       highOperand = imm((normalizeRuntimeLiteral(value, 2, "math value") >> 8) & 0xff);
     }
@@ -6112,7 +6448,20 @@ function emitRuntimeIncDec(asm, compileState, target, increment) {
 
 function emitRuntimeBit(asm, compileState, operation, target, value) {
   const variable = resolveRuntimeVariable(compileState, target, "bit operation target");
-  if (variable.size !== 1) throw new Error("bit operations currently require a byte or bool variable");
+  if (variable.size === 2) {
+    for (let part = 0; part < 2; part++) {
+      asm.lda(addressMode(variable.address + part));
+      const source = isVarRef(value) ? resolveRuntimeVariable(compileState, value) : null;
+      const operand = source ? (part < source.size ? addressMode(source.address + part) : imm(0))
+        : imm((normalizeRuntimeLiteral(value, 2, "bit value") >> (part * 8)) & 255);
+      if (operation === "and") asm.and(operand);
+      else if (operation === "or") asm.ora(operand);
+      else if (operation === "xor") asm.eor(operand);
+      else throw new Error(`Unsupported bit operation: ${operation}`);
+      asm.sta(addressMode(variable.address + part));
+    }
+    return;
+  }
   asm.lda(addressMode(variable.address));
   const operand = runtimeValueOperand(compileState, typeof value === "boolean" ? Number(value) : value, "bit value");
   if (operation === "and") asm.and(operand);
@@ -6423,13 +6772,20 @@ function counterLiteral(counter, value, label) {
 
 function emitGameCounterSet(asm, compileState, counter, value) {
   const addresses = validateGameCounter(compileState, counter);
+  if (isApiValue(value)) {
+    const digits = emitDecimalDigits(asm, compileState, value);
+    addresses.forEach((address, index) => emitLoadAndStore(asm, digits + 5 - addresses.length + index, address));
+    return;
+  }
   const digits = counterLiteral(counter, value, `counter ${counter.name} value`);
   addresses.forEach((address, index) => emitStoreImmediate(asm, address, digits[index]));
 }
 
 function emitGameCounterMath(asm, compileState, counter, value, subtract) {
   const addresses = validateGameCounter(compileState, counter);
-  const digits = counterLiteral(counter, value, `counter ${counter.name} delta`);
+  const dynamicDigits = isApiValue(value) ? emitDecimalDigits(asm, compileState, value) : null;
+  const digits = dynamicDigits === null ? counterLiteral(counter, value, `counter ${counter.name} delta`) : null;
+  const operand = index => dynamicDigits === null ? imm(digits[index]) : abs(dynamicDigits + 5 - addresses.length + index);
   const id = compileState.loopCounter++;
   subtract ? asm.sec() : asm.clc();
   for (let index = addresses.length - 1; index >= 0; index -= 1) {
@@ -6437,7 +6793,7 @@ function emitGameCounterMath(asm, compileState, counter, value, subtract) {
     const nextLabel = `game_counter_next_${id}_${index}`;
     asm.lda(abs(addresses[index]));
     if (subtract) {
-      asm.sbc(imm(digits[index]));
+      asm.sbc(operand(index));
       asm.bcc(rel(carryLabel));
       asm.sta(abs(addresses[index]));
       asm.sec();
@@ -6447,7 +6803,7 @@ function emitGameCounterMath(asm, compileState, counter, value, subtract) {
       asm.sta(abs(addresses[index]));
       asm.clc();
     } else {
-      asm.adc(imm(digits[index]));
+      asm.adc(operand(index));
       asm.cmp(imm(10));
       asm.bcs(rel(carryLabel));
       asm.sta(abs(addresses[index]));
@@ -6464,12 +6820,77 @@ function emitGameCounterMath(asm, compileState, counter, value, subtract) {
 
 function emitGameCounterDraw(asm, compileState, counter, x, y, color) {
   const addresses = validateGameCounter(compileState, counter);
+  if ([x, y, color].some(isApiValue)) return emitDecimalDraw(asm, compileState, addresses, x, y, color);
   ensureByte(x, "counter screen x"); ensureByte(y, "counter screen y"); ensureByte(color, "counter color");
   if (x + addresses.length > 40 || y >= 25 || color > 15) throw new Error("game counter must fit inside the 40x25 screen and use a C64 color");
   addresses.forEach((address, index) => {
     asm.lda(abs(address)); asm.clc(); asm.adc(imm(48)); asm.sta(abs(compileState.screenBase + y * 40 + x + index));
     emitStoreImmediate(asm, compileState.colorBase + y * 40 + x + index, color);
   });
+}
+
+function emitDecimalDigits(asm, state, value) {
+  const work = apiScratch(state, "decimal_work", 2);
+  const digits = apiAddress(state, apiScratch(state, "decimal_digits", 5));
+  const address = apiAddress(state, work);
+  emitApiStore(asm, state, value, address, 2);
+  state.sharedRoutines.apiDecimal = { address, digits };
+  asm.jsr(abs("api_decimal_convert"));
+  return digits;
+}
+
+function emitApiRoutines(asm, state) {
+  if (!state.sharedRoutines.apiDecimal) return;
+  const { address, digits } = state.sharedRoutines.apiDecimal;
+  asm.label("api_decimal_convert");
+  [10000, 1000, 100, 10].forEach((power, index) => {
+    emitStoreImmediate(asm, digits + index, 0);
+    const loop = `api_decimal_${state.loopCounter++}`;
+    const subtract = `${loop}_subtract`, done = `${loop}_done`;
+    asm.label(loop);
+    asm.lda(abs(address + 1)); asm.cmp(imm(power >> 8)); asm.bcc(rel(done)); asm.bne(rel(subtract));
+    asm.lda(abs(address)); asm.cmp(imm(power & 255)); asm.bcc(rel(done));
+    asm.label(subtract);
+    asm.sec(); asm.lda(abs(address)); asm.sbc(imm(power & 255)); asm.sta(abs(address));
+    asm.lda(abs(address + 1)); asm.sbc(imm(power >> 8)); asm.sta(abs(address + 1));
+    asm.inc(abs(digits + index)); asm.jmp(abs(loop)); asm.label(done);
+  });
+  emitLoadAndStore(asm, address, digits + 4);
+  asm.rts();
+}
+
+function emitDecimalDraw(asm, state, addresses, x, y, color) {
+  if (![x, y].some(isApiValue)) {
+    if (!Number.isInteger(x) || x < 0 || x + addresses.length > 40 || !Number.isInteger(y) || y < 0 || y >= 25) {
+      throw new Error("number must fit on the 40x25 screen");
+    }
+    const offset = y * 40 + x + fixedBottomPanelMemoryOffset(state, y);
+    addresses.forEach((address, index) => {
+      asm.lda(abs(address)); asm.clc(); asm.adc(imm(48)); asm.sta(abs(state.screenBase + offset + index));
+      emitApiStore(asm, state, color, state.colorBase + offset + index, 1, 15);
+    });
+    return;
+  }
+  const done = `api_number_done_${state.loopCounter++}`;
+  emitTextPointers(asm, state, x, y, addresses.length, done);
+  addresses.forEach((address, index) => {
+    asm.ldy(imm(index)); asm.lda(abs(address)); asm.clc(); asm.adc(imm(48)); asm.sta(indy(HIRES_ZP_PTR_LO));
+    asm.lda(apiOperand(state, color)); asm.and(imm(15)); asm.sta(indy(HIRES_ZP_WORK_LO));
+  });
+  asm.label(done);
+}
+
+function emitPrintNumber(asm, state, x, y, value, options) {
+  const count = options.digits ?? 5;
+  if (!Number.isInteger(count) || count < 1 || count > 5) throw new Error("printNumber digits must be a constant between 1 and 5");
+  const color = options.color;
+  if (!isApiValue(value)) {
+    ensureWord(value, "printNumber value");
+    const text = String(value).padStart(count, "0").slice(-count);
+    return emitPrintAt(asm, x, y, text, color, state.screenBase, state.colorBase, state);
+  }
+  const digits = emitDecimalDigits(asm, state, value);
+  emitDecimalDraw(asm, state, Array.from({ length: count }, (_, i) => digits + 5 - count + i), x, y, color);
 }
 
 function emitRandomByteToA(asm, compileState) {
@@ -6518,12 +6939,19 @@ const GAME_FRAME_COMPILE_TIME_ONLY_OPS = new Set([
   "irqInstall", "irqChainToKernal", "irqDisableKernalTimer", "irqEnableKernalTimer",
   "gameFrame", "gameInit", "gameScene", "gameSceneStart", "controlRoutine",
   "gamePoolRegister", "gameCounterRegister",
-  "spriteCreateRuntime", "spriteRuntimeData", "spriteRuntimeColor", "spriteRuntimeFlag",
+  "spriteCreateRuntime", "spriteRuntimeData",
   "spriteFrames", "spriteUseFrames", "spriteSequence", "spriteRuntimeBounds", "mapEntityCreate", "spriteAssetRegister"
 ]);
 
 function prepareGameFrameInstructions(instructions, compileState) {
   for (const instruction of instructions) {
+    if (instruction.op === "controlCall" && compileState.game.naturalRoutines?.has(instruction.args[0])) {
+      const name = instruction.args[0];
+      if (!compileState.game.preparedNaturalRoutines.has(name)) {
+        compileState.game.preparedNaturalRoutines.add(name);
+        prepareGameFrameInstructions(compileState.game.naturalRoutines.get(name), compileState);
+      }
+    }
     if (GAME_FRAME_COMPILE_TIME_ONLY_OPS.has(instruction.op)) {
       throw new Error(`${instruction.op} cannot be used inside c64.game.frame(); declare resources before the frame loop and update runtime variables inside it`);
     }
@@ -6596,15 +7024,62 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
   // Central dispatcher: one DSL instruction enters here and is translated into
   // one or more low level assembly operations.
   switch (instruction.op) {
+    case "naturalVariable": {
+      const [name, type] = instruction.args;
+      const size = type === "word" ? 2 : 1;
+      registerVariable(compileState, name, allocateVariableAddress(compileState, size), size);
+      compileState.variables.get(name).valueType = type;
+      break;
+    }
+    case "naturalLabel":
+      asm.label(instruction.args[0]);
+      break;
+    case "naturalJump":
+      asm.jmp(abs(instruction.args[0]));
+      break;
+    case "naturalCast": {
+      const [target, value] = instruction.args;
+      const dest = resolveRuntimeVariable(compileState, target);
+      const source = isVarRef(value) ? resolveRuntimeVariable(compileState, value) : null;
+      for (let part = 0; part < dest.size; part++) {
+        if (source && part < source.size) emitLoadAndStore(asm, source.address + part, dest.address + part);
+        else emitStoreImmediate(asm, dest.address + part, source ? 0 : (Number(value) >> (part * 8)) & 255);
+      }
+      break;
+    }
+    case "naturalShift": {
+      const [target, direction, count] = instruction.args;
+      const variable = resolveRuntimeVariable(compileState, target);
+      for (let i = 0; i < count; i++) {
+        if (direction === "left") {
+          asm.asl(addressMode(variable.address));
+          if (variable.size === 2) asm.rol(addressMode(variable.address + 1));
+        } else {
+          if (variable.size === 2) asm.lsr(addressMode(variable.address + 1));
+          if (variable.size === 2) asm.ror(addressMode(variable.address));
+          else asm.lsr(addressMode(variable.address));
+        }
+      }
+      break;
+    }
     case "borderColor":
-      emitStoreImmediate(asm, c64.VIC_BORDER_COLOR, instruction.args[0]);
+      if (isApiValue(instruction.args[0])) asm.lda(apiOperand(compileState, instruction.args[0]));
+      else emitRuntimeValueToA(asm, compileState, instruction.args[0]);
+      asm.sta(abs(c64.VIC_BORDER_COLOR));
       break;
     case "backgroundColor":
-      emitStoreImmediate(asm, c64.VIC_BACKGROUND_COLOR, instruction.args[0]);
+      if (isApiValue(instruction.args[0])) asm.lda(apiOperand(compileState, instruction.args[0]));
+      else emitRuntimeValueToA(asm, compileState, instruction.args[0]);
+      asm.sta(abs(c64.VIC_BACKGROUND_COLOR));
       break;
     case "textColor":
-      emitStoreImmediate(asm, 0x0286, instruction.args[0]);
-      compileState.currentTextColor = instruction.args[0] & 0xff;
+      if (isApiValue(instruction.args[0])) {
+        emitApiStore(asm, compileState, instruction.args[0], 0x0286, 1, 15);
+        compileState.currentTextColor = { type: "currentTextColor" };
+      } else {
+        emitStoreImmediate(asm, 0x0286, instruction.args[0]);
+        compileState.currentTextColor = instruction.args[0] & 0xff;
+      }
       break;
     case "clearScreen":
       asm.lda(imm(147));
@@ -6618,6 +7093,9 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
       break;
     case "printAt":
       emitPrintAt(asm, instruction.args[0], instruction.args[1], instruction.args[2], instruction.args[3], compileState.screenBase, compileState.colorBase, compileState);
+      break;
+    case "printNumber":
+      emitPrintNumber(asm, compileState, ...instruction.args);
       break;
     case "printCentered": {
       const centeredX = Math.max(0, Math.floor((40 - instruction.args[1].length) / 2));
@@ -6694,10 +7172,10 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
       emitMapHorizontalScrollerDraw(asm, compileState, instruction.args[0]);
       break;
     case "mapHorizontalScrollerMove":
-      emitMapHorizontalScrollerMove(asm, compileState, instruction.args[0], instruction.args[1]);
+      emitMapHorizontalScrollerMove(asm, compileState, ...instruction.args);
       break;
     case "mapVerticalScrollerMove":
-      emitMapVerticalScrollerMove(asm, compileState, instruction.args[0], instruction.args[1]);
+      emitMapVerticalScrollerMove(asm, compileState, ...instruction.args);
       break;
     case "mapScrollerFollow":
       emitMapScrollerFollow(asm, compileState, instruction.args[0], instruction.args[1], instruction.args[2]);
@@ -7015,6 +7493,43 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
       asm.label(doneLabel);
       break;
     }
+    case "naturalArrayFill": {
+      const [array, value] = instruction.args;
+      for (let part = 0; part < (array.valueType === "word" ? 2 : 1); part++) {
+        const loop = `natural_array_fill_${compileState.loopCounter++}`;
+        asm.lda(apiOperand(compileState, value, part));
+        asm.ldx(imm(array.length & 255));
+        asm.label(loop);
+        // Descending X also covers 256 entries (0 -> 255). STA preserves
+        // DEX's zero flag, so no separate counter or comparison is needed.
+        asm.dex();
+        asm.sta(absx(part ? `${array.name}_hi` : array.name));
+        asm.bne(rel(loop));
+      }
+      break;
+    }
+    case "naturalArrayLoad":
+    case "naturalArrayStore": {
+      const [array, index, value] = instruction.args;
+      const load = instruction.op === "naturalArrayLoad";
+      const done = `natural_array_done_${compileState.loopCounter++}`;
+      if (load) emitRuntimeSet(asm, compileState, value, 0);
+      // Range guards also check the high byte: word indices never wrap to X.
+      emitApiRange(asm, compileState, index, 0, array.length - 1, done);
+      asm.ldx(apiOperand(compileState, index));
+      for (let part = 0; part < (array.valueType === "word" ? 2 : 1); part++) {
+        const table = part ? `${array.name}_hi` : array.name;
+        if (load) {
+          asm.lda(absx(table));
+          asm.sta(apiOperand(compileState, value, part));
+        } else {
+          asm.lda(apiOperand(compileState, value, part));
+          asm.sta(absx(table));
+        }
+      }
+      asm.label(done);
+      break;
+    }
     case "runtimeTableLoad": {
       const index = instruction.args[1];
       if (isVarRef(index)) asm.ldx(addressMode(resolveRuntimeByteAddress(compileState, index, "table index")));
@@ -7097,17 +7612,29 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
       emitRuntimeSpritePointer(asm, compileState, spriteRef, asset.blockIndex);
       break;
     }
+    case "spriteRuntimePosition": {
+      const [sprite, x, y] = instruction.args;
+      const done = `api_sprite_position_done_${compileState.loopCounter++}`;
+      getSpriteRuntime(compileState, sprite);
+      emitApiRange(asm, compileState, x, 0, 511, done, "sprite x");
+      emitApiRange(asm, compileState, y, 0, 255, done, "sprite y");
+      emitApiStore(asm, compileState, x, apiAddress(compileState, sprite.x), 2);
+      emitApiStore(asm, compileState, y, apiAddress(compileState, sprite.y));
+      emitSpriteRuntimeSync(asm, compileState, sprite);
+      asm.label(done); break;
+    }
     case "spriteRuntimeColor": {
       const spriteRef = instruction.args[0];
       getSpriteRuntime(compileState, spriteRef);
-      ensureByte(instruction.args[1], "sprite color");
-      emitStoreImmediate(asm, spriteRuntimeInternal(spriteRef.index).color, instruction.args[1]);
-      if (!compileState.multiplexer.enabled) emitStoreImmediate(asm, spriteColorAddress(spriteRef.index), instruction.args[1]);
+      const color = instruction.args[1];
+      if (!isApiValue(color)) ensureByte(color, "sprite color");
+      emitApiStore(asm, compileState, color, spriteRuntimeInternal(spriteRef.index).color);
+      if (!compileState.multiplexer.enabled) emitApiStore(asm, compileState, color, spriteColorAddress(spriteRef.index));
       break;
     }
     case "spriteRuntimeFlag":
-      getSpriteRuntime(compileState, instruction.args[0]).flags[instruction.args[1]] = Boolean(instruction.args[2]);
-      emitRuntimeSpriteFlag(asm, compileState, instruction.args[0], instruction.args[1], Boolean(instruction.args[2]));
+      getSpriteRuntime(compileState, instruction.args[0]).flags[instruction.args[1]] = isApiValue(instruction.args[2]) ? instruction.args[2] : Boolean(instruction.args[2]);
+      emitRuntimeSpriteFlag(asm, compileState, instruction.args[0], instruction.args[1], instruction.args[2]);
       break;
     case "spriteRuntimeBounds": {
       const runtime = getSpriteRuntime(compileState, instruction.args[0]);
@@ -7310,7 +7837,8 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
       break;
     }
     case "spriteColor":
-      emitStoreImmediate(asm, spriteColorAddress(instruction.args[0]), instruction.args[1]);
+      if (isApiValue(instruction.args[1])) emitApiStore(asm, compileState, instruction.args[1], spriteColorAddress(instruction.args[0]));
+      else emitStoreImmediate(asm, spriteColorAddress(instruction.args[0]), instruction.args[1]);
       break;
     case "spriteData":
       emitSpriteData(asm, compileState, instruction.args[0], instruction.args[1], instruction.args[2]);
@@ -7319,22 +7847,24 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
       emitSpritePointer(asm, instruction.args[0], instruction.args[1]);
       break;
     case "spriteMulticolor":
-      emitSetBitState(asm, c64.VIC_SPRITE_MULTICOLOR, instruction.args[0], Boolean(instruction.args[1]));
+      emitApiBitState(asm, compileState, c64.VIC_SPRITE_MULTICOLOR, instruction.args[0], instruction.args[1]);
       break;
     case "spriteExpandX":
-      emitSetBitState(asm, c64.VIC_SPRITE_EXPAND_X, instruction.args[0], Boolean(instruction.args[1]));
+      emitApiBitState(asm, compileState, c64.VIC_SPRITE_EXPAND_X, instruction.args[0], instruction.args[1]);
       break;
     case "spriteExpandY":
-      emitSetBitState(asm, c64.VIC_SPRITE_EXPAND_Y, instruction.args[0], Boolean(instruction.args[1]));
+      emitApiBitState(asm, compileState, c64.VIC_SPRITE_EXPAND_Y, instruction.args[0], instruction.args[1]);
       break;
     case "spritePriority":
-      emitSetBitState(asm, c64.VIC_SPRITE_PRIORITY, instruction.args[0], Boolean(instruction.args[1]));
+      emitApiBitState(asm, compileState, c64.VIC_SPRITE_PRIORITY, instruction.args[0], instruction.args[1]);
       break;
     case "spriteSharedColor1":
-      emitStoreImmediate(asm, 0xd025, instruction.args[0]);
+      if (isApiValue(instruction.args[0])) emitApiStore(asm, compileState, instruction.args[0], 0xd025);
+      else emitStoreImmediate(asm, 0xd025, instruction.args[0]);
       break;
     case "spriteSharedColor2":
-      emitStoreImmediate(asm, 0xd026, instruction.args[0]);
+      if (isApiValue(instruction.args[0])) emitApiStore(asm, compileState, instruction.args[0], 0xd026);
+      else emitStoreImmediate(asm, 0xd026, instruction.args[0]);
       break;
     case "spriteInstallAnimator":
       ensureWord(instruction.args[0], "sprite animator raster line");
@@ -7531,13 +8061,21 @@ function emitGameSceneRoutines(asm, state) {
 function configureScrollPresentation(asm, state) {
   const frame = state.game.frame;
   const scroller = [...state.assets.scrollers.values()][0];
-  const follow = frame?.instructions?.filter(instruction => instruction.op === "mapScrollerFollow");
+  // Named natural update functions remain JSR routines. Inspect their known
+  // bodies so using a function does not disable the raster-safe copy schedule.
+  const expandCalls = (instructions, active = new Set()) => (instructions ?? []).flatMap(instruction => {
+    const name = instruction.args[0];
+    if (instruction.op !== "controlCall" || !state.game.naturalRoutines.has(name) || active.has(name)) return [instruction];
+    return expandCalls(state.game.naturalRoutines.get(name), new Set([...active, name]));
+  });
+  const follow = expandCalls(frame?.instructions).filter(instruction => instruction.op === "mapScrollerFollow");
+  const opaqueCalls = [...state.optimization.controlCalls].some(name => !state.game.naturalRoutines.has(name));
   if (!frame || frame.sceneManaged || frame.options?.rasterLine !== undefined
-      || !scroller || scroller.verticalUsed || scroller.viewport.screenWidth * scroller.viewport.screenHeight <= 256
+      || !scroller || scroller.verticalUsed || state.optimization.usesVerticalMapScroll || scroller.viewport.screenWidth * scroller.viewport.screenHeight <= 256
       || !state.multiplexer.enabled || state.optimization.spriteIndices.size > 8
       || state.assets.scrollers.size !== 1 || state.optimization.usesMapActivation
       || state.optimization.cameraFollowCount !== 1 || state.optimization.usesExplicitScrollMove
-      || state.optimization.usesControlCall || follow?.length !== 1) return;
+      || opaqueCalls || follow.length !== 1) return;
 
   // Wide horizontal maps cannot fit physics + in-place copies + a polling
   // sprite presenter into the lower-border budget. Compute logical state
@@ -8280,6 +8818,8 @@ export function compileInstructions(instructions, options = {}) {
       keyboardKeys: new Set()
     },
     game: {
+      naturalRoutines: new Map(instructions.filter(item => item.op === "controlRoutine" && item.args[0].startsWith("__js_")).map(item => [item.args[0], item.args[1]])),
+      preparedNaturalRoutines: new Set(),
       frame: null,
       scenes: new Map(),
       sceneStart: null,
@@ -8345,6 +8885,7 @@ export function compileInstructions(instructions, options = {}) {
   for (const instruction of instructions) {
     if (instruction.op === "programConfig") continue;
     if (instruction.op === "sidReserveSfxVoice") continue;
+    if (instruction.op === "controlRoutine" && state.game.naturalRoutines.has(instruction.args[0])) continue;
     if (instruction.op === "irqInstall") {
       state.irq.installRequested = true;
       continue;
@@ -8368,12 +8909,19 @@ export function compileInstructions(instructions, options = {}) {
     compileHighLevelInstruction(asm, instruction, state);
   }
 
+  configureScrollPresentation(asm, state);
+  // Presentation must be selected before emitting the bodies: camera.follow
+  // inside a named update must use the same deferred copy path as inline code.
+  for (const instruction of instructions) {
+    if (instruction.op === "controlRoutine" && state.game.naturalRoutines.has(instruction.args[0])) {
+      compileHighLevelInstruction(asm, instruction, state);
+    }
+  }
+
   // An activation requested by c64.game.init() is completed before IRQs and
   // the first visible frame start. Requests made by a frame are handled again
   // at the safe transition point at the end of that frame.
   emitPendingMapActivation(asm, state);
-
-  configureScrollPresentation(asm, state);
 
   if (state.sfx.enabled && state.irq.handlers.length === 0
       && !state.sid.player.installRequested && !state.spriteAnimator.installRequested) {
@@ -8457,6 +9005,7 @@ export function compileInstructions(instructions, options = {}) {
   emitMapRoutines(asm, state);
   emitDiskLoaderRoutine(asm, state);
   emitHiresRoutines(asm, state);
+  emitApiRoutines(asm, state);
   // Strings and user data are emitted after code, then referenced by labels.
   emitStringPool(asm, state);
   emitDataPool(asm, state);
@@ -8487,6 +9036,11 @@ export async function compileFile(inputFile, options = {}) {
   const compileOptions = normalizeCompileOptions(options, false);
   resetRuntime();
   setAssetBaseDirectory(path.dirname(absolute));
+  const source = await fs.readFile(absolute, "utf8");
+  if (hasNaturalDirective(source)) {
+    const state = recordNaturalSource(source, absolute);
+    return compileInstructions(state.instructions, { ...compileOptions, irqHandlers: state.irq.handlers });
+  }
   const moduleUrl = pathToFileURL(absolute);
   moduleUrl.searchParams.set("ts", String(Date.now()));
   await import(moduleUrl.href);
@@ -8503,8 +9057,12 @@ export async function compileJsToC64Outputs(source, options = {}) {
   const compileOptions = normalizeCompileOptions(options, true);
   resetRuntime();
   setAssetBaseDirectory(process.cwd());
-  await executeInlineSource(source);
-  const state = getProgramState();
+  let state;
+  if (hasNaturalDirective(source)) state = recordNaturalSource(source);
+  else {
+    await executeInlineSource(source);
+    state = getProgramState();
+  }
   return {
     source,
     ...compileInstructions(state.instructions, {

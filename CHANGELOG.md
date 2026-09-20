@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+- Added complete natural-mode Tetris, Platformer and interactive hires reference programs, with executed-6502 gameplay checks and PAL raster parity for both Platformer versions
+- Kept deferred scroll scheduling when camera follow is called inside named natural functions; validated the schedule before emitting those routine bodies
+- Fixed runtime-argument validation for entity/sprite resource handles and reset map/scroller IDs between compilations for deterministic outputs
+
+- Added common `screen.setup`, `game.run` and joystick `scroll` helpers that expand to existing DSL instructions, preserving the legacy APIs
+- Added natural typed-array `fill(value)` with compact descending 6502 loops; simplified hires, scrolling and Lights Out examples and added a common-helpers demo
+
+- Fixed hires point color addressing at page boundaries: clear an already-propagated carry before adding the screen base, preventing missing bands and displaced colors in all shared drawing routines
+
+- Added fixed Uint8Array/Uint16Array storage in natural mode, indexed reads/writes/updates and checked bounds, using native 6502 indexed addressing
+- Added specialized function parameters for constant text, arrays and API objects, plus a complete natural Lights Out example
+- Fixed duplicate memset labels when repeated screen clears occur in separate specialized routines
+
+- Unified calculated arguments across hires shapes, text positioning/drawing, decimal counters, sprite colors/flags and scrolling; kept constant drawing paths and shared binary-to-decimal code
+- Added `printNumber`, runtime sprite-handle appearance methods, an explicit `printAt` color, and a natural score/HUD example
+
+- Added an opt-in `"use c64"` JavaScript frontend with natural conditions, integer expressions, loops and shared functions; legacy 1.0.1 sources keep their recording behavior
+- Added explicit byte/word intrinsics, source diagnostics, short-circuit evaluation, and natural hires/sprite/scroll examples with executed-6502 regression coverage
+- Added runtime coordinates to hires points/lines with endpoint bounds guards while preserving constant drawing paths
+
 - Fixed Platformer Mini's late horizontal row copies: prepare camera movement early, defer copying to the scroll-band end, and present up to eight logical sprites in fixed IRQ slots; added PAL row-fetch regression coverage across the complete map in both directions
 - Replaced blocking SID effect delays with an on-demand 50 Hz PAL/NTSC IRQ sequencer, pooled effect tables, atomic retriggers and preserved map pointers; warn on synchronous legacy note/rest durations
 - Fixed frame waits missing scanlines covered by IRQs, respected the scroll band with multiplexing, and published fine-scroll phases before coarse copies

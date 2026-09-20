@@ -69,6 +69,252 @@ console.log(basicText);
 
 ## Features
 
+### Natural JavaScript source (experimental)
+
+Start a source file with `"use c64";` to compile ordinary JavaScript control flow
+to 6502 code. Build it with the same `c64js build` command, or pass its source to
+`compileJsToC64Outputs()` / `compileJsToBasicData()`. Do not execute this source
+directly with Node.js: the directive is interpreted by the js-c64 compiler.
+Files without the directive retain the 1.0.1 recording DSL and its host-side
+JavaScript behavior.
+
+```js
+"use c64";
+import { c64 } from "js-c64";
+
+const joystick = c64.input.joystick(2);
+let color = 0;
+
+function nextColor() {
+  color = (color + 1) & 15;
+  c64.borderColor(color);
+}
+
+c64.clearScreen();
+c64.borderColor(c64.COLOR_BLACK);
+c64.backgroundColor(c64.COLOR_BLACK);
+
+c64.game.frame(() => {
+  if (joystick.firePressed()) nextColor();
+});
+```
+
+This is a small, explicitly supported JavaScript subset, not a JavaScript VM on
+the C64. The frontend parses source with Acorn and lowers it to the existing DSL
+instructions and 6502 generator. The syntax applies across the API, including
+hires, sprites, scrolling, input, audio and scenes; each API's restrictions on
+compile-time configuration arguments still apply.
+
+Supported in this first implementation:
+
+- `let`, `const`, lexical blocks, scalar function parameters and local variables.
+  Functions also accept constant text, configuration/API objects and fixed typed
+  arrays. These arguments specialize shared routines at compile time; numeric
+  arguments still use runtime parameters. Returns remain numeric/boolean.
+- `if` / `else`, short-circuit `&&` / `||`, `!`, comparisons and `condition ? a : b`.
+- `+`, `-`, `&`, `|`, `^`, `++`, `--` and compound assignments. Multiplication
+  by a constant from 0 to 255 uses shifts/additions. Shift counts must be constants
+  from 0 to 15. Constant expressions are evaluated during compilation.
+- `for`, `while`, `break`, `continue`, named top-level functions and `return`.
+  A function returning a value must return on every path. Callbacks can use a
+  bare `return` and named zero-argument functions can be passed to `game.frame`.
+- Existing `c64` API calls, literal configuration objects/arrays and static
+  member access. Imports currently support only `import { c64 } from ...`.
+
+Numeric storage is explicit and predictable:
+
+```js
+let color = 0;              // unsigned byte, 0..255
+let ready = false;          // boolean
+let x = c64.word(300);      // unsigned 16-bit value, 0..65535
+let low = c64.byte(x);      // explicit truncation to the low byte
+
+x += 2;
+color = (color + 1) & 15;
+```
+
+Plain numeric `let` declarations initialized with a literal use one byte;
+`let x = 300` is rejected and suggests `c64.word(300)`. A variable initialized
+from another runtime value inherits its width. Arithmetic wraps at the width
+of its operands (the widest runtime operand or integer literal wins), and
+comparisons are unsigned. Promote **before** a calculation when its result must
+exceed 255: `c64.word(color) + 300`. Negative literals can encode two's complement
+bit patterns; they do not introduce signed comparisons. Floating-point runtime
+values, dynamic multiplication/division/modulo, recursion, async functions,
+dynamic allocation and dynamically indexed ordinary JS arrays are not implemented.
+Unsupported constructs produce errors instead of running gameplay logic on the PC.
+
+Fixed typed arrays support natural indexed reads, writes and updates:
+
+```js
+const cells = new Uint8Array(16);           // initially zero
+const points = new Uint16Array([100, 500]); // 16-bit elements
+
+function flip(board, index) {
+  board[index] ^= 1;
+}
+
+let selected = 3;
+flip(cells, selected);
+points[0] += 10;
+```
+
+Declare these arrays with `const` at top level, with 1..256 elements and constant
+unsigned initial values of the declared width. Their storage is embedded in the
+PRG and initialized when loaded, with no heap or garbage collector. Reset their
+contents explicitly when restarting a game. `.length` is a compile-time constant;
+use a word loop counter to iterate over all 256 entries without byte wraparound.
+Runtime out-of-bounds reads return zero and writes are ignored; invalid constant
+indices are compilation errors. Indexed byte loads/stores use native 6502 indexed
+addressing; words use two byte tables. Bounds checks cost a few instructions.
+Ordinary `[1, 2, 3]` literals remain compile-time configuration arrays.
+
+Text arguments specialize by text value, objects/arrays by identity, and numeric
+arguments by width. Calls with the same signature share one JSR/RTS routine;
+different text or object arguments can increase code size. Objects and arrays are
+passed by reference, while numbers are passed by value. Text/object parameters
+cannot be reassigned. There are no runtime strings or general JavaScript objects.
+See `examples/natural-lights.js` for a complete Lights Out game using a board,
+reusable functions, joystick input, a move counter, victory detection and restart.
+
+Common helpers reduce repeated setup and update code:
+
+```js
+function init() {
+  c64.screen.setup({ background: c64.COLOR_BLACK, color: c64.COLOR_CYAN });
+  cells.fill(0);
+}
+
+function update() {
+  joystick.scroll(camera, 2);
+}
+
+c64.game.run({ init, update });
+```
+
+- `c64.screen.setup(options)` configures border/background/text color, selects
+  standard text mode, and clears the screen. Defaults are black background,
+  matching border and white text. Use `mode: "hires"` for bitmap mode or
+  `clear: false` to preserve contents. Colors may be runtime values; mode and
+  clear must be constants. The original `c64.screen(address)` remains available.
+  Text setup selects the standard VIC text bank/charset; install custom charsets
+  and configure custom screen addresses afterwards.
+- `c64.game.run({ init, update }, options)` combines optional initialization and
+  a required frame update. It accepts the same `hz`/`rasterLine` options as
+  `game.frame`, and does not replace scene management. It cannot be combined with
+  another frame loop or `game.start`.
+- `joystick.scroll(camera, speed)` checks held left/right/up/down directions in
+  that order and delegates to the existing scroller. Speed defaults to 1 and
+  supports runtime values with the same 0..8 checks as individual scroll calls.
+  Constant speed must be 1..8. Opposite directions are both processed; diagonals
+  move both axes. Call it inside the frame update for fresh joystick snapshots.
+- Typed-array `.fill(value)` overwrites the entire fixed array at runtime and
+  returns that array. Partial ranges are not supported. Values follow the same
+  width rules as indexed assignments; use `c64.byte(...)` to truncate explicitly.
+  A descending 6502 indexed loop fills each byte plane, without per-cell bounds
+  checks or an allocated loop variable. This intrinsic requires natural mode.
+
+Screen, game and joystick helpers also work with the legacy DSL and expand into
+existing instructions, with no additional runtime layer. Old API calls remain
+available. `examples/natural-helpers.js` demonstrates setup, filling and updates;
+the natural hires, scroll and Lights Out examples also use these helpers.
+
+Complete reference rewrites are available as `examples/natural-tetris.js`,
+`examples/natural-platformer.js` and `examples/natural-hires-interactive.js`.
+Their source includes the controls. They cover board rotations/line clearing,
+sprite physics/collisions/raster scrolling, and interactive bitmap drawing.
+Executed-code tests validate gameplay and PAL presentation; see
+[`docs/natural-reference-validation.md`](docs/natural-reference-validation.md)
+in the repository for measured code/RAM costs, timing scope and remaining limits.
+
+Configuration handles use `const`. Their runtime fields can be changed naturally:
+
+```js
+const player = c64.sprite.create(0, { x: 160, y: 120 });
+c64.game.frame(() => {
+  if (joystick.right() && player.x < 320) player.x += 2;
+  player.sync(); // publish the position to the VIC-II
+});
+```
+
+Functions compile to shared `JSR`/`RTS` routines, specialized by parameter widths.
+Parameters, locals and temporary values use static RAM; a function cannot be
+shared between raster IRQ and main/frame code. Unused functions do not generate
+code. Simple increments use `INC`/`DEC`; a regression test checks identical bytes
+and cycle counts against an equivalent recording-DSL program. Complex expressions
+and function calls still have their own RAM/cycle costs. Natural loops have no
+hidden iteration limit and must be written to terminate or fit the frame budget.
+
+Runtime values now work across drawing, sprites, counters and scrolling, both
+in natural sources and through typed references in the recording DSL:
+
+| API | Runtime arguments |
+| --- | --- |
+| `hires.point`, `line`, `rect`, `fillRect`, `circle`, `fillCircle` | Coordinates, dimensions/radius and color (byte or word) |
+| `hires.clear` | Color |
+| `printAt`, `writeChar`, `fillRect`, `drawFrame`, `clearLine` | Positions, sizes, character codes and colors; text strings remain constants |
+| `printNumber(x, y, value, options)` | Position, unsigned 16-bit value and color |
+| `score.set`, `add`, `sub`, `draw` | Amounts, draw position and color |
+| `sprite.color`, `multicolor`, `expandX`, `expandY`, `priority` | Colors/flags, on sprite handles or the indexed API |
+| `sprite.setPosition` / indexed `setY` | Word-sized Y inputs are checked before conversion to a byte |
+| `camera.left`, `right`, `up`, `down` | Pixel count from a byte or word variable |
+
+```js
+let x = c64.word(260);
+let size = 24;
+let ink = 7;
+c64.hires.fillRect(x, 40, size + 8, size, ink);
+
+let points = c64.word(1250);
+const score = c64.game.score({ digits: 5 });
+score.add(points);
+c64.printNumber(2, 3, points, { digits: 5, color: ink });
+```
+
+`printNumber` displays 1 to 5 digits (5 by default), padded with zeros. `digits`
+is a compile-time option; values wider than the chosen decimal field display
+their least significant digits. Dynamic counter amounts use the same decimal
+conversion, and arithmetic wraps modulo the counter's decimal capacity. Conversion
+uses one shared 6502 routine with bounded work, not a loop repeated once per point.
+
+Invalid runtime drawing coordinates or dimensions skip the whole operation;
+shapes/text are not clipped or allowed to wrap into adjacent RAM. Dynamic strings
+at a variable position must fit on one 40-character row. Runtime scroll counts
+of 0 or outside 1..8 do nothing; valid counts reuse the existing pixel-step
+routines and their viewport/raster restrictions. Color registers use the low
+nibble. Constant drawing calls retain their specialized paths; dynamic HUD
+values at constant positions still use direct screen addresses.
+
+`textColor(value)` captures the value when executed. In a natural source that
+uses `textColor`, implicit text colors are read at runtime, including across
+branches and repeated function calls; the initial color is white. `printAt`
+also accepts an optional fourth color argument. For callbacks and functions
+without an explicit color, this avoids baking the host's recording order into
+the result. Drawing/formatting helpers use shared scratch RAM and are not
+reentrant: keep these operations in main/frame code rather than interrupting
+them with another drawing operation in a raster IRQ.
+
+Asset definitions, memory addresses, sprite indexes, viewport geometry, text
+strings, animation definitions and timer configuration remain compile-time
+settings. Changing an API to accept calculated values does not make those
+configuration objects dynamically allocated on the C64.
+
+Complete examples:
+
+- [Hires shapes with calculated dimensions and colors](examples/natural-hires.js)
+- [Sprite movement, expansion, color and coordinate display](examples/natural-sprites.js)
+- [Scrolling with a variable speed](examples/natural-scroll.js)
+- [Score, increasing bonus and numeric HUD](examples/natural-score.js)
+
+```bash
+c64js build examples/natural-hires.js -o natural-hires.prg
+c64js build examples/natural-sprites.js -o natural-sprites.prg
+c64js build examples/natural-scroll.js -o natural-scroll.prg
+c64js build examples/natural-score.js -o natural-score.prg
+```
+
+### Existing compiler features
+
 - Full internal NMOS 6502 opcode table for the official instructions commonly used on the C64
 - Labels, forward references, relative branches, symbol map and `.lst` listing generation
 - High-level C64 DSL for screen, color RAM, memory and KERNAL interactions
