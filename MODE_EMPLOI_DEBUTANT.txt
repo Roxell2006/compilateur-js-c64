@@ -1,2745 +1,1406 @@
-MODE D'EMPLOI DEBUTANT - JS-C64
-================================
+JS-C64 — LE GUIDE DE PROGRAMMATION
+==================================
+Apprendre progressivement à créer des programmes C64 — version 1.1.0
 
-1. A QUOI SERT JS-C64 ?
------------------------
+Ce guide vous accompagne de l'installation de js-c64 avec npm jusqu'à la
+création de jeux et de programmes en code machine pour le Commodore 64.
 
-js-c64 permet d'ecrire un petit programme en JavaScript qui sera transforme
-en code machine 6502 pour Commodore 64.
+Vous écrivez des conditions, calculs, boucles et fonctions JavaScript ; js-c64
+produit du code machine 6502. Le C64 n'exécute ni Node.js ni un interpréteur JS.
 
-On n'ecrit pas un vrai programme JavaScript "normal".
-On ecrit surtout une suite d'appels a l'objet c64.
+Lisez d'abord les chapitres 1 à 8, puis choisissez votre parcours : sprites,
+son, dessin ou jeux avec scroll. L'assembleur et les interruptions peuvent
+attendre un deuxième passage. Un bloc « Programme complet » se copie dans un
+fichier .js. Les autres blocs sont des extraits à intégrer à votre programme.
+Les commandes s'exécutent dans un terminal depuis le dossier du projet.
 
-Exemple tres simple :
+TABLE DES MATIÈRES
+=================
+  1. Installer les outils
+  2. Créer un projet, compiler et lancer son premier PRG
+  3. Comprendre un programme js-c64 et la directive "use c64"
+  4. Écran texte, couleurs, caractères et nombres
+  5. Variables, calculs, conditions et boucles
+  6. Fonctions, tableaux et grilles
+  7. Boucle de jeu, clavier, joystick et temporisation
+  8. Scores, hasard et scènes
+  9. Mémoire, données et placement du programme
+ 10. Insérer de l'assembleur 6502
+ 11. Sprites : création, mouvement, animation et collisions
+ 12. Sons et musique : le SID
+ 13. Dessin haute résolution : le mode HR
+ 14. Raster et interruptions
+ 15. Préparer les graphismes, maps et objets
+ 16. Scroll, caméra et interface fixe
+ 17. Entités, collisions de terrain et platformer
+ 18. Plusieurs niveaux et chargement sur disque
+ 19. Compiler, examiner et optimiser un programme
+ 20. Trois programmes complets pour aller plus loin
+ 21. Dépannage et bonnes habitudes
+ 22. Référence rapide des fonctions
+ 23. API de compilation et outils pour les développeurs
 
+
+1. INSTALLER LES OUTILS
+======================
+Installez Node.js 18 ou supérieur, qui fournit également npm. Prévoyez un éditeur
+de texte et un émulateur C64 capable de lancer un PRG, par exemple le mien en ligne: https://c64.romualdhansen.com/
+Aucun assembleur externe n'est requis.
+Vérifiez les outils dans un terminal :
+
+    node --version
+    npm --version
+
+Node.js et npm servent sur votre ordinateur à installer la bibliothèque et à
+compiler. Ils ne sont pas nécessaires sur le C64 qui exécutera votre programme.
+Installez js-c64 dans le dossier de votre projet, comme indiqué ci-dessous.
+
+
+2. CRÉER UN PROJET, COMPILER ET LANCER SON PREMIER PRG
+===================================================
+Depuis le dossier où vous souhaitez ranger vos projets :
+
+    mkdir mon-jeu
+    cd mon-jeu
+    npm init -y
+    npm pkg set type=module
+    npm install js-c64@^1.1.0
+
+npm init crée package.json, qui décrit le projet. Le réglage type=module permet
+les imports JavaScript. npm install ajoute js-c64 aux dépendances et installe
+une version compatible avec la 1.1.0 dans le dossier node_modules.
+Créez main.js dans mon-jeu :
+
+--- Programme complet : 01-bonjour ---
+"use c64";
 import { c64 } from "js-c64";
 
-c64.clearScreen();
-c64.borderColor(c64.COLOR_BLUE);
-c64.backgroundColor(c64.COLOR_BLUE);
-c64.textColor(c64.COLOR_WHITE);
-c64.printAt(0, 0, "HELLO C64");
+c64.screen.setup({ color: c64.COLOR_CYAN });
+c64.printCentered(10, "BONJOUR LE C64 !");
+c64.printAt(7, 13, "MON PREMIER PROGRAMME JS");
+--- Fin du programme ---
 
+Compilez :
 
-2. COMMENT COMPILER UN PROGRAMME
---------------------------------
+    npx c64js build main.js -o dist/mon-jeu.prg
 
-2.1 POURQUOI LA COMMANDE C64JS PEUT NE PAS ETRE RECONNUE
----------------------------------------------------------
+Ouvrez ce PRG avec l'autostart de votre émulateur. Il contient une adresse de
+chargement et, par défaut, un lanceur BASIC. Vous pouvez aussi le transférer
+sur un vrai C64 avec votre matériel habituel.
 
-Si vous ouvrez simplement PowerShell et tapez :
+Ne lancez pas « node main.js » : c'est l'entrée du compilateur C64. Après chaque
+modification, recompilez puis rechargez le nouveau PRG.
 
-c64js build examples/hello.js -o hello.prg
+Organisation conseillée :
 
-Windows peut afficher un message du genre :
+    mon-jeu/
+      main.js
+      package.json
+      assets/       ressources JSON
+      dist/         résultats de compilation
 
-Le terme "c64js" n'est pas reconnu...
+Pour ajouter une commande pratique :
 
-Ce message ne signifie pas que votre programme hello.js est mauvais.
-Il signifie seulement que la commande c64js n'a pas ete installee globalement,
-ou que Windows ne la trouve pas dans sa variable PATH.
+    npm pkg set "scripts.build=c64js build main.js -o dist/mon-jeu.prg"
+    npm run build
 
-Pour un debutant qui travaille directement dans le dossier du compilateur,
-la methode la plus simple et la plus fiable est d'utiliser Node.js :
+3. COMPRENDRE UN PROGRAMME JS-C64 ET LA DIRECTIVE "USE C64"
+=========================================================
+Commencez chaque fichier source destiné à être compilé pour le C64 par :
 
-node .\src\cli.js build .\examples\hello.js -o .\hello.prg
+    "use c64";
+    import { c64 } from "js-c64";
 
-Cette commande lance directement le fichier src\cli.js du projet. Elle ne
-demande pas que la commande c64js soit installee globalement.
-
-
-2.2 PREPARER LE PROJET UNE PREMIERE FOIS
-----------------------------------------
-
-1. Installez Node.js si ce n'est pas deja fait.
-
-2. Dans VS Code, ouvrez le dossier complet du projet js-c64.
-
-3. Ouvrez le terminal de VS Code :
-
-Terminal > Nouveau terminal
-
-4. Verifiez que le terminal se trouve bien dans le dossier du compilateur :
-
-Get-Location
-
-Puis verifiez que package.json est visible :
-
-Get-ChildItem package.json
-
-Le chemin affiche doit se terminer par le dossier du projet, par exemple :
-
-D:\Programmation\Vibe Coding Pro\compilateur js-c64
-
-Si vous n'etes pas dans ce dossier, utilisez cd avec le chemin entre guillemets :
-
-cd "D:\Programmation\Vibe Coding Pro\compilateur js-c64"
-
-Les guillemets sont indispensables lorsque le chemin contient des espaces.
-
-5. Verifiez que Node.js et npm fonctionnent :
-
-node -v
-npm -v
-
-Ces commandes doivent afficher des numeros de version.
-
-6. Installez les dependances du projet. Cette operation est normalement a faire
-une seule fois, puis de nouveau uniquement si package.json change :
-
-npm install
-
-
-2.3 COMPILER DEPUIS LE DOSSIER DU COMPILATEUR - METHODE RECOMMANDEE
--------------------------------------------------------------------
-
-Pour creer un fichier PRG directement chargeable dans VICE :
-
-node .\src\cli.js build .\examples\hello.js -o .\dist\hello.prg
-
-Detail de la commande :
-
-- node lance Node.js
-- .\src\cli.js est le programme de compilation
-- build demande une compilation
-- .\examples\hello.js est le fichier source JavaScript
-- -o signifie output, c'est-a-dire fichier de sortie
-- .\dist\hello.prg est le fichier qui sera cree
-
-Le compilateur cree automatiquement le dossier dist s'il n'existe pas.
-
-Pour produire de l'assembleur 6502 lisible :
-
-node .\src\cli.js build .\examples\hello.js -o .\dist\hello.asm --format asm
-
-Pour produire un listing avec les adresses et les octets machine :
-
-node .\src\cli.js build .\examples\hello.js -o .\dist\hello.lst --format lst
-
-Pour produire un fichier binaire brut, sans en-tete PRG :
-
-node .\src\cli.js build .\examples\hello.js -o .\dist\hello.bin --format bin
-
-Pour produire un programme BASIC contenant des lignes DATA :
-
-node .\src\cli.js build .\examples\hello.js -o .\dist\hello.bas --format data
-
-Pour creer aussi une carte JSON contenant les symboles et leurs adresses :
-
-node .\src\cli.js build .\examples\hello.js -o .\dist\hello.asm --format asm --map .\dist\hello-symbols.json
-
-Le format est aussi deduit automatiquement de l'extension du fichier de sortie.
-Par exemple, cette commande produit bien de l'assembleur :
-
-node .\src\cli.js build .\examples\hello.js -o .\dist\hello.asm
-
-Ecrire --format asm reste utile car cela rend la commande plus explicite.
-
-
-2.4 UTILISER NPX DANS UN AUTRE PROJET
--------------------------------------
-
-Si js-c64 est installe comme dependance dans votre propre projet, placez-vous
-d'abord dans ce projet puis faites :
-
-npm install js-c64
-
-Vous pouvez ensuite lancer la commande locale du package avec npx :
-
-npx c64js build .\examples\hello.js -o .\build\hello.prg
-
-npx cherche c64js dans node_modules\.bin. Il n'est donc pas necessaire
-d'installer c64js globalement.
-
-Si le package npm n'est pas encore publie, vous pouvez l'installer depuis son
-dossier local. Depuis le dossier de votre propre projet :
-
-npm install "D:\Programmation\Vibe Coding Pro\compilateur js-c64"
-
-Puis utilisez la meme commande npx c64js.
-
-
-2.5 RENDRE LA COMMANDE C64JS DISPONIBLE PARTOUT - OPTION FACULTATIVE
--------------------------------------------------------------------
-
-Cette methode est pratique, mais elle n'est pas obligatoire.
-
-Ouvrez un terminal dans le dossier du compilateur js-c64, puis tapez :
-
-npm link
-
-npm cree alors un lien global vers le projet. Dans PowerShell, vous pouvez
-verifier que la commande est maintenant visible avec :
-
-Get-Command c64js
-
-Puis compiler avec la commande courte :
-
-c64js build .\examples\hello.js -o .\dist\hello.prg
-
-Si c64js n'est toujours pas reconnu juste apres npm link, fermez puis rouvrez
-le terminal. La methode avec node .\src\cli.js continuera toujours a fonctionner.
-
-
-2.6 CHOISIR L'ADRESSE DE DEPART AVEC --sys
-------------------------------------------
-
-Exemple pour produire un BASIC DATA charge a l'adresse 49152 :
-
-node .\src\cli.js build .\examples\hello.js -o .\dist\hello.bas --format data --sys 49152
-
-Ou a l'adresse 8192 :
-
-node .\src\cli.js build .\examples\hello.js -o .\dist\hello.bas --format data --sys 8192
-
-Dans ces cas, le programme BASIC genere utilisera respectivement :
-
-SYS 49152
-
-ou :
-
-SYS 8192
-
-L'option --sys est surtout utile pour les formats suivants :
-
-- BASIC DATA
-- ASM
-- LST
-- BIN
-
-Pour le format PRG, la version actuelle utilise normalement le cas standard
-avec SYS 2064.
-
-
-2.7 RESOUDRE LES ERREURS LES PLUS COURANTES
--------------------------------------------
-
-Erreur : "c64js n'est pas reconnu"
-
-Solution recommandee : utilisez node .\src\cli.js depuis le dossier js-c64.
-
-Erreur : "Cannot find module ...src\cli.js"
-
-Cause probable : le terminal n'est pas ouvert dans le dossier du compilateur.
-Utilisez Get-Location, puis cd pour revenir dans le bon dossier.
-
-Erreur : "node n'est pas reconnu"
-
-Node.js n'est pas installe, ou son installation n'est pas dans le PATH.
-Installez Node.js, puis fermez et rouvrez VS Code et son terminal.
-
-Erreur : le fichier examples\hello.js est introuvable
-
-Verifiez le dossier courant avec Get-Location et le fichier avec :
-
-Get-ChildItem .\examples\hello.js
-
-Tous les chemins de la commande sont relatifs au dossier actuellement affiche
-par Get-Location.
-
-
-2.8 COMPILER DIRECTEMENT UN TEXTE JS EN MEMOIRE
------------------------------------------------
-
-Cette nouvelle possibilite est utile si vous avez :
-
-- un outil IA
-- un emulateur
-- une application Node.js
-
-Dans ce cas, vous n'etes pas oblige d'ecrire un fichier .js sur disque.
-Vous pouvez donner directement au compilateur une chaine de texte contenant
-le programme JS-C64.
-
-Exemple complet :
-
-import { compileJsToC64Outputs } from "js-c64";
-
-const source = `
-  c64.clearScreen();
-  c64.borderColor(c64.COLOR_BLUE);
-  c64.backgroundColor(c64.COLOR_BLUE);
-  c64.textColor(c64.COLOR_WHITE);
-  c64.printAt(0, 0, "Hello, C64!");
-`;
-
-const result = await compileJsToC64Outputs(source, { sysAddress: 49152 });
-console.log(result.basicText);
-
-Ce code fait ceci :
-
-- source contient le programme JS-C64 sous forme de texte
-- compileJsToC64Outputs() compile ce texte
-- sysAddress: 49152 demande un BASIC DATA avec SYS 49152
-- result.basicText contient le programme BASIC final en texte simple
-
-Autrement dit, result.basicText contient un texte du genre :
-
-10 FORI=0TO...:READA:POKE49152+I,A:NEXT
-20 SYS 49152
-100 DATA ...
-
-Important :
-
-- cette fonction execute le texte JS dans Node.js
-- il ne faut donc pas lui donner du code non fiable
-- c'est tres pratique pour une IA qui genere elle-meme le code JS-C64
-
-
-2.9 VERSION ENCORE PLUS SIMPLE : BASIC TEXTE DIRECT
----------------------------------------------------
-
-Si vous voulez directement recuperer le texte BASIC sans passer par result,
-vous pouvez utiliser :
-
-import { compileJsToBasicData } from "js-c64";
-
-const source = `
-  c64.clearScreen();
-  c64.borderColor(c64.COLOR_BLUE);
-  c64.backgroundColor(c64.COLOR_BLUE);
-  c64.textColor(c64.COLOR_WHITE);
-  c64.printAt(0, 0, "Hello, C64!");
-`;
-
-const basicText = await compileJsToBasicData(source, { sysAddress: 49152 });
-console.log(basicText);
-
-Cette version est ideale si votre but est simplement :
-
-- obtenir le texte BASIC final
-- l'envoyer dans un emulateur
-- ou l'afficher dans votre propre interface
-
-
-2.10 CHOISIR L'OPTIMISATION ET CREER UN RAPPORT
------------------------------------------------
-
-Sans option particuliere, js-c64 utilise le mode balanced. C'est le meilleur
-choix general pour un jeu :
-
-node .\src\cli.js build .\examples\platformer-mini.js -o .\dist\platformer-mini.prg
-
-Vous pouvez choisir explicitement un des trois modes :
-
-node .\src\cli.js build .\examples\platformer-mini.js -o .\dist\platformer-mini.prg --opt balanced
-node .\src\cli.js build .\examples\platformer-mini.js -o .\dist\platformer-mini-size.prg --opt size
-node .\src\cli.js build .\examples\platformer-mini.js -o .\dist\platformer-mini-speed.prg --opt speed
-
-- balanced partage le code repete et garde une marge avant d'utiliser RLE
-- size cherche le plus petit PRG possible
-- speed evite la decompression des maps/charsets au demarrage et copie certains
-  petits morceaux de code directement dans la boucle, ce qui peut agrandir le PRG
-
-La compression RLE est automatique. Le compilateur compte aussi la taille du
-decompresseur. Il laisse donc une map ou un charset en donnees normales si RLE
-rendrait le programme plus grand.
-
-Pour comprendre le choix du compilateur, ajoutez --report :
-
-node .\src\cli.js build .\examples\platformer-mini.js -o .\dist\platformer-mini.prg --opt balanced --report .\dist\platformer-mini.report.json
-
-Le fichier JSON contient notamment optimization-summary :
-
-- programBytes : taille reelle du code machine choisi
-- profiles : comparaison estimee des modes size, balanced et speed
-- rle : nombre de blocs compresses et octets economises
-- sharedRoutines : code repete partage
-- omittedRoutines : fonctions absentes car le jeu ne les utilise pas
-- audio et multiplexer : economies musicales et budget des sprites virtuels
-
-Les tailles des deux modes non compiles sont des estimations rapides. Pour une
-comparaison exacte, compilez votre jeu trois fois avec trois noms de sortie,
-comme dans les commandes ci-dessus. Le JavaScript du jeu ne doit pas changer.
-
-
-3. STRUCTURE MINIMALE D'UN FICHIER
-----------------------------------
-
-Le plus simple est :
-
-import { c64 } from "js-c64";
-
-c64.clearScreen();
-c64.printAt(0, 0, "BONJOUR");
-
-
-4. LES FONCTIONS C64 DE BASE
-----------------------------
-
-4.1 c64.clearScreen()
----------------------
-
-Efface l'ecran du Commodore 64.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.clearScreen();
-
-
-4.2 c64.borderColor(couleur)
-----------------------------
-
-Change la couleur du cadre de l'ecran.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.borderColor(c64.COLOR_RED);
-
-
-4.3 c64.backgroundColor(couleur)
---------------------------------
-
-Change la couleur du fond.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.backgroundColor(c64.COLOR_BLUE);
-
-
-4.4 c64.textColor(couleur)
---------------------------
-
-Definit la couleur du texte pour les prochains printAt().
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.textColor(c64.COLOR_WHITE);
-c64.printAt(0, 0, "TEXTE BLANC");
-
-
-4.5 c64.print(texte)
---------------------
-
-Affiche du texte en utilisant la routine KERNAL CHROUT.
-Pratique pour un affichage simple.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.clearScreen();
-c64.print("BONJOUR");
-
-
-4.6 c64.printAt(x, y, texte)
-----------------------------
-
-Affiche un texte a la position x, y.
-
-x = colonne
-y = ligne
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.printAt(10, 5, "AU MILIEU");
-
-
-4.7 c64.printCentered(y, texte)
--------------------------------
-
-Affiche un texte centre horizontalement sur une ligne.
-
-Vous ne donnez que la ligne y.
-La librairie calcule toute seule la bonne colonne.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.printCentered(10, "TEXTE AU CENTRE");
-
-
-4.8 c64.waitKey()
------------------
-
-Attend qu'une touche du clavier soit appuyee.
-
-Le programme reste bloque tant qu'aucune touche n'est detectee.
-Ensuite il continue.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.printAt(0, 0, "APPUYEZ SUR UNE TOUCHE");
-c64.waitKey();
-c64.clearScreen();
-
-Cette fonction est pratique pour :
-
-- attendre que le joueur lise un message
-- attendre avant de quitter un ecran
-- faire une pause entre deux parties d'un programme
-
-
-4.9 c64.poke(adresse, valeur)
------------------------------
-
-Ecrit une valeur dans une adresse memoire du C64.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.poke(c64.VIC_BORDER_COLOR, c64.COLOR_GREEN);
-
-
-4.10 c64.peek(adresse)
+À quoi sert "use c64" ?
 ----------------------
-
-Lit une adresse memoire.
-Dans la version actuelle, c'est surtout utile avec c64.poke() ou avec
-de l'assembleur bas niveau.
-
-Exemple simple :
-
-import { c64 } from "js-c64";
-
-c64.poke(0x0400, c64.peek(0xD020));
-
-Cet exemple copie la couleur du border dans le premier caractere ecran.
-
-
-4.10 c64.memset(adresse, valeur, longueur)
------------------------------------------
-
-Remplit une zone memoire avec la meme valeur.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.memset(c64.SCREEN_RAM, 81, 40);
-
-Ici on remplit 40 cases ecran avec le code 81.
-
-
-4.11 c64.memcpy(destination, source, longueur)
-----------------------------------------------
-
-Copie un bloc memoire vers une autre zone memoire.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.memcpy(0x0428, 0x0400, 40);
-
-Ici on copie 40 octets de la premiere ligne vers la deuxieme.
-
-
-4.12 c64.copyDataTo(adresse, dataRefOuNom, longueur)
-----------------------------------------------------
-
-Copie une donnee declaree avec c64.data.* vers une zone memoire.
-
-C'est tres utile pour copier une chaine vers SCREEN_RAM, ou copier des octets
-prepares a l'avance.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.data.screenString("titre", "BONJOUR");
-c64.copyDataTo(c64.SCREEN_RAM, c64.dataRef("titre"), 8);
-
-Ici la chaine "titre" est copiee au debut de l'ecran.
-
-
-4.13 c64.memsetColor(adresse, couleur, longueur)
-------------------------------------------------
-
-Remplit une zone memoire couleur avec la meme couleur.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.memsetColor(c64.COLOR_RAM, c64.COLOR_YELLOW, 40);
-
-Ici on met les 40 premieres couleurs texte en jaune.
-
-
-4.14 c64.writeChar(x, y, caractere, couleur)
---------------------------------------------
-
-Ecrit un seul caractere a une position precise.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.writeChar(5, 5, 81, c64.COLOR_WHITE);
-
-Ici on ecrit le code caractere 81 en blanc.
-
-Vous pouvez aussi donner une chaine d'un caractere :
-
-c64.writeChar(10, 10, "*", c64.COLOR_RED);
-
-
-4.15 c64.fillRect(x, y, largeur, hauteur, caractere, couleur)
---------------------------------------------------------------
-
-Remplit un rectangle sur l'ecran texte.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.fillRect(0, 0, 40, 25, 32, c64.COLOR_BLUE);
-
-Ici on remplit tout l'ecran avec des espaces bleus.
-
-Exemple plus visible :
-
-c64.fillRect(5, 5, 10, 4, 81, c64.COLOR_LIGHTBLUE);
-
-
-4.16 c64.drawFrame(x, y, largeur, hauteur, caractere, couleur)
----------------------------------------------------------------
-
-Dessine un cadre rectangulaire en mode texte.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.drawFrame(2, 2, 20, 8, 81, c64.COLOR_WHITE);
-
-Ici on dessine un cadre blanc.
-
-
-4.17 c64.clearLine(y, caractere, couleur)
------------------------------------------
-
-Efface ou remplit une ligne complete.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.clearLine(10, 32, c64.COLOR_BLUE);
-
-Ici on remplit la ligne 10 avec des espaces bleus.
-
-
-4.18 c64.screen(adresse)
+Cette directive indique au compilateur js-c64 d'analyser les variables,
+conditions, boucles et fonctions JavaScript pour les traduire en instructions
+6502. Par exemple, « if (vies === 0) » devient un test effectué pendant
+l'exécution sur le C64 ; une variable let correspond à une valeur en mémoire.
+
+Placez-la au début du fichier, avant l'import, et conservez-la dans tous les
+programmes C64 de ce guide, même les plus simples. Elle ne remplace pas l'import :
+celui-ci donne accès aux fonctions c64, comme clearScreen ou sprite.create.
+Elle ne lance pas non plus la compilation : utilisez « npx c64js build ».
+
+Quand ne pas l'utiliser ?
 ------------------------
+Ne la mettez pas dans vos scripts Node.js exécutés sur l'ordinateur, par exemple
+un outil appelant compileFile pour construire un PRG (chapitre 23). Dans un
+moteur JavaScript ordinaire, "use c64" n'a pas de comportement spécial : elle
+ne transforme pas Node.js en émulateur et ne crée pas un environnement C64.
+
+À la compilation, js-c64 lit les assets, réserve la mémoire et assemble le
+programme. Sur le C64, les instructions produites modifient les variables,
+lisent les entrées, dessinent et jouent les sons. Un JSON de votre ordinateur
+n'est donc pas recherché au moment où le C64 joue. Le chargement sur disquette
+C64 est une autre opération, présentée au chapitre 18.
+
+Le langage est un sous-ensemble de JavaScript adapté au C64 :
+
+  Disponible                       À ne pas utiliser dans le source C64
+  let, const, if, else              DOM, console, API Node.js
+  for, while, break, continue       classes, objets créés dynamiquement
+  fonctions et return              récursion, async/await, Promise
+  tableaux typés fixes             push, pop, map, filter, tableaux extensibles
+  entiers 8 et 16 bits              nombres flottants
+
+Les objets { ... } décrivent surtout des options constantes. player ou camera
+sont des références à des ressources du moteur, pas des objets alloués par un
+interpréteur JS. Gardez votre code C64 dans un fichier pour débuter : les imports
+utilisateur ne constituent pas un système général de modules JavaScript.
+Déclarez les fonctions au premier niveau. Les callbacks du moteur présentés ici
+sont synchrones et sans paramètres ; utilisez des fonctions nommées ou des
+flèches sans arguments.
+
+
+4. ÉCRAN TEXTE, COULEURS, CARACTÈRES ET NOMBRES
+============================================
+L'écran texte standard contient 40 colonnes et 25 lignes : x = 0..39, y = 0..24.
+
+    c64.screen.setup({
+      mode: "text", background: c64.COLOR_BLACK,
+      border: c64.COLOR_BLUE, color: c64.COLOR_WHITE, clear: true
+    });
+
+Sans options : texte, fond et bordure noirs, encre blanche, écran effacé.
+Si border est omis, il reprend background. mode et clear sont constants ; les
+couleurs peuvent être calculées. clear: false préserve le contenu mais configure
+tout de même le mode vidéo. Installez un charset personnalisé après setup.
+
+Les appels simples restent la bonne méthode pour une opération précise :
 
-Change l'adresse de base utilisee par printAt() pour l'ecran.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.screen(0x0400);
-c64.printAt(0, 0, "LIGNE 1");
-
-
-4.19 c64.colorRam(adresse)
---------------------------
-
-Change l'adresse de base utilisee pour les couleurs texte.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.colorRam(0xD800);
-c64.textColor(c64.COLOR_YELLOW);
-c64.printAt(0, 0, "JAUNE");
-
-
-4.20 c64.sys(adresse)
----------------------
-
-Fait un JSR vers une routine machine.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.sys(c64.KERNAL_CHROUT);
-
-Remarque : pour CHROUT seul, il faut en pratique charger A avant si on veut
-envoyer un caractere utile.
-
-
-4.21 c64.label(nom)
--------------------
-
-Ajoute un label dans le code genere.
-C'est utile surtout avec l'assembleur bas niveau.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.label("debut");
-
-
-4.22 c64.comment(texte)
------------------------
-
-Ajoute un commentaire dans la sortie assembleur/listing.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.comment("Preparation de l'ecran");
-c64.clearScreen();
-
-
-5. DONNEES ET VARIABLES
------------------------
-
-La version v0.2.0 ajoute une facon plus propre de manipuler :
-
-- des donnees
-- des variables
-- des references symboliques
-
-Cela evite d'ecrire trop d'adresses "magiques" a la main.
-
-
-5.1 c64.data.byte(nom, valeurs)
--------------------------------
-
-Declare une suite d'octets.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.data.byte("palette", [1, 2, 3, 4]);
-
-
-5.2 c64.data.word(nom, valeurs)
--------------------------------
-
-Declare une suite de mots 16 bits.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.data.word("positions", [0x0400, 0x0428, 0x0450]);
-
-
-5.3 c64.data.string(nom, texte)
--------------------------------
-
-Declare une chaine de texte de type PETSCII/texte KERNAL.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.data.string("message", "BONJOUR");
-
-
-5.4 c64.data.screenString(nom, texte)
--------------------------------------
-
-Declare une chaine deja preparee pour l'ecran texte.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.data.screenString("titre", "HELLO");
-
-
-5.5 c64.data.length(nom)
-------------------------
-
-Renvoie la longueur de la donnee en octets.
-
-Important :
-
-Pour les chaines, la longueur inclut aussi l'octet de fin 0.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.data.screenString("titre", "HELLO");
-
-const taille = c64.data.length("titre");
-
-
-5.6 c64.dataRef(nom, longueurOptionnelle)
------------------------------------------
-
-Cree une reference vers une donnee declaree.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.data.screenString("titre", "BONJOUR");
-c64.copyDataTo(c64.SCREEN_RAM, c64.dataRef("titre"), c64.data.length("titre"));
-
-La longueur optionnelle peut etre utile si vous voulez referencer une donnee
-avant sa declaration.
-
-
-5.7 c64.var.byte(nom, adresseOuOptions, valeurInitiale)
--------------------------------------------------------
-
-Declare une variable octet, comprise entre 0 et 255.
-
-Ancienne forme avec une adresse choisie manuellement :
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.var.byte("counter", 0xC200, 3);
-
-Nouvelle forme recommandee pour la logique de jeu :
-
-const counter = c64.var.byte("counter", { initial: 3 });
-
-Le compilateur choisit alors une adresse libre dans sa zone de variables.
-La reference retournee possede les operations runtime suivantes :
-
-counter.set(10);
-counter.add(2);
-counter.sub(1);
-counter.inc();
-counter.dec();
-
-Elle peut aussi creer des conditions avec eq(), ne(), lt(), lte(), gt() et gte().
-
-
-5.8 c64.var.word(nom, adresse, valeurInitiale)
-----------------------------------------------
-
-Declare une variable mot 16 bits.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.var.word("playerX", 0xC210, 320);
-
-
-5.9 c64.varRef(nom)
--------------------
-
-Cree une reference vers une variable declaree.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.var.byte("counter", 0xC200, 0);
-c64.poke(c64.varRef("counter"), 9);
-
-Ici on ecrit 9 dans la variable "counter".
-
-
-6. LES COULEURS DISPONIBLES
----------------------------
-
-Les constantes de couleur disponibles sont :
-
-c64.COLOR_BLACK
-c64.COLOR_WHITE
-c64.COLOR_RED
-c64.COLOR_CYAN
-c64.COLOR_VIOLET
-c64.COLOR_GREEN
-c64.COLOR_BLUE
-c64.COLOR_YELLOW
-c64.COLOR_ORANGE
-c64.COLOR_BROWN
-c64.COLOR_LIGHTRED
-c64.COLOR_GRAY1
-c64.COLOR_GRAY2
-c64.COLOR_LIGHTGREEN
-c64.COLOR_LIGHTBLUE
-c64.COLOR_GRAY3
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.borderColor(c64.COLOR_ORANGE);
-c64.backgroundColor(c64.COLOR_BROWN);
-c64.textColor(c64.COLOR_WHITE);
-
-
-7. CONSTANTES UTILES
---------------------
-
-Quelques constantes pratiques :
-
-c64.SCREEN_RAM
-c64.COLOR_RAM
-c64.VIC_BORDER_COLOR
-c64.VIC_BACKGROUND_COLOR
-c64.KERNAL_CHROUT
-c64.KERNAL_GETIN
-c64.KERNAL_SCNKEY
-c64.KERNAL_PLOT
-c64.JOYSTICK_PORT_1
-c64.JOYSTICK_PORT_2
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.poke(c64.VIC_BACKGROUND_COLOR, c64.COLOR_CYAN);
-
-
-7.1 LE SON SID (V0.6.0)
------------------------
-
-La version actuelle de js-c64 sait deja faire :
-
-- des petits bruitages immediats
-- des notes simples
-- de la musique 3 voix
-- de la musique qui tourne en fond pendant des IRQ raster ou une animation
-
-Autrement dit, on peut deja faire une petite demo sonore assez sympa.
-
-
-7.1.1 c64.sid.volume(valeur)
----------------------------
-
-Regle le volume general du SID.
-
-La valeur va de 0 a 15.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.sid.volume(15);
-
-
-7.1.2 c64.sid.filter(mode, cutoff, resonance)
----------------------------------------------
-
-Active et regle le filtre SID.
-
-Parametres :
-
-- mode = type de filtre
-- cutoff = frequence de coupure
-- resonance = resonance du filtre
-
-Valeurs utiles :
-
-- mode peut etre :
-  off
-  lowpass
-  bandpass
-  highpass
-
-On peut aussi combiner plusieurs modes :
-
-- "lowpass+highpass"
-- "lowpass+bandpass"
-
-cutoff doit etre entre 0 et 2047.
-
-resonance doit etre entre 0 et 15.
-
-Exemple simple :
-
-import { c64 } from "js-c64";
-
-c64.sid.volume(15);
-c64.sid.filter("lowpass", 1024, 8);
-
-Exemple avec combinaison :
-
-import { c64 } from "js-c64";
-
-c64.sid.volume(10);
-c64.sid.filter("lowpass+highpass", 1600, 12);
-
-Important :
-
-Cette fonction ecrit dans les registres SID du filtre.
-Elle sert surtout a changer le caractere du son.
-
-
-7.1.3 c64.sid.voice(numero)
----------------------------
-
-Donne acces a une voix SID precise.
-
-Le numero doit etre :
-
-- 1
-- 2
-- 3
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.sid.voice(1).waveform("pulse");
-
-
-7.1.4 c64.sid.voice(1).frequency(valeur)
----------------------------------------
-
-Definit directement la frequence brute d'une voix.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.sid.voice(1).frequency(0x1147);
-
-
-7.1.5 c64.sid.freq(voix, valeur)
---------------------------------
-
-Version plus simple pour donner une frequence.
-
-Si la valeur est petite, la librairie la traite comme une frequence en Hertz.
-Si la valeur est grande, elle la traite comme une valeur SID brute.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.sid.freq(1, 440);
-
-
-7.1.6 c64.sid.voice(1).pulseWidth(valeur)
-----------------------------------------
-
-Regle la largeur d'impulsion pour l'onde pulse.
-
-La valeur va de 0 a 4095.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.sid.voice(1).waveform("pulse");
-c64.sid.voice(1).pulseWidth(0x0800);
-
-
-7.1.7 c64.sid.voice(1).waveform(type)
-------------------------------------
-
-Choisit la forme d'onde.
-
-Types disponibles :
-
-- triangle
-- saw
-- pulse
-- noise
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.sid.voice(1).waveform("triangle");
-
-
-7.1.8 c64.sid.voice(1).gate(on)
--------------------------------
-
-Ouvre ou ferme manuellement la gate d'une voix.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.sid.voice(1).waveform("saw");
-c64.sid.voice(1).gate(true);
-
-
-7.1.9 c64.sid.voice(1).attackDecay(valeur)
------------------------------------------
-
-Regle l'attaque et le decay.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.sid.voice(1).attackDecay(0x11);
-
-
-7.1.10 c64.sid.voice(1).sustainRelease(valeur)
----------------------------------------------
-
-Regle le sustain et le release.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.sid.voice(1).sustainRelease(0xf0);
-
-
-7.1.11 c64.sid.note(voix, note, duree)
---------------------------------------
-
-Joue une note sur une voix.
-
-Exemples de notes :
-
-- C4
-- F#4
-- Bb3
-
-Si duree > 0, la note attend un peu puis ferme la gate.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.sid.volume(15);
-c64.sid.voice(1).waveform("pulse");
-c64.sid.voice(1).attackDecay(0x11);
-c64.sid.voice(1).sustainRelease(0xf0);
-c64.sid.note(1, "C4", 10);
-
-
-7.1.12 c64.sid.rest(voix, duree)
---------------------------------
-
-Fait une pause sur une voix.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.sid.rest(1, 6);
-
-
-7.1.13 c64.sid.playSong(songDefinition)
----------------------------------------
-
-Lance une musique 3 voix en fond.
-
-Important :
-
-- ce n'est plus un lecteur bloquant
-- la musique tourne en IRQ
-- elle peut cohabiter avec un raster effect
-- elle peut aussi cohabiter avec l'animateur de sprites
-
-Structure :
-
-import { c64 } from "js-c64";
-
-c64.sid.playSong({
-  tempo: 18,
-  loop: true,
-  voices: [
-    ["C4", "E4", "G4", "C5"],
-    ["C3", "R", "G2", "R"],
-    ["R", "C5", "R", "G4"]
-  ]
-});
-
-Ici :
-
-- tempo regle la vitesse generale sur une horloge logique de 50 Hz. La vitesse
-  reste donc la meme sur un C64 PAL et un C64 NTSC
-- loop: true recommence automatiquement la musique
-- voices contient 3 tableaux
-- chaque tableau correspond a une voix SID
-- "R" veut dire silence
-
-
-7.1.14 c64.sid.installPlayer(ligneRaster)
------------------------------------------
-
-Installe le lecteur musical sur une ligne raster donnee.
-
-Dans beaucoup de cas, playSong() suffit deja car il demande automatiquement
-le lecteur en fond.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.sid.installPlayer(250);
-
-
-7.1.15 c64.sid.stopSong()
--------------------------
-
-Arrete la musique en fond.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.sid.stopSong();
-
-
-7.1.16 RESERVER UNE VOIX AUX BRUITAGES, PAUSE ET REPRISE (V0.11)
-----------------------------------------------------------------
-
-Le SID ne possede que trois voix. Sans regle particuliere, la musique et un
-bruitage peuvent modifier la voix 1 au meme moment. Le compilateur affiche alors
-l'avertissement SID_VOICE_CONFLICT.
-
-La solution recommandee pour un jeu est de reserver une voix avant la musique :
-
-c64.sid.reserveSfxVoice(3);
-
-c64.sid.playSong({
-  tempo: 5,
-  loop: true,
-  voices: [
-    ["C4", "E4", "G4", "E4"],
-    ["C3", "R", "G2", "R"],
-    [{ rest: true, duration: 4 }]
-  ]
-});
-
-Ici, les voix 1 et 2 appartiennent a la musique. La voix 3 est prioritaire pour
-les bruitages beep(), click(), noise(), explosion(), laser() et pickup(). Le
-lecteur musical ne touche jamais a cette voix. Il ne stocke meme pas ses trois
-tables de musique dans le PRG, ce qui economise de la place.
-
-Le tableau musical de la voix reservee doit contenir seulement des silences.
-Sinon le build affiche SID_RESERVED_VOICE_MUSIC_DATA et ignore les notes de
-cette voix.
-
-Pour mettre uniquement la musique en pause, sans perdre sa position :
-
-c64.sid.pauseSong();
-
-Pour continuer :
-
-c64.sid.resumeSong();
-
-stopSong() est different : il arrete la musique et remet sa position au debut.
-Le rapport de build sid-audio indique les voix musicales, la voix reservee, le
-nombre d'effets, la compensation PAL/NTSC et les octets economises.
-
-Exemple jouable : examples/sid-game-audio.js
-
-
-7.1.17 INSTRUMENTS, PATTERNS ET FADE NON BLOQUANT (V0.11)
----------------------------------------------------------
-
-Un instrument rassemble les reglages que vous deviez auparavant repeter pour
-chaque voix :
-
-const lead = c64.sid.instrument("lead", {
-  waveform: "pulse",
-  pulseWidth: 0x0800,
-  attackDecay: 0x11,
-  sustainRelease: 0x98
-});
-
-Un pattern est une petite phrase musicale reutilisable :
-
-const riff = c64.sid.pattern("riff", [
-  "C4", "E4", "G4", { note: "C5", duration: 2 }
-]);
-
-repeat(2) joue la phrase deux fois sans recopier son tableau dans le fichier JS :
-
-c64.sid.playSong({
-  tempo: 5,
-  loop: true,
-  instruments: [lead, null, null],
-  voices: [
-    riff.repeat(2),
-    [{ rest: true, duration: 10 }],
-    [{ rest: true, duration: 10 }]
-  ]
-});
-
-Chaque tableau instruments correspond a la voix de meme numero. null signifie
-que vous gardez les reglages faits manuellement avec c64.sid.voice(). Les
-patterns peuvent aussi etre places dans un tableau avec des notes ou d'autres
-patterns.
-
-Pour diminuer progressivement le volume jusqu'a zero :
-
-c64.sid.fadeSong(0, 3);
-
-Le premier nombre est le volume cible entre 0 et 15. Le second indique le nombre
-de ticks entre deux pas de volume. Avec 3, le volume change de 1 toutes les 3/50
-de seconde. Le fade tourne dans l'IRQ et ne bloque jamais la boucle de jeu.
-
-Pour remonter ensuite au volume 12 :
-
-c64.sid.fadeSong(12, 3);
-
-Le runtime du fade n'est ajoute au PRG que si fadeSong() est utilise. Le
-compilateur mutualise aussi les tables de deux voix dont les notes developpees
-sont exactement identiques. Le rapport sid-audio indique les patterns,
-instruments, appels de fade et octets de tables mutualises.
-
-
-7.1.18 Bruitages prets a l'emploi
----------------------------------
-
-Fonctions disponibles :
-
-- c64.sid.beep()
-- c64.sid.click()
-- c64.sid.noise(duree)
-- c64.sid.explosion()
-- c64.sid.laser()
-- c64.sid.pickup()
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.sid.beep();
-c64.sid.laser();
-
-
-7.1.19 Exemple complet : musique + raster
------------------------------------------
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.clearScreen();
-c64.borderColor(c64.COLOR_BLACK);
-c64.backgroundColor(c64.COLOR_BLACK);
-c64.textColor(c64.COLOR_WHITE);
-c64.printAt(0, 0, "COMBO IRQ");
-
-c64.sid.volume(15);
-c64.sid.filter("lowpass", 1200, 8);
-
-c64.sid.voice(1).waveform("pulse");
-c64.sid.voice(1).pulseWidth(0x0800);
-c64.sid.voice(1).attackDecay(0x11);
-c64.sid.voice(1).sustainRelease(0xf0);
-
-c64.sid.voice(2).waveform("triangle");
-c64.sid.voice(2).attackDecay(0x11);
-c64.sid.voice(2).sustainRelease(0xd0);
-
-c64.sid.voice(3).waveform("saw");
-c64.sid.voice(3).attackDecay(0x11);
-c64.sid.voice(3).sustainRelease(0xa0);
-
-c64.sid.playSong({
-  tempo: 18,
-  voices: [
-    ["C4", "E4", "G4", "C5"],
-    ["C3", "R", "G2", "R"],
-    ["R", "C5", "R", "G4"]
-  ]
-});
-
-c64.irq.raster(50, () => {
-  c64.borderColor(c64.COLOR_RED);
-});
-
-c64.irq.raster(150, () => {
-  c64.borderColor(c64.COLOR_BLUE);
-});
-
-c64.irq.chainToKernal();
-c64.irq.install();
-
-Cet exemple correspond a l'idee du fichier :
-
-examples/combo-irq.js
-
-
-7.2 PREMIERE BOUCLE DE JEU RUNTIME (V0.7.0)
---------------------------------------------
-
-Une boucle de jeu execute son bloc une seule fois par image video :
-
-const joystick = c64.input.joystick(2);
-const player = c64.sprite.create(0, {
-  x: 100,
-  y: 120,
-  data: Array(63).fill(255),
-  minX: 24,
-  maxX: 320
-});
-
-c64.game.frame(() => {
-  player.setVelocity(0, 0);
-  c64.control.if(joystick.left(), () => player.setVelocity(-2, 0));
-  c64.control.if(joystick.right(), () => player.setVelocity(2, 0));
-  player.update();
-});
-
-Les directions disponibles sont :
-
-- joystick.up()
-- joystick.down()
-- joystick.left()
-- joystick.right()
-- joystick.fire()
-
-Pour detecter seulement la premiere frame d'un appui :
-
-joystick.firePressed()
-
-Pour detecter le relachement :
-
-joystick.fireReleased()
-
-Tres important : une condition normale JavaScript est executee par Node.js
-pendant la compilation. Elle ne represente pas une decision prise par le C64.
-
-N'ecrivez donc pas :
-
-if (joystick.left()) {
-  player.setVelocity(-2, 0);
-}
-
-Utilisez toujours c64.control.if() pour une condition runtime :
-
-c64.control.if(joystick.left(), () => {
-  player.setVelocity(-2, 0);
-});
-
-Une seule boucle c64.game.frame() est autorisee par programme. Pour le moment,
-le compilateur detecte PAL ou NTSC. Avec { hz: 50 }, le jeu effectue 50 mises a
-jour logiques par seconde dans les deux cas. Avec { hz: "video" }, il suit la
-frequence native : 50 sur PAL et 60 sur NTSC.
-
-La v0.7 ajoute aussi :
-
-- c64.var.word() pour les valeurs 16 bits
-- c64.var.bool() pour les etats vrai/faux
-- and(), or(), xor() et toggle()
-- c64.control.repeat() pour une repetition bornee
-- c64.control.while() avec maxIterations obligatoire
-- c64.control.routine() et c64.control.call()
-- c64.input.keyboard() pour des actions clavier non bloquantes
-- c64.game.init() pour l'initialisation
-- c64.game.every() pour une tache periodique
-- c64.table.byte() pour un tableau indexe pendant le jeu
-
-Les variables doivent etre creees avant la boucle pour que le code de la frame
-puisse garder leurs references. La configuration de l'ecran, des musiques et des
-sprites peut etre regroupee dans c64.game.init().
-
-Exemple complet :
-
-examples/game-loop-input.js
-
-
-7.2.1 SCENES DE JEU ET ACTIVATION D'UN NIVEAU (DEBUT V1.0)
-----------------------------------------------------------
-
-Pour un jeu avec un titre, une pause et un game over, vous pouvez laisser le
-compilateur construire la boucle principale :
-
-c64.game.scene("title", {
-  enter() {
     c64.clearScreen();
-    c64.printCentered(12, "FIRE POUR JOUER");
-  },
-  update() {
-    c64.control.if(joystick.firePressed(), () => c64.game.go("game"));
+    c64.borderColor(c64.COLOR_BLACK);
+    c64.backgroundColor(c64.COLOR_BLACK);
+    c64.textColor(c64.COLOR_WHITE);
+
+Palette, avec le préfixe c64. :
+
+  0 COLOR_BLACK       4 COLOR_VIOLET       8 COLOR_ORANGE     12 COLOR_GRAY2
+  1 COLOR_WHITE       5 COLOR_GREEN        9 COLOR_BROWN      13 COLOR_LIGHTGREEN
+  2 COLOR_RED         6 COLOR_BLUE        10 COLOR_LIGHTRED   14 COLOR_LIGHTBLUE
+  3 COLOR_CYAN        7 COLOR_YELLOW      11 COLOR_GRAY1      15 COLOR_GRAY3
+
+Afficher du texte et des nombres
+-------------------------------
+    c64.print("BONJOUR");                  à la position du curseur
+    c64.printAt(2, 4, "SCORE", 7);          à une position donnée
+    c64.printCentered(8, "JEU TERMINE");    centré sur une ligne
+    c64.printNumber(10, 4, 123, { digits: 5, color: 1 });
+
+Le dernier appel affiche 00123. digits est constant, de 1 à 5. Une largeur trop
+petite ne conserve que les chiffres de droite. Passez une variable directement
+à printNumber : la concaténation de texte et de nombres calculés n'est pas
+une chaîne C64. Préférez des textes en majuscules sans accents : le jeu de
+caractères C64 n'est pas Unicode.
+
+Caractères et zones
+-------------------
+    c64.writeChar(10, 10, 81, c64.COLOR_YELLOW);
+    c64.fillRect(2, 5, 12, 4, 32, c64.COLOR_BLUE);
+    c64.drawFrame(1, 4, 14, 6, 81, c64.COLOR_CYAN);
+    c64.clearLine(20);
+
+fillRect remplit ; drawFrame dessine un contour. Les dimensions sont en cases,
+pas en pixels. clearLine accepte aussi caractère et couleur. Le remplissage
+utilise par défaut l'espace, code 32 ; le cadre utilise le caractère 81.
+Un code écran n'est pas un code ASCII : A vaut 1, les chiffres commencent à 48.
+writeChar accepte aussi un caractère littéral. Gardez les zones dans l'écran :
+une forme hors limites n'est pas automatiquement découpée à son bord.
+
+--- Programme complet : 02-compteur ---
+"use c64";
+import { c64 } from "js-c64";
+
+c64.screen.setup({ border: c64.COLOR_BLUE });
+c64.drawFrame(5, 5, 30, 12, 81, c64.COLOR_CYAN);
+c64.printAt(8, 7, "TABLE DE MULTIPLICATION");
+for (let i = 0; i < 5; i++) {
+  c64.printNumber(12, 10 + i, i, { digits: 1 });
+  c64.printNumber(20, 10 + i, i * 3, { digits: 2 });
+}
+--- Fin du programme ---
+
+
+5. VARIABLES, CALCULS, CONDITIONS ET BOUCLES
+==========================================
+    let vies = 3;                  entier non signé 8 bits : 0..255
+    let termine = false;           booléen
+    let position = c64.word(300);   entier non signé 16 bits : 0..65535
+    const vitesse = 2;             constante
+
+Une petite valeur numérique initialise normalement un octet. Écrivez c64.word
+pour une plage dépassant 255 ; let position = 300 est refusé sans cette largeur.
+Les calculs débordent : sur un octet, 255 + 1 donne 0. Élargissez AVANT le calcul :
+
+    let petit = 255;
+    let grand = c64.word(petit) + 1;
+
+c64.byte conserve l'octet bas. word ne récupère pas les bits déjà perdus dans un
+calcul. Les vitesses de sprites/entités peuvent être négatives selon leurs API,
+mais les comparaisons JavaScript restent non signées. Ne testez pas leur sens
+avec vitesse < 0 ; gardez par exemple un booléen facingLeft.
+
+    score += 10;
+    vies--;
+    couleur = (couleur + 1) & 15;
+    if (vies === 0) {
+      termine = true;
+    } else if (score >= 100 && !termine) {
+      c64.borderColor(c64.COLOR_GREEN);
+    }
+
+Opérateurs : +, -, &, |, ^, incréments/décréments, affectations composées ;
+==, !=, ===, !==, <, <=, >, >= ; !, &&, ||. Les opérateurs logiques court-circuitent
+leur deuxième opérande. Le ternaire fonctionne avec les valeurs scalaires :
+
+    let couleur = termine ? c64.COLOR_RED : c64.COLOR_GREEN;
+
+La multiplication par une constante de 0 à 255 est disponible, ainsi que les
+décalages d'un nombre constant de 0 à 15 bits. Les expressions constantes sont
+simplifiées. La multiplication de deux variables, la division et le modulo
+dynamiques ne sont pas proposés. Pour les puissances de deux, >> et & peuvent
+exprimer certains calculs entiers.
+
+Boucles
+-------
+    for (let x = 0; x < 40; x++) {
+      c64.writeChar(x, 12, 81, c64.COLOR_WHITE);
+    }
+
+    while (vies > 0) {
+      vies--;
+      if (vies === 1) break;
+    }
+
+break quitte la boucle ; continue passe à l'itération suivante. La condition
+doit pouvoir devenir fausse. Un compteur byte ne peut pas atteindre 256 :
+utilisez un word pour parcourir 256 éléments. Une longue boucle bloque le reste
+de la frame ; pour animer un jeu, employez game.run, pas un while infini.
+
+
+6. FONCTIONS, TABLEAUX ET GRILLES
+================================
+    function dessinerCase(x, y, couleur) {
+      c64.writeChar(x, y, 81, couleur);
+    }
+
+Les fonctions acceptent nombres, booléens, références de ressources/tableaux et
+texte constant. Les scalaires sont passés par valeur ; les références désignent
+les mêmes données. Un retour est numérique ou booléen ; une fonction utilisée
+comme valeur doit retourner une valeur sur tous les chemins. Pas de récursion.
+
+Tableaux fixes
+--------------
+    const cases = new Uint8Array(200);
+    const positions = new Uint16Array([40, 160, 300]);
+    cases[3] = 1;
+    cases[3]++;
+    let contenu = cases[3];
+    cases.fill(0);
+
+Le tableau est réservé à la compilation, avec 1 à 256 éléments. Uint8Array
+stocke des octets, Uint16Array des mots. Les valeurs initiales sont constantes.
+.length donne la taille ; fill remplit tout le tableau, sans variante début/fin.
+Un indice constant invalide provoque une erreur ; un indice dynamique hors
+limites donne zéro en lecture et ignore l'écriture.
+Un tableau ordinaire [ ... ] sert à une configuration constante. Pour des
+données modifiables et un indice variable, choisissez un tableau typé.
+
+--- Programme complet : 03-grille ---
+"use c64";
+import { c64 } from "js-c64";
+
+const cases = new Uint8Array(100);
+function index(x, y) {
+  return y * 10 + x;
+}
+function dessiner() {
+  for (let y = 0; y < 10; y++) {
+    for (let x = 0; x < 10; x++) {
+      let couleur = cases[index(x, y)] === 0 ? 6 : 7;
+      c64.writeChar(x + 15, y + 7, 81, couleur);
+    }
   }
-});
+}
+c64.screen.setup();
+cases.fill(0);
+cases[index(4, 4)] = 1;
+cases[index(5, 4)] = 1;
+dessiner();
+--- Fin du programme ---
 
-c64.game.scene("game", {
-  update() {
-    player.update();
-  }
-});
+Au-delà de 255, les indices intermédiaires doivent être calculés sur 16 bits.
+La limite de 256 éléments par tableau reste applicable : découpez une grande
+grille ou utilisez les maps du moteur. Réinitialisez vos tableaux au début
+d'une nouvelle partie : changer de scène ne recharge pas leurs données initiales.
 
-c64.game.start("title", { hz: 50 });
+7. BOUCLE DE JEU, CLAVIER, JOYSTICK ET TEMPORISATION
+=================================================
+Structure recommandée :
 
-Les quatre noms disponibles sont exactement :
+    function init() { ... }
+    function update() { ... }
+    c64.game.run({ init, update });
 
-- title
-- game
-- pause
-- gameOver
+init s'exécute une fois ; update à chaque étape logique. La cadence par défaut
+est { hz: 50 } ; le moteur adapte les étapes au NTSC. { hz: "video" } suit chaque
+image vidéo. Cela ne rend pas instantané un calcul trop long : respectez le
+budget de la machine. rasterLine règle le point de synchronisation.
+Déclarez les ressources fixes hors d'update ; dessinez le décor permanent dans
+init, puis ne redessinez que ce qui change.
 
-Chaque scene peut avoir trois blocs facultatifs :
+Joystick
+--------
+    const joystick = c64.input.joystick(2);
 
-- enter est execute une fois quand on entre dans la scene
-- update est execute une fois par frame tant que la scene est active
-- exit est execute une fois avant de quitter la scene
+  left(), right(), up(), down(), fire()       direction/bouton maintenu
+  leftPressed(), firePressed(), etc.          nouvel appui
+  leftReleased(), fireReleased(), etc.        relâchement
 
-c64.game.go("pause") demande un changement. Le moteur attend la fin de la
-frame, appelle exit, change de scene puis appelle enter. Une seule transition
-peut etre en attente, ce qui garde un temps d'execution borne.
+Employez ces appels dans les conditions de la frame. Le moteur capture les
+entrées pour fournir un état cohérent. Le port 2 est pratique pour débuter.
 
-N'utilisez pas c64.game.frame() dans le meme programme que c64.game.start().
-Les scenes fournissent deja l'unique boucle de frame.
+Clavier
+-------
+    const keys = c64.input.keyboard({
+      saut: c64.KEY_SPACE, valider: c64.KEY_RETURN, aide: c64.KEY_F1
+    });
 
-Pour preparer un niveau charge depuis une map :
+  keys.saut.held()       maintenue
+  keys.saut.pressed()    nouvel appui
+  keys.saut.released()   relâchement
 
-const level1 = c64.assets.loadMap("assets/level1.json");
+c64.waitKey() est bloquant. Réservez-le aux programmes séquentiels ; dans un
+jeu, pressed() permet aux animations et à la musique de continuer.
 
-c64.game.init(() => level1.activate());
+--- Programme complet : 04-clavier ---
+"use c64";
+import { c64 } from "js-c64";
 
-Pour savoir au runtime si cette map est active :
+const keys = c64.input.keyboard({ action: c64.KEY_SPACE });
+let secondes = 0;
+function init() {
+  c64.screen.setup();
+  c64.printAt(2, 8, "ESPACE : BORDURE JAUNE");
+}
+function compter() {
+  secondes++;
+  c64.printNumber(18, 12, secondes, { digits: 3 });
+}
+function update() {
+  if (keys.action.held()) c64.borderColor(c64.COLOR_YELLOW);
+  else c64.borderColor(c64.COLOR_BLACK);
+  c64.game.every(50, compter);
+}
+c64.game.run({ init, update });
+--- Fin du programme ---
 
-c64.control.if(level1.isActive(), () => {
-  c64.borderColor(c64.COLOR_GREEN);
-});
-
-Dans un PRG autonome, activate() remet les cellules et le charset de la map dans
-leur etat original. Si l'appel est fait dans le jeu, cette reinitialisation est
-effectuee apres la frame. Dans un build D64, les maps partagent une seule zone
-RAM et activate() charge les fichiers du niveau depuis la disquette.
-
-Exemple complet : examples/game-scenes.js
-
-
-7.2.2 SCORE, VIES, HASARD ET POOLS FIXES (V1.0)
-------------------------------------------------
-
-Pour afficher un score sans faire une conversion nombre-vers-texte couteuse a
-chaque frame, utilisez un compteur decimal :
-
-const score = c64.game.score({ digits: 5, initial: 0 });
-const lives = c64.game.lives({ initial: 3 });
-
-score.add(100);
-score.draw(2, 0, { color: c64.COLOR_YELLOW });
-lives.dec();
-lives.draw(35, 0);
-
-digits est le nombre de chiffres reserves, de 1 a 5. Le compteur reboucle a zero
-quand sa valeur maximale est depassee. Les fonctions disponibles sont set,
-add, sub, inc, dec et draw. En interne, chaque chiffre est deja stocke sous
-forme decimale : draw n'effectue donc aucune division dans la boucle de jeu.
-
-Pour obtenir un hasard reproductible :
-
-const roll = c64.var.byte("roll", { initial: 0 });
-c64.random.seed(42);
-c64.random.range(roll, 10);
-
-roll recevra une valeur de 0 a 9. Une meme seed non nulle produit toujours la
-meme suite, ce qui facilite les tests. c64.random.byte(roll) produit une valeur
-de 0 a 255. La seed doit etre comprise entre 1 et 255.
-
-Un pool fixe permet de preparer un nombre maximum de projectiles ou d'ennemis :
-
-const bullets = c64.pool.fixed("bullets", 8, (index) => ({
-  active: c64.var.bool("bullet" + index + "Active", false),
-  x: c64.var.word("bullet" + index + "X", { initial: 0 })
-}));
-
-bullets.forEach((bullet) => bullet.active.set(false));
-
-La fonction de creation est executee par Node.js pendant la compilation. Il y
-aura exactement 8 entrees dans le programme C64 : aucune allocation dynamique,
-aucun ramasse-miettes et aucune surprise de memoire pendant le jeu.
-
-
-7.2.3 CREER UNE DISQUETTE D64 AVEC PLUSIEURS NIVEAUX
------------------------------------------------------
-
-Pour un petit programme, le PRG autonome reste le choix le plus simple. Pour un
-jeu avec plusieurs maps et beaucoup de sprites, le format D64 garde le programme
-principal compact et place les gros assets dans des modules PRG de donnees sur la
-disquette.
-
-Depuis le dossier de js-c64 :
-
-node .\src\cli.js build .\examples\multilevel-d64.js -o .\dist\multilevel.d64
-
-L'extension .d64 suffit. Le compilateur active automatiquement le mode assets
-disque, cree le PRG principal, le repertoire, la BAM et tous les modules de
-donnees.
-
-Pour choisir un autre nom ou un autre lecteur :
-
-node .\src\cli.js build .\examples\multilevel-d64.js -o .\dist\jeu.d64 --disk-name "MON JEU" --program-name "START" --device 8
-
-- --disk-name est le nom affiche par le repertoire de la disquette
-- --program-name est le nom du PRG principal
-- --device vaut normalement 8; utilisez 9 seulement si votre lecteur est 9
-- chaque nom Commodore est limite a 16 caracteres
-
-Pour obtenir aussi un rapport lisible :
-
-node .\src\cli.js build .\examples\multilevel-d64.js -o .\dist\jeu.d64 --report .\dist\jeu-report.json
-
-Le rapport indique les fichiers de chaque niveau, leur adresse RAM, leur taille,
-leurs blocs 1541 et l'espace libre.
-
-Dans le code JavaScript, chargez d'abord les definitions :
-
-const level1 = c64.assets.loadMap("assets/level1.json");
-const enemy = c64.assets.loadSprite("assets/enemy.json", {
-  address: 0x2200,
-  resident: false
-});
-
-Puis activez le niveau a un endroit sur, par exemple dans enter() :
-
-level1.activate({ draw: true, sprites: [enemy] });
-
-- draw: true charge puis redessine toute la map
-- resident: true, valeur par defaut, charge un sprite une seule fois au demarrage
-- resident: false reserve le sprite a un niveau
-- sprites: [enemy] indique les sprites non residents a charger avec cette map
-
-Les maps partagent la zone $8000-$9FFF. Les tables de tuiles/collisions
-partagent $3800-$3FFF. Les sprites propres aux niveaux peuvent partager une meme
-adresse alignee sur 64 octets, par exemple $2200 : charger le niveau suivant
-remplace alors simplement leurs pixels.
-
-Un fichier .asm, .lst ou .bas peut decrire exactement le runtime disque :
-
-node .\src\cli.js build .\examples\multilevel-d64.js -o .\dist\multilevel.asm --format asm --assets disk
-
-Attention : ce runtime a encore besoin des modules de donnees. Ils apparaissent
-comme PRG dans le repertoire parce que la routine KERNAL LOAD refuse les entrees
-USR. Seul le premier PRG, nomme MULTILEVEL par defaut, est un programme a lancer.
-Le fichier D64 est la
-sortie directement utilisable dans VICE. Pour un PRG totalement autonome :
-
-node .\src\cli.js build .\examples\multilevel-d64.js -o .\dist\multilevel.prg --assets inline
-
-Dans VICE, montez la disquette puis utilisez LOAD"*",8,1 et RUN. Si un fichier
-de donnees manque, le changement de niveau est annule, la bordure devient rouge et le
-message DISK ERROR apparait.
-
-
-7.3 SPRITES DE JEU, ANIMATIONS ET COLLISIONS (V0.8.0)
-------------------------------------------------------
-
-Pour un jeu, creez maintenant un sprite sous forme d'objet. Vous gardez cet
-objet dans une constante et vous lui demandez ensuite de bouger, rebondir ou
-tester une collision :
-
-const pixels = Array(63).fill(255);
-
-const player = c64.sprite.create(0, {
-  x: 100,
-  y: 120,
-  data: pixels,
-  color: c64.COLOR_YELLOW,
-  minX: 24,
-  maxX: 320,
-  minY: 50,
-  maxY: 220
-});
-
-Le premier nombre de create() est le numero materiel du sprite. Le C64 possede
-8 sprites, donc les numeros valides vont de 0 a 7.
-
-La position X n'est pas limitee a 255. player.x est une variable runtime 16
-bits et le compilateur gere automatiquement le bit supplementaire dans le
-registre VIC-II $D010. Une valeur comme 296 ou 320 fonctionne donc directement.
-
-Pour deplacer le sprite avec le joystick :
+--- Programme complet : 04-deplacement ---
+"use c64";
+import { c64 } from "js-c64";
 
 const joystick = c64.input.joystick(2);
-
-c64.game.frame(() => {
-  player.setVelocity(0, 0);
-  c64.control.if(joystick.left(), () => player.setVelocity(-3, 0));
-  c64.control.if(joystick.right(), () => player.setVelocity(3, 0));
-  player.update();
-});
-
-Les vitesses vx et vy sont signees : une valeur negative va vers la gauche ou
-vers le haut. update() applique la vitesse, respecte les limites et recopie la
-position dans les registres video.
-
-Pour obtenir un rebond automatique, ajoutez bounceX: true ou bounceY: true dans
-les options de create(). Les methodes reverseX() et reverseY() permettent aussi
-d'inverser la direction vous-meme.
-
-Animation avec plusieurs images :
-
-const frames = c64.sprite.frames("hero", [imageRepos, imageMarche]);
-const hero = c64.sprite.create(0, { x: 80, y: 120, frames });
-
-hero.sequence("walk", [0, 1], { speed: 5, loop: true });
-hero.play("walk");
-
-Chaque image contient au maximum 63 octets. Le compilateur reserve et aligne
-automatiquement les blocs de 64 octets demandes par le VIC-II. Plusieurs
-sprites peuvent reutiliser le meme objet frames sans recopier les pixels.
-
-Collision simple avec des rectangles invisibles (hitboxes) :
-
-const ball = c64.sprite.create(0, {
-  x: 100, y: 100, data: ballePixels,
-  hitbox: { width: 8, height: 8 }
-});
-
-const paddle = c64.sprite.create(1, {
-  x: 120, y: 220, data: raquettePixels,
-  hitbox: { width: 24, height: 5 }
-});
-
-c64.game.frame(() => {
-  ball.update();
-  c64.control.if(ball.collides(paddle), () => ball.reverseY());
-});
-
-collides() effectue une collision AABB logicielle et previsible. Pour utiliser
-les collisions materielles du VIC-II, il existe vicCollides() et
-collidesWithBackground(). Le compilateur centralise leur lecture, car les
-registres materiels de collision sont effaces lorsqu'on les lit.
-
-Exemples complets :
-
-examples/sprite-animate.js
-examples/breakout-mini.js
-
-Le compilateur optimise automatiquement le code genere. Si plusieurs sprites
-utilisent les memes pixels, leurs donnees constantes sont partagees dans la
-memoire VIC-II. Indiquez un dataAddress different pour chaque sprite si vous
-voulez modifier leurs pixels separement pendant le jeu. Les collisions AABB, la synchronisation des
-sprites et sid.click() utilisent aussi une routine assembleur commune lorsqu'il
-y a plusieurs appels. Vous ne devez rien changer dans votre code JavaScript.
-
-
-7.4 SPRITES VIRTUELS 8 A 15 ET MULTIPLEXAGE (V0.8.2)
------------------------------------------------------
-
-Le C64 ne possede physiquement que 8 sprites. js-c64 permet cependant de creer
-16 sprites logiques, numerotes de 0 a 15 :
-
-const top = c64.sprite.create(0, {
-  x: 80, y: 70, data: pixels, color: c64.COLOR_WHITE
-});
-
-const virtuel = c64.sprite.create(8, {
-  x: 180, y: 180, data: pixels, color: c64.COLOR_RED
-});
-
-c64.game.frame(() => {
-  top.update();
-  virtuel.update();
-});
-
-Des que vous creez le sprite 8, 9, 10, 11, 12, 13, 14 ou 15, le compilateur
-active automatiquement le multiplexeur. Vous ne devez appeler aucune fonction
-speciale. Les sprites 8 a 15 possedent les memes proprietes x, y, vx, vy et
-active, les memes animations et les memes collisions AABB que les sprites 0 a
-7.
-
-COMMENT FONCTIONNE LE TRI AUTOMATIQUE
-
-Les numeros 0 a 15 ne definissent plus une zone de l'ecran. Par exemple, le
-sprite 8 peut etre en haut et le sprite 0 en bas :
-
-const sprite0 = c64.sprite.create(0, { x: 80, y: 190, data: pixels });
-const sprite8 = c64.sprite.create(8, { x: 180, y: 60, data: pixels });
-
-A chaque image, le code genere effectue automatiquement les operations
-suivantes :
-
-1. il conserve uniquement les sprites actifs ;
-2. il les trie du plus petit Y au plus grand Y ;
-3. il attribue les huit premiers canaux materiels du VIC-II ;
-4. quand un sprite est entierement termine, son canal materiel est reutilise
-   pour le prochain sprite de la liste.
-
-Un sprite normal occupe 21 lignes. Le scheduler ajoute une petite marge avant
-de reutiliser son canal. Avec expandY: true, il tient compte d'une hauteur de
-42 lignes. La position X et l'option expandX ne changent pas les lignes raster
-occupees.
-
-Il n'existe donc plus de separation fixe entre le haut et le bas. Un sprite
-place au centre reste programme pendant toute sa hauteur. Il n'est pas coupe et
-il n'est pas necessaire de le dessiner deux fois. Cela evite aussi de gaspiller
-un second canal materiel pour le meme sprite.
-
-Le tri, la copie des positions, couleurs, pointeurs et options ainsi que la
-reutilisation des canaux sont realises par des routines assembleur partagees.
-Le JavaScript de l'utilisateur reste simple et le PRG reste compact.
-
-LIMITATIONS IMPORTANTES
-
-1. Une boucle c64.game.frame() est obligatoire.
-
-2. Tous les sprites 0 a 15 peuvent etre places librement sur X et Y et peuvent
-se croiser verticalement. Leur numero n'impose aucune zone.
-
-3. Le C64 ne peut toujours afficher que 8 sprites sur une meme ligne raster.
-Si un neuvieme sprite recouvre le meme intervalle vertical, aucun canal
-materiel n'est disponible : ce sprite est omis pendant cette image. Il pourra
-reapparaitre automatiquement a l'image suivante si une place se libere. Le
-choix est deterministe : tri par Y, puis par numero logique en cas d'egalite ;
-les sprites les plus tardifs sont omis jusqu'a ce qu'un canal soit libre.
-
-4. expandY: true double la hauteur raster utilisee. Il est donc plus facile
-d'atteindre la limite de 8 chevauchements avec des sprites agrandis en Y.
-
-5. Utilisez spriteA.collides(spriteB) pour les collisions. vicCollides() et
-collidesWithBackground() ne sont pas disponibles avec le multiplexage, car les
-bits de collision materiels correspondent aux 8 canaux reutilises.
-
-6. N'utilisez pas en meme temps l'ancienne API directe comme
-c64.sprite.position(). Manipulez uniquement les objets retournes par
-c64.sprite.create(). Le compilateur signale ce melange comme une erreur.
-
-7. Gardez la boucle de jeu courte et bornee. Le tri et la preparation des
-premiers canaux doivent etre termines avant le retour de l'image visible.
-
-Le rapport de build contient sprite-multiplexer-budget. Il indique le maximum
-de sprites qui se chevauchent, les lignes disponibles pour reprogrammer le
-VIC-II et la politique de depassement. La commande c64js affiche aussi
-SPRITE_RASTER_BUDGET si plus de huit sprites occupent la meme bande ou si deux
-groupes sont trop proches. Le PRG reste deterministe, mais la scene doit alors
-etre espacee verticalement.
-
-En mode multiplexe, la mise a jour logique commence automatiquement vers la
-ligne raster 200. Seule la memoire logique est modifiee a ce moment : les
-registres VIC-II ne sont reprogrammes qu'au vrai retour du raster en haut de
-l'image. Un sprite central deja affiche ne peut donc pas etre coupe.
-
-Exemple complet :
-
-examples/sprite-multiplex-16.js
-
-
-7.5 CHARGER UN CHARSET ET UNE MAP JSON (DEBUT V0.9)
-----------------------------------------------------
-
-Le compilateur peut maintenant lire un fichier d'assets JSON. Ce fichier reste
-dans votre projet et contient les pixels du charset, les tiles, leurs couleurs,
-leurs collisions et la map. Seules les donnees C64 utiles sont integrees au
-PRG final.
-
-Le chemin est relatif au fichier JavaScript compile. Par exemple, depuis
-examples/tilemap-static.js :
-
-const room = c64.assets.loadMap("assets/v09-room.json");
-
-c64.game.init(() => {
-  c64.charset.use(room.charset, { address: 0x3000 });
-  c64.map.draw(room, { x: 10, y: 6 });
-});
-
-c64.charset.use() verifie automatiquement que :
-
-- l'adresse est alignee sur $0800, soit 2048 octets ;
-- le charset et la memoire ecran sont dans la meme banque VIC-II ;
-- chaque caractere contient exactement 8 octets ;
-- le charset ne contient pas plus de 256 caracteres.
-
-Les 64 premiers caractères originaux sont toujours conservés automatiquement.
-Il ne faut pas les écrire dans le JSON : la liste characters contient uniquement
-les caractères personnalisés.
-
-"charset": {
-  "mode": "hires",
-  "characters": [
-    [255, 129, 129, 129, 129, 129, 129, 255]
-  ]
+let x = 20;
+let y = 12;
+function init() {
+  c64.screen.setup();
+  c64.printAt(2, 2, "BOUGEZ AVEC LE JOYSTICK 2");
+  c64.writeChar(x, y, 81, c64.COLOR_YELLOW);
 }
-
-Au démarrage, le code généré masque brièvement les registres d'E/S à $D000,
-lit les 512 octets de la ROM de caractères puis les copie dans le charset RAM.
-Le premier caractère personnalisé de cet exemple reçoit automatiquement le code
-écran 64. Le Studio n'exporte ni les 64 glyphes système, ni un réglage spécial :
-le compilateur reconnaît tout charset personnalisé et effectue cette copie pour
-tous les programmes. Les anciens assets avec "romCharacters": 64 restent lus.
-
-Une tile peut contenir plusieurs caracteres. Avec tileWidth: 2 et tileHeight: 2,
-chaque case de map dessine un bloc de 2 x 2 caracteres. Les couleurs sont
-enregistrees separement pour chaque cellule.
-
-COLLISIONS LOGIQUES
-
-Ne testez pas la couleur affichee pour savoir si un mur est solide. Le JSON
-possede une valeur collision independante : 0 pour vide, 1 pour solide, ou une
-autre valeur choisie par le jeu.
-
-const tileX = c64.var.byte("tileX", { initial: 1 });
-const tileY = c64.var.byte("tileY", { initial: 1 });
-
-c64.game.frame(() => {
-  const tile = c64.map.tileAt(room, tileX, tileY);
-
-  c64.control.if(tile.isSolid(), () => {
-    tileX.set(0);
-  });
-});
-
-tile.hasCollision(2) permet de tester une autre valeur, par exemple un objet a
-ramasser.
-
-MAP DYNAMIQUE EN DEUX DIMENSIONS
-
-La map chargee devient une grille modifiable en RAM C64. La forme la plus simple
-pour acceder a une case est :
-
-const cellule = room.map(tileX, tileY);
-
-Vous pouvez ensuite la lire, la comparer ou la modifier :
-
-cellule.load(tileValue);       // place son numero de tile dans tileValue
-cellule.eq(0);                 // condition : la case est vide
-cellule.ne(0);                 // condition : la case n'est pas vide
-cellule.set(1);                // remplace la case par la tile 1
-
-set() modifie la map logique puis redessine automatiquement uniquement le
-caractere ou metatile concerne, avec ses couleurs. Il ne faut donc pas redessiner
-tout l'ecran apres l'explosion d'un mur ou le deplacement d'un bloc.
-
-Pour forcer exceptionnellement un dessin complet :
-
-room.map.redraw();
-
-Un redraw complet est beaucoup plus couteux et ne doit normalement pas etre
-appele a chaque frame. Les acces hors de la map sont ignores par set() et ne
-sont jamais consideres comme une case vide par eq(0). Cela simplifie les tests
-de collision contre les bords.
-
-Les maps dynamiques utilisent maintenant un index 16 bits. Elles peuvent contenir
-jusqu'a 8 192 cases au total dans la zone RAM sure $8000-$9FFF. Le rapport assetReport
-indique les plages utilisees et le compilateur refuse un chevauchement avec le
-programme, un charset ou des sprites. Une map plus grande que l'ecran peut etre
-affichee avec le scroller de la v0.10 explique ci-dessous.
-
-CONVERTIR DES COORDONNEES
-
-const pixelX = c64.var.word("pixelX", { initial: 160 });
-const pixelY = c64.var.byte("pixelY", { initial: 80 });
-const tileX = c64.var.byte("tileX", { initial: 0 });
-const tileY = c64.var.byte("tileY", { initial: 0 });
-
-c64.map.pixelToTile(room,
-  { x: pixelX, y: pixelY },
-  { x: tileX, y: tileY }
-);
-
-Les fonctions inverses sont tileToPixel(), characterToTile() et
-tileToCharacter(). Les resultats sont ecrits dans les variables donnees, sans
-allocation dynamique sur le C64.
-
-CHARSET MULTICOLORE ET OBJETS
-
-Un JSON peut utiliser "mode": "multicolor". Activez ses trois couleurs globales :
-
-c64.charset.use(room.charset, {
-  address: 0x3000,
-  background: 0,
-  multicolor1: 5,
-  multicolor2: 10
-});
-
-Dans ce mode, la couleur propre de chaque cellule doit rester entre 0 et 7. Le
-tableau map.objects peut contenir des spawns, sorties ou ennemis avec un type,
-des coordonnees x/y et un objet properties. Ces metadonnees sont conservees par
-le compilateur et par le studio graphique externe.
-
-Le format complet utilise par la demonstration est visible ici :
-
-examples/assets/v09-room.json
-
-Exemple compilable :
-
-examples/tilemap-static.js
-
-Exemple de jeu avec modifications dynamiques :
-
-examples/tetris-mini.js
-
-Autres exemples jouables :
-
-examples/snake.js
-examples/maze-game.js
-
-Dans cet exemple, un petit generateur pseudo-aleatoire choisit une piece T, O,
-I ou L, sa rotation et sa colonne de depart. Le joystick du port 2 la deplace a
-gauche et a droite. Le bouton FIRE la fait pivoter. La piece descend
-automatiquement, teste les cases de la map puis devient solide lorsqu'elle ne
-peut plus descendre.
-
-Cette mini-demo se concentre sur la map dynamique, les collisions et les
-rotations. Elle ne supprime pas encore les lignes completes et ne calcule pas
-encore de score.
-
-L'editeur graphique n'est pas inclus dans le coeur de la librairie pour le
-moment. Il pourra etre developpe comme outil separe et produire exactement le
-meme JSON.
-
-
-7.6 SCROLLING X/Y ET PANNEAU DE SCORE FIXE (V0.10)
---------------------------------------------------
-
-Pour afficher seulement une partie d'une grande map et la deplacer en douceur,
-creez un scroller :
-
-const scroll = c64.map.scroller(room, {
-  sourceX: 0,
-  sourceY: 0,
-  width: 28,
-  height: 8,
-  x: 6,
-  y: 6,
-  panel: "bottom"
-});
-
-width et height sont la taille visible en caracteres. x et y indiquent ou cette
-fenetre commence sur l'ecran. Les tiles doivent actuellement mesurer 1 x 1
-caractere. Pour masquer les colonnes de travail du VIC-II, la fenetre doit rester
-entre les colonnes 1 et 38.
-
-Dans l'initialisation, dessinez une premiere fois la fenetre :
-
-c64.game.init(() => {
-  c64.clearScreen();
-  c64.printCentered(22, "SCORE 0000");
-  scroll.draw();
-});
-
-Puis deplacez-la dans la boucle de jeu :
-
-c64.game.frame(() => {
-  c64.control.if(joystick.left(),  () => scroll.left());
-  c64.control.if(joystick.right(), () => scroll.right());
-  c64.control.if(joystick.up(),    () => scroll.up());
-  c64.control.if(joystick.down(),  () => scroll.down());
-});
-
-Chaque appel avance d'un pixel. Vous pouvez demander de 1 a 8 pixels avec, par
-exemple, scroll.right(2). La camera s'arrete automatiquement aux quatre bords de
-la map.
-
-panel: "bottom" conserve la zone en dessous et permet le scroll fin X/Y. Le
-compilateur active $D011 avant la premiere badline visible. Avant le panneau,
-une IRQ demarree assez tot effectue toute la transition avec une attente precise
-des lignes raster. Elle normalise non seulement les badlines, mais aussi les
-compteurs internes RC et VCBASE du VIC-II. Les huit phases YSCROLL atteignent
-ainsi le panneau avec exactement la meme adresse Screen RAM. panel: "top" permet actuellement le scroll
-horizontal, mais up() et down() sont refuses : un scroll Y sous un panneau texte
-superieur exige une compensation FLD/badline plus avancee pour ne pas repeter des
-lignes de caracteres. Les IRQ partagent le dispatcher avec celles de
-l'utilisateur, la musique SID et les animations de sprites.
-
-Pour garantir que l'IRQ d'entree ne soit jamais retardee d'une frame, un
-scroller desactive automatiquement le timer CIA du KERNAL et utilise uniquement
-les IRQ du VIC-II. Cela evite le rare scintillement de 7 pixels qui pouvait se
-produire meme sans mouvement. Les entrees c64.input continuent de fonctionner
-car elles lisent directement le joystick et le clavier. L'horloge systeme du
-KERNAL et son tampon clavier ne doivent en revanche pas etre utilises dans ce
-mode temps reel.
-
-TAILLE EXACTE DU PANNEAU
-
-Avec la forme historique panel: "bottom" ou panel: "top", ce sont toujours y et
-height qui determinent indirectement la place restante. Cette forme reste
-compatible.
-
-Pour reserver exactement 2 lignes en bas, utilisez maintenant :
-
-const scroll = c64.map.scroller(room, {
-  width: 28,
-  x: 1,
-  panel: { position: "bottom", rows: 2 }
-});
-
-La forme courte panel: { bottom: 2 } est equivalente.
-
-Pour reserver exactement 5 lignes en haut, utilisez
-panel: { position: "top", rows: 5 } ou la forme courte panel: { top: 5 }.
-
-Dans cette nouvelle forme, il ne faut plus calculer y et height : le compilateur
-place le viewport dans les 25 lignes de l'ecran et garde exactement le nombre de
-lignes demande. La map source doit etre au moins aussi haute que le viewport
-obtenu. Sans mouvement vertical, 2 lignes en bas laissent 23 lignes de map
-lorsque le viewport commence a y = 0. Si up() ou down() est utilise, la derniere
-de ces lignes devient une bande de transition protegee : il reste donc 22 lignes
-de map visibles, une ligne de transition et 2 lignes fixes.
-
-Le scroll vertical reserve une ligne complete entre la map mobile et le panneau.
-Pendant cette transition, le runtime selectionne temporairement un charset vide
-puis coupe DEN seulement apres la fin de la ligne VIC-II courante. Les caracteres
-vides prennent la couleur de fond : la bande ne devient donc pas une couture
-noire. La meme IRQ restaure ensuite $D011, $D016 et $D018 avant le panneau.
-
-Vous continuez a utiliser les coordonnees normales avec printAt(), writeChar(),
-fillRect(), clearLine() et drawFrame(). Le compilateur place automatiquement les
-donnees du panneau une ligne plus tot en Screen RAM pour correspondre au VCBASE
-normalise. C'est cette correction de l'adresse interne du VIC-II qui empeche le
-panneau de sauter d'un caractere complet pendant le scroll Y.
-
-Tous les 8 pixels, le runtime decale Screen RAM et Color RAM ensemble puis ne
-charge que la colonne ou la ligne qui entre dans la fenetre. Les lignes sont
-copiees de haut en bas, deux cellules par branche, afin que chaque ligne soit
-prete avant le retour du faisceau. Si rasterLine n'est pas indique dans
-c64.game.frame(), le compilateur choisit automatiquement la premiere ligne sure
-apres la bande de scroll. Le rapport de build map-scroll indique cette ligne et
-si les wraps respectent les budgets PAL et NTSC.
-Si un sens de scroll vertical ne peut pas terminer avant le retour du faisceau
-PAL, le compilateur refuse maintenant le build au lieu de produire un affichage
-qui scintille. Reduisez alors width ou height du viewport.
-
-Exemple complet :
-
-examples/tilemap-scroll-x.js
-
-
-7.7 OBJETS DE MAP ET SPRITES (DEBUT V0.10.1)
-------------------------------------------------
-
-Un objet de map peut maintenant avoir un identifiant unique :
-
-{
-  "id": "player",
-  "type": "player-spawn",
-  "x": 10,
-  "y": 7,
-  "sprite": "hero",
-  "properties": { "direction": "right" }
+function update() {
+  c64.writeChar(x, y, 32);
+  if (joystick.left() && x > 0) x--;
+  if (joystick.right() && x < 39) x++;
+  if (joystick.up() && y > 4) y--;
+  if (joystick.down() && y < 24) y++;
+  c64.writeChar(x, y, 81, c64.COLOR_YELLOW);
 }
+c64.game.run({ init, update });
+--- Fin du programme ---
 
-x et y restent des positions de tuiles faciles a placer dans le studio. Le
-compilateur calcule aussi worldX et worldY en pixels. Ces coordonnees monde sont
-independantes de l'ecran et utilisent 16 bits.
+Pour appeler une fonction moins souvent, dans update :
 
-Pour retrouver puis relier cet objet a l'un des 16 sprites logiques :
+    c64.game.every(25, clignoter);
 
-const hero = c64.assets.loadSprite("assets/hero.sprite.json", {
-  address: 0x2e00
-});
-const spawn = c64.map.object(room, "player");
-const player = c64.map.spawn(room, spawn.id, {
-  sprite: 0
-});
+clignoter doit être définie dans le programme. L'intervalle est constant,
+1..255 étapes atteignant cet appel. À 50 Hz, 25 étapes font une demi-seconde si
+l'appel est exécuté à chaque étape. Une condition qui saute l'appel met son
+compteur en pause. game.init et game.frame existent aussi pour composer les
+briques séparément ; game.run suffit normalement. Une seule boucle principale.
 
-Le fichier de map contient "sprite": "hero" dans l'objet player. loadSprite()
-doit donc etre appele avant spawn(). L'id du fichier sprite doit etre exactement
-le meme. Si le fichier ou l'id manque, le compilateur indique le fichier de map
-et l'objet fautif.
 
-FORMAT SPRITE-ASSET-V1
+8. SCORES, HASARD ET SCÈNES
+==========================
+Compteurs décimaux
+------------------
+    const score = c64.game.score({ digits: 5 });
+    const vies = c64.game.lives({ initial: 3 });
+    const temps = c64.game.counter("temps", { digits: 3, initial: 120 });
+    score.set(0);
+    score.add(100);
+    score.inc();
+    vies.dec();
+    temps.sub(10);
+    score.draw(30, 1, { color: c64.COLOR_YELLOW });
 
-Un fichier sprite JSON contient :
+set/add/sub/inc/dec modifient le compteur ; draw l'affiche. Le résultat boucle
+à la capacité décimale choisie : décrémenter 000 donne 999 pour trois chiffres.
+Pour décider si la partie est terminée, gardez au besoin une variable numérique
+de jeu séparée. Ne supposez pas qu'un compteur décimal est une variable JS.
 
-- version: 1 et un id unique utilisable par les objets de map ;
-- mode: "hires" ou "multicolor" ;
-- color, et aussi multicolor1/multicolor2 en mode multicolore ;
-- une ou plusieurs frames de exactement 63 octets, soit 24 x 21 pixels C64 ;
-- origin et hitbox ;
-- animations avec la liste des frames, la vitesse et loop ;
-- initialAnimation, facultatif.
+Hasard reproductible
+--------------------
+    let tirage = 0;
+    c64.random.seed(42);
+    c64.random.range(tirage, 6);
 
-Exemple complet : examples/assets/v10-hero.sprite.json
+range écrit dans tirage un résultat de 0 à 5 : ce n'est pas une fonction qui
+renvoie un nombre. byte(tirage) produit un octet. Le maximum de range est
+constant, de 1 à 256 ; la graine est constante, de 1 à 255. La même graine
+reproduit la même suite, ce qui aide à déboguer.
 
-Dans l'objet de map, cette propriete lance automatiquement une animation :
+--- Programme complet : 05-hasard-score ---
+"use c64";
+import { c64 } from "js-c64";
 
-"properties": {
-  "direction": "right",
-  "animation": "idle-right"
+const joystick = c64.input.joystick(2);
+const score = c64.game.score({ digits: 5 });
+let tirage = 0;
+function init() {
+  c64.screen.setup();
+  c64.random.seed(42);
+  c64.printCentered(8, "FEU : AJOUTER UN DE AU SCORE");
+  score.draw(17, 12);
 }
-
-Pour changer d'animation dans le jeu :
-
-player.play("run-right");
-player.play("run", "right"); // cherche aussi "run-right"
-player.pauseAnimation();
-player.resumeAnimation();
-
-moveAndCollide() avance automatiquement l'animation d'une frame logique. Les
-tables de pixels de l'asset sont partagees entre les entites qui l'utilisent.
-Il n'est donc plus necessaire de recopier les 63 octets du sprite dans chaque
-fichier JS.
-
-Attention : tous les sprites multicolores du VIC-II partagent les deux couleurs
-multicolor1 et multicolor2. Le compilateur refuse deux assets utilises avec des
-valeurs incompatibles. L'adresse optionnelle doit etre multiple de 64 et rester
-dans la banque VIC entre $2000 et $3FFF. Le rapport memoire detecte les conflits
-avec le programme, le charset et les autres sprites.
-
-Vous pouvez aussi rechercher un type avec c64.map.objects(room, "enemy-spawn").
-object() exige un seul resultat. S'il existe plusieurs ennemis du meme type,
-utilisez objects() ou donnez leur identifiant unique.
-
-player.worldX et player.worldY indiquent la position exacte dans le niveau.
-player.screenX et player.screenY sont les coordonnees du sprite sur l'ecran.
-Apres un deplacement, projetez l'entite :
-
-player.worldX.add(1);
-player.project({
-  cameraX: cameraX,
-  cameraY: cameraY,
-  viewportWidth: 320,
-  viewportHeight: 200
-});
-
-project() masque automatiquement l'entite si son origine est hors de la fenetre.
-Les sprites 8 a 15 activent toujours automatiquement le multiplexeur.
-
-Pour eviter un clignotement au bord, ajoutez une marge de culling :
-
-camera.project(enemy, { cullingMargin: { x: 24, y: 21 } });
-
-La marge conserve le sprite juste avant et apres le viewport. Elle doit encore
-tenir dans les coordonnees X/Y du VIC-II.
-
-Pour bloquer le personnage contre les tuiles dont Collision est different de 0 :
-
-player.setVelocity(0, 0);
-c64.control.if(joystick.left(),  () => player.velocityX.set(-2));
-c64.control.if(joystick.right(), () => player.velocityX.set(2));
-c64.control.if(joystick.up(),    () => player.velocityY.set(-2));
-c64.control.if(joystick.down(),  () => player.velocityY.set(2));
-player.moveAndCollide();
-
-Le moteur deplace d'abord l'axe X, puis l'axe Y. Il avance pixel par pixel afin
-de ne pas traverser un mur avec une vitesse superieure a 1. La vitesse maximale
-testee vaut 8 pixels par frame par defaut et peut etre reglee avec
-maxCollisionSpeed, entre 1 et 16.
-
-Sans sprite-asset, la hitbox peut encore etre definie dans spriteOptions :
-
-spriteOptions: {
-  hitbox: { offsetX: 4, offsetY: 1, width: 16, height: 20 }
+function update() {
+  if (joystick.firePressed()) {
+    c64.random.range(tirage, 6);
+    tirage++;
+    score.add(tirage);
+    score.draw(17, 12);
+  }
 }
+c64.game.run({ init, update });
+--- Fin du programme ---
 
-Les etats player.onGround, player.hitCeiling, player.hitLeft et player.hitRight
-sont des booleens runtime. player.isOnGround() fournit directement une condition
-pour c64.control.if(). player.jump(4) place une vitesse verticale negative.
-La projection du scroller tient compte de la phase fine $D016=7 : le bord de la
-hitbox et le bord du caractere de collision utilisent donc le meme pixel monde.
-Lorsque le scroll vertical est actif, elle compense aussi les 4 pixels entre la
-phase normale $D011=3 et la phase scroll $D011=7.
+Scènes
+------
+Quatre noms fixes : "title", "game", "pause", "gameOver". Chaque scène propose
+enter, update et exit. Déclarez-les, puis utilisez game.start à la place de
+game.run. game.go demande une transition appliquée entre les étapes ; game.is
+permet un test. Les noms ne sont pas des chaînes calculées dynamiquement.
 
-COMPORTEMENTS DE COLLISION ET ENTITES
-
-Par defaut, 0 est traversable et toute autre valeur est solide. Une table
-optionnelle peut donner un sens aux autres valeurs :
-
-const behaviors = {
-  1: "solid",
-  2: "platform",
-  3: "danger",
-  4: "ladder",
-  5: "exit",
-  6: "passable"
-};
-
-const player = c64.map.spawn(room, "player", {
-  sprite: 0,
-  collisionBehaviors: behaviors
-});
-
-"platform" bloque une chute et la sonde au sol, mais se traverse par le bas et
-sur les cotes. danger, ladder, exit et passable ne bloquent pas. Le moteur met
-a jour isOnDanger(), isOnLadder() et isAtExit() apres moveAndCollide(). Une
-valeur absente de la table reste solide.
-
-player.collides(enemy) reutilise l'AABB logicielle des sprites. disable() masque
-durablement l'entite, meme si camera.project() est appele. enable() la reactive.
-respawn("nom-du-spawn") remet position, vitesses et contacts a zero sans recreer
-le moteur ; plusieurs points de spawn permettent de changer de zone.
-
-Pour faire suivre le joueur par le scroller, appelez follow() apres son
-deplacement :
-
-player.moveAndCollide();
-camera.follow(player, {
-  axis: "both",
-  deadZone: { x: 48, y: 32, width: 48, height: 32 },
-  maxSpeed: 2
-});
-
-La zone morte est un rectangle en pixels dans le viewport. Tant que le centre de
-la hitbox du joueur reste dedans, la camera ne bouge pas. Lorsqu'il en sort, la
-camera avance de maxSpeed pixels au maximum par frame et s'arrete automatiquement
-aux bords de la map.
-
-axis peut valoir "x", "y" ou "both". Le suivi vertical demande actuellement
-panel: "bottom". Avec panel: "top", utilisez axis: "x".
-
-Le joueur suivi est projete automatiquement. Pour afficher les autres entites
-avec exactement la meme camera :
-
-camera.project(enemy);
-camera.project(collectible);
-
-Cela fonctionne aussi pour les sprites virtuels 8 a 15. Appelez toujours
-camera.project() apres camera.follow() afin d'utiliser la position finale de la
-camera pour cette frame.
-
-PROGRAMMES PLUS GRANDS
-
-Un jeu complet peut occuper la zone normalement reservee aux donnees video.
-Placez alors le code dans une autre banque CPU, avant les autres appels :
-
-c64.program.start(0x4000);
-
-Le compilateur genere automatiquement le bon SYS dans le PRG, le BAS, l'ASM et
-le LST. Pour le PRG, un petit chargeur en $0810 copie le code vers $4000 : le
-fichier ne contient donc pas 14 Ko de zeros entre BASIC et le programme. Les
-sprites restent dans la banque VIC-II. platformer-mini.js utilise cette
-disposition et son rapport map-scroll valide les budgets PAL et NTSC.
-
-Exemple complet :
-
-examples/map-entity-spawn.js
-examples/platformer-mini.js
-
-
-8. GESTION DES IRQ RASTER
--------------------------
-
-Les IRQ raster permettent de faire un effet visuel pendant que le C64 tourne.
-
-8.1 c64.irq.raster(ligne, fonction)
------------------------------------
-
-Ajoute un handler appele a une ligne raster donnee.
-
-Exemple :
-
+--- Programme complet : 05-scenes ---
+"use c64";
 import { c64 } from "js-c64";
 
-c64.irq.raster(50, () => {
-  c64.borderColor(c64.COLOR_RED);
-});
+const joystick = c64.input.joystick(2);
+let total = 0;
+function titre() {
+  c64.screen.setup();
+  c64.printCentered(10, "FEU POUR JOUER");
+}
+function attendre() {
+  if (joystick.firePressed()) c64.game.go("game");
+}
+function commencer() {
+  total = 0;
+  c64.screen.setup();
+  c64.printAt(2, 4, "FEU : +1 / BAS : TERMINER");
+}
+function jouer() {
+  if (joystick.firePressed()) total++;
+  c64.printNumber(18, 12, total, { digits: 3 });
+  if (joystick.downPressed()) c64.game.go("gameOver");
+}
+function resultat() {
+  c64.screen.setup();
+  c64.printCentered(10, "PARTIE TERMINEE");
+  c64.printNumber(18, 12, total, { digits: 3 });
+  c64.printCentered(15, "FEU POUR REJOUER");
+}
+c64.game.scene("title", { enter: titre, update: attendre });
+c64.game.scene("game", { enter: commencer, update: jouer });
+c64.game.scene("gameOver", { enter: resultat, update: attendre });
+c64.game.start("title");
+--- Fin du programme ---
+
+Pour une pause, conservez les données de la partie : ne les réinitialisez pas
+systématiquement dans enter si game est aussi utilisé pour reprendre.
 
 
-8.2 c64.irq.install()
----------------------
+9. MÉMOIRE, DONNÉES ET PLACEMENT DU PROGRAMME
+===========================================
+Un petit jeu peut laisser le compilateur réserver variables et temporaires.
+Les accès explicites deviennent utiles pour le matériel ou une routine machine.
+Le C64 a 65536 adresses ; selon sa configuration, elles désignent RAM, ROM ou
+registres. Consultez le rapport mémoire avant de choisir une zone manuellement.
 
-Installe les IRQ que vous avez definies.
+    c64.poke(0xd020, c64.COLOR_RED);
+    c64.memset(0x0400, 32, 40);
+    c64.memsetColor(0xd800, c64.COLOR_WHITE, 40);
+    c64.memcpy(0x0428, 0x0400, 40);
 
-Exemple :
+poke écrit un octet ; memset remplit ; memcpy reçoit destination, source,
+longueur. Ces primitives de bloc utilisent des longueurs sur un octet : restez
+entre 1 et 255. Utilisez des blocs successifs ou les fonctions spécialisées
+pour un écran entier. Évitez les copies recouvrantes : ce n'est pas memmove.
 
+Particularité bas niveau : peek produit un descripteur de lecture, pas un
+nombre JavaScript utilisable dans tous les calculs. Cet usage est prévu :
+
+    c64.poke(0x0400, c64.peek(0x0401));
+
+N'écrivez pas let valeur = c64.peek(...) en supposant un retour numérique
+ordinaire. Pour un accès matériel plus complexe, utilisez l'assembleur.
+
+Données embarquées
+------------------
+    c64.data.byte("motif", [1, 2, 3, 4]);
+    const motif = c64.dataRef("motif");
+    c64.copyDataTo(0x0400, motif, 4);
+
+data.byte/word stockent octets/mots. data.string et screenString ajoutent un
+zéro terminal avec des encodages différents. Les noms doivent être uniques.
+dataRef retrouve une référence nommée ; copyDataTo copie vers l'adresse choisie.
+data.length(nom) fournit la taille en octets, y compris le zéro terminal des
+chaînes. Les déclarations data ne renvoient pas directement une référence.
+Pour des données de jeu modifiables, préférez les tableaux typés.
+
+--- Programme complet : 06-memoire ---
+"use c64";
 import { c64 } from "js-c64";
 
-c64.irq.raster(50, () => {
-  c64.borderColor(c64.COLOR_RED);
-});
+c64.screen.setup();
+c64.data.byte("lettres", [1, 2, 3, 4]);
+c64.copyDataTo(0x0400, c64.dataRef("lettres"), c64.data.length("lettres"));
+c64.memset(0x0428, 81, 40);
+c64.memsetColor(0xd828, c64.COLOR_YELLOW, 40);
+c64.memcpy(0x0450, 0x0428, 40);
+c64.poke(0x0478, c64.peek(0x0400));
+--- Fin du programme ---
 
-c64.irq.install();
+Placement
+---------
+Le code démarre normalement à $0810, soit 2064. Pour choisir un autre placement :
+
+    c64.program.start(0x4000);
+
+Le PRG conserve un lanceur adapté qui met en place le code. Ce choix doit être
+cohérent avec les assets ; il ne crée pas de mémoire supplémentaire. Les variables
+du programme occupent une zone dédiée, notamment $C100–$C2FF : ne réutilisez pas
+ces adresses sans vérifier les réservations du compilateur.
+screen(adresse) et colorRam(adresse) changent les bases des helpers texte.
+Une organisation vidéo personnalisée demande aussi une configuration cohérente
+de la banque et des registres VIC-II.
 
 
-8.3 c64.irq.chainToKernal()
----------------------------
+10. INSÉRER DE L'ASSEMBLEUR 6502
+==============================
+L'assembleur peut rester dans le même fichier source JavaScript. Réservez-le aux routines
+dont vous comprenez les effets sur registres, drapeaux et mémoire.
 
-Apres votre IRQ, le programme saute vers l'IRQ KERNAL standard.
-C'est utile pour garder BASIC vivant et conserver un READY. reactif.
-
-Exemple :
-
+--- Programme complet : 06-assembleur ---
+"use c64";
 import { c64 } from "js-c64";
 
-c64.irq.raster(250, () => {
-  c64.borderColor(c64.COLOR_GREEN);
-});
-
-c64.irq.chainToKernal();
-c64.irq.install();
-
-
-8.4 c64.irq.disableKernalTimer()
---------------------------------
-
-Desactive les interruptions timer CIA du KERNAL.
-A utiliser seulement si vous savez pourquoi.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.irq.disableKernalTimer();
-c64.irq.raster(50, () => {
-  c64.borderColor(c64.COLOR_RED);
-});
-c64.irq.install();
-
-
-8.5 c64.irq.enableKernalTimer()
--------------------------------
-
-Reactive le mode normal des timers KERNAL dans l'etat interne du compilateur.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.irq.disableKernalTimer();
-c64.irq.enableKernalTimer();
-
-
-8.6 c64.irq.ack()
------------------
-
-Ajoute un acquittement IRQ.
-En pratique, l'outil le gere deja dans les handlers raster generes.
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.irq.ack();
-
-
-8.7 c64.irq.rasterLoop(ligne, fonction, options)
-------------------------------------------------
-
-Version simplifiee pour un effet raster en boucle.
-Par defaut :
-
-- elle enregistre le handler
-- elle chaine vers le KERNAL
-- elle installe l'IRQ
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.irq.rasterLoop(245, () => {
-  c64.asm.lda(c64.abs("color_state"));
-  c64.asm.clc();
-  c64.asm.adc(c64.imm(1));
-  c64.asm.and(c64.imm(0x0f));
-  c64.asm.sta(c64.abs("color_state"));
-  c64.asm.sta(c64.abs(c64.VIC_BORDER_COLOR));
-});
-
-c64.asm.label("color_state");
-c64.asm.byte(0);
-
-Exemple avec options :
-
-c64.irq.rasterLoop(245, () => {
-  c64.borderColor(c64.COLOR_RED);
-}, {
-  chainToKernal: true,
-  install: true,
-  disableKernalTimer: false
-});
-
-
-9. ASSEMBLEUR BAS NIVEAU : c64.asm
-----------------------------------
-
-Si vous voulez faire du code plus avance, vous pouvez utiliser c64.asm.
-
-Exemple de base :
-
-import { c64 } from "js-c64";
-
-c64.asm.lda(c64.imm(6));
-c64.asm.sta(c64.abs(c64.VIC_BORDER_COLOR));
-
-Les instructions disponibles incluent notamment :
-
-adc and asl bcc bcs beq bit bmi bne bpl brk bvc bvs
-clc cld cli clv cmp cpx cpy dec dex dey eor inc inx iny
-jmp jsr lda ldx ldy lsr nop ora pha php pla plp
-rol ror rti rts sbc sec sed sei sta stx sty tax tay
-tsx txa txs tya
-
-Exemple :
-
-import { c64 } from "js-c64";
-
-c64.asm.sei();
-c64.asm.lda(c64.imm(0));
-c64.asm.sta(c64.abs(c64.VIC_BORDER_COLOR));
-c64.asm.cli();
-
-
-10. LES MODES D'ADRESSAGE
-------------------------
-
-Pour les instructions assembleur, on utilise des helpers :
-
-c64.imm(valeur)    immediate
-c64.zp(adresse)    zero page
-c64.zpx(adresse)   zero page,X
-c64.zpy(adresse)   zero page,Y
-c64.abs(adresse)   absolute
-c64.absx(adresse)  absolute,X
-c64.absy(adresse)  absolute,Y
-c64.ind(adresse)   indirect
-c64.indx(adresse)  indexed indirect
-c64.indy(adresse)  indirect indexed
-c64.rel(label)     branche relative
-c64.acc()          accumulateur
-c64.impl()         sans operande
-c64.immLo(label)   octet bas d'un label
-c64.immHi(label)   octet haut d'un label
-
-Exemples :
-
-c64.asm.lda(c64.imm(10));
-c64.asm.sta(c64.abs(0xD020));
-c64.asm.lda(c64.zp(0xFB));
-c64.asm.bne(c64.rel("boucle"));
-
-
-11. LABELS ET DONNEES EN ASSEMBLEUR
------------------------------------
-
-10.1 c64.asm.label(nom)
------------------------
-
-Place un label pour pouvoir y sauter.
-
-Exemple :
-
-c64.asm.label("boucle");
+c64.screen.setup();
+c64.printAt(0, 2, "UNE LIGNE ECRITE EN ASSEMBLEUR");
+c64.asm.ldx(c64.imm(0));
+c64.asm.label("ligne_asm");
+c64.asm.lda(c64.imm(81));
+c64.asm.sta(c64.absx(0x0400));
 c64.asm.inx();
-c64.asm.bne(c64.rel("boucle"));
+c64.asm.cpx(c64.imm(40));
+c64.asm.bne(c64.rel("ligne_asm"));
+--- Fin du programme ---
+
+X compte de 0 à 39 ; A contient le caractère ; STA écrit à $0400 + X.
+BNE revient au label tant que la comparaison avec 40 n'est pas égale.
+
+Modes d'adressage
+-----------------
+  imm(10)         immédiat #10
+  immLo(label)    octet bas de l'adresse d'un label
+  immHi(label)    octet haut
+  zp(0xfb)        page zéro
+  zpx / zpy       page zéro indexée
+  abs(0x0400)     absolu
+  absx / absy     absolu indexé par X/Y
+  ind(adresse)    indirect, notamment pour JMP
+  indx(adresse)   indirect indexé avant lecture du pointeur
+  indy(adresse)   pointeur indirect puis ajout de Y
+  rel(label)     branchement relatif
+  acc()          accumulateur
+  impl()         implicite
+
+Préfixez ces helpers avec c64. Chaque instruction n'accepte que les modes
+prévus par le 6502. Un branchement relatif atteint -128..127 octets ; pour aller
+plus loin, inversez le test puis utilisez JMP.
+
+Instructions c64.asm
+-------------------
+  Chargement/transfert : lda ldx ldy sta stx sty tax tay tsx txa txs tya
+  Calcul/logique      : adc sbc and ora eor asl lsr rol ror inc dec
+  Compteurs/tests     : inx iny dex dey cmp cpx cpy bit
+  Branchements        : bcc bcs beq bmi bne bpl bvc bvs jmp jsr rts
+  Pile/interruption   : pha php pla plp brk rti
+  Drapeaux/autres     : clc cld cli clv sec sed sei nop
+
+Avant une addition indépendante avec ADC, utilisez CLC ; avant une soustraction
+avec SBC, utilisez SEC. Le compilateur gère cela pour les expressions JavaScript.
+asm.label/comment nomment et annotent. asm.byte émet des octets bruts : ne placez
+pas des données sur un chemin exécuté. c64.label/comment existent également.
+c64.sys(adresse) appelle une routine externe qui doit revenir par RTS.
+
+Les noms des variables déclarées avec let ne sont pas des labels publics stables. Pour une
+interopérabilité explicite, var.byte/word/bool réservent une variable nommée,
+éventuellement à adresse fixe, et varRef la retrouve. Ce cas spécialisé ne
+remplace pas les let habituels. Ne pointez pas arbitrairement dans les temporaires.
+Le moteur utilise A/X/Y et de la page zéro, notamment $FB–$FE pour certaines
+opérations. Ne supposez pas leur conservation par un appel c64. Ne laissez pas
+le mode décimal SED actif à l'entrée du code compilé. N'ajoutez pas RTS au milieu
+d'une fonction JavaScript : laissez le compilateur gérer ses retours.
 
 
-10.2 c64.asm.comment(texte)
----------------------------
+11. SPRITES : CRÉATION, MOUVEMENT, ANIMATION ET COLLISIONS
+=======================================================
+Le VIC-II fournit huit sprites matériels. Un sprite monochrome mesure 24 × 21
+pixels ; un multicolore utilise 12 × 21 points plus larges. Une image contient
+63 octets, rangés dans un bloc aligné sur 64 octets.
+Pour cet exemple, copiez le fichier fourni avec le paquet :
+node_modules/js-c64/examples/assets/v10-hero.sprite.json
+vers assets/v10-hero.sprite.json dans votre projet.
 
-Ajoute un commentaire dans l'assembleur.
-
-Exemple :
-
-c64.asm.comment("Debut de la routine");
-
-
-10.3 c64.asm.byte(valeur1, valeur2, ...)
-----------------------------------------
-
-Ajoute directement des octets.
-
-Exemple :
-
-c64.asm.label("sprite_data");
-c64.asm.byte(0, 24, 60, 126, 255);
-
-
-11. EXEMPLES TRES COURTS
-------------------------
-
-12. EXEMPLES TRES COURTS
-------------------------
-
-12.1 Ecran bleu avec texte blanc
---------------------------------
-
+--- Programme complet : 07-sprite ---
+"use c64";
 import { c64 } from "js-c64";
 
-c64.clearScreen();
-c64.borderColor(c64.COLOR_BLUE);
-c64.backgroundColor(c64.COLOR_BLUE);
-c64.textColor(c64.COLOR_WHITE);
-c64.printAt(0, 0, "HELLO");
-
-
-12.2 Copier une ligne ecran
----------------------------
-
-import { c64 } from "js-c64";
-
-c64.printAt(0, 0, "BONJOUR");
-c64.memcpy(0x0428, 0x0400, 7);
-
-
-12.3 Faire clignoter le border avec rasterLoop
-----------------------------------------------
-
-import { c64 } from "js-c64";
-
-c64.irq.rasterLoop(245, () => {
-  c64.asm.lda(c64.abs("etat"));
-  c64.asm.eor(c64.imm(1));
-  c64.asm.sta(c64.abs("etat"));
-  c64.asm.sta(c64.abs(c64.VIC_BORDER_COLOR));
+const dessin = c64.assets.loadSprite("assets/v10-hero.sprite.json");
+const joystick = c64.input.joystick(2);
+const player = c64.sprite.create(0, {
+  x: 160, y: 120, frames: dessin.framesRef, color: c64.COLOR_YELLOW
 });
+function init() {
+  c64.screen.setup();
+  c64.printAt(2, 2, "JOYSTICK 2 : DEPLACEMENT");
+}
+function update() {
+  if (joystick.left() && player.x > 24) player.x -= 2;
+  if (joystick.right() && player.x < 320) player.x += 2;
+  if (joystick.up() && player.y > 50) player.y -= 2;
+  if (joystick.down() && player.y < 220) player.y += 2;
+  player.color(joystick.fire() ? c64.COLOR_CYAN : c64.COLOR_YELLOW);
+  player.sync();
+}
+c64.game.run({ init, update });
+--- Fin du programme ---
 
-c64.asm.label("etat");
-c64.asm.byte(0);
+Ce sont les coordonnées VIC-II avec le décalage de la zone visible, pas les
+coordonnées texte/HR. x va matériellement de 0 à 511 ; y de 0 à 255.
 
+Deux manières de déplacer
+------------------------
+  Manuel : modifiez player.x/y, puis sync() publie la position.
+  Moteur : configurez vx/vy et les bornes, puis update() applique mouvement,
+           limites/rebonds, animation et synchronisation.
 
-12.4 Utiliser data + dataRef + varRef
--------------------------------------
+Évitez d'ajouter involontairement les deux mouvements. Les vitesses négatives
+ont ici une interprétation signée propre au moteur.
 
+Options de création
+-------------------
+  x/y ; vx/vy ; active ; color ; frames ou data/dataAddress
+  multicolor ; expandX/expandY ; priority
+  minX/maxX/minY/maxY ; bounceX/bounceY
+  hitbox: { offsetX, offsetY, width, height }
+
+Méthodes : setPosition(x,y), setVelocity(vx,vy),
+setBounds(minX,maxX,minY,maxY,{ bounceX, bounceY }), reverseX/Y(),
+update(), sync(), enable(), disable(), color(valeur), multicolor(bool),
+expandX/Y(bool), priority(bool). La hitbox ajuste le rectangle de collision.
+sharedColor1 et sharedColor2, sur c64.sprite, règlent les deux couleurs communes
+aux sprites multicolores ; elles ne sont pas indépendantes pour chaque sprite.
+
+Animation et collisions
+------------------------
+Pour un asset d'au moins deux images, hors de la boucle :
+
+    player.sequence("marche", [0, 1], { speed: 6, loop: true });
+    player.play("marche");
+
+speed règle les mises à jour par image. Rappeler la même séquence ne sert pas
+à la recommencer. pauseAnimation/resumeAnimation la suspendent/reprennent.
+Appelez update pour la faire avancer. Les noms sont constants : pour en choisir
+un, utilisez if/else, pas une chaîne dynamique issue d'un ternaire.
+
+    if (player.collides(enemy)) { ... }
+    if (player.vicCollides(enemy)) { ... }
+    if (player.collidesWithBackground()) { ... }
+
+collides teste les rectangles logiciels. vicCollides et la collision avec le
+fond utilisent les informations matérielles. Pour la physique du terrain,
+utilisez les entités de map.
+
+Plus de huit sprites et données personnalisées
+---------------------------------------------
+create accepte les indices logiques 0..15 ; 8..15 sollicitent le multiplexeur
+avec la boucle de jeu. Il réutilise les sprites à différentes hauteurs, pas
+seize sprites sur une même ligne raster. L'agrandissement vertical augmente
+les contraintes. N'ajoutez pas un autre pilote qui modifie les mêmes registres.
+sprite.frames(nom, tableauxDe63Octets, { address }) construit une banque sans
+JSON ; assets.defineSprite accepte une description constante selon le schéma.
+Un asset JSON édité graphiquement reste souvent plus facile à maintenir.
+
+12. SONS ET MUSIQUE : LE SID
+===========================
+Le SID a trois voix. Commencez par les effets non bloquants :
+
+    c64.sid.volume(12);
+    c64.sid.reserveSfxVoice(3);
+    c64.sid.pickup();
+
+Effets : beep(), click(), explosion(), laser(), pickup(), noise(duree).
+La durée de noise est en ticks de 1/50 seconde ; 0 devient un tick. Un nouvel
+effet remplace celui en cours sur la voix réservée. Le moteur audio avance par
+IRQ avec adaptation PAL/NTSC. Utilisez firePressed(), pas fire(), si vous ne
+voulez pas redéclencher un son à chaque frame de l'appui.
+
+--- Programme complet : 08-musique ---
+"use c64";
 import { c64 } from "js-c64";
 
-c64.var.byte("counter", 0xC200, 3);
-c64.data.screenString("titre", "BONJOUR");
+const joystick = c64.input.joystick(2);
+const lead = c64.sid.instrument("lead", {
+  waveform: "pulse", pulseWidth: 0x0800,
+  attackDecay: 0x11, sustainRelease: 0x98
+});
+const melody = c64.sid.pattern("melody", ["C4", "E4", "G4", "E4"]);
+const silence = c64.sid.pattern("silence", [{ rest: true, duration: 4 }]);
+c64.sid.reserveSfxVoice(3);
+c64.sid.volume(12);
+c64.sid.playSong({
+  tempo: 5, loop: true,
+  instruments: [lead, null, null],
+  voices: [melody.repeat(2), silence.repeat(2), silence.repeat(2)]
+});
+function init() {
+  c64.screen.setup();
+  c64.printCentered(10, "FEU : BRUITAGE");
+}
+function update() {
+  if (joystick.firePressed()) c64.sid.pickup();
+  if (joystick.upPressed()) c64.sid.pauseSong();
+  if (joystick.downPressed()) c64.sid.resumeSong();
+}
+c64.game.run({ init, update });
+--- Fin du programme ---
 
-c64.copyDataTo(c64.SCREEN_RAM, c64.dataRef("titre"), c64.data.length("titre"));
-c64.memsetColor(c64.COLOR_RAM, c64.COLOR_YELLOW, c64.data.length("titre"));
-c64.poke(c64.varRef("counter"), 9);
+Une chanson décrit trois voix et leurs instruments. Les patterns contiennent
+noms de notes, { note: "C4", duration: 2 } ou { rest: true, duration: 2 }.
+repeat développe une répétition à la compilation. tempo règle l'unité musicale
+en ticks à 50 Hz. La voix réservée aux effets doit rester disponible.
+pauseSong/resumeSong/stopSong contrôlent le lecteur. fadeSong(volume, intervalle)
+modifie le volume global, partagé avec les effets. installPlayer(ligne) permet
+un réglage explicite de la ligne raster du lecteur.
+
+Contrôle direct d'une voix
+-------------------------
+    const voix = c64.sid.voice(1);
+    voix.waveform("triangle");
+    voix.frequency(4000);
+    voix.attackDecay(0x12);
+    voix.sustainRelease(0x88);
+    voix.gate(true);
+
+frequency et sid.freq utilisent la même convention : un entier supérieur à
+2048 et inférieur ou égal à 65535 est une valeur brute de registre ; les autres
+valeurs sont converties depuis des Hz avec l'horloge PAL. Pour une mélodie,
+préférez des noms de notes afin d'éviter cette ambiguïté d'unité. pulseWidth
+accepte 0..4095 ; waveform choisit triangle, saw, pulse, noise. attackDecay
+combine attaque/décroissance en deux demi-octets ; sustainRelease combine
+maintien/relâchement. gate(false) commence le relâchement. Ces réglages bas
+niveau utilisent des paramètres de configuration constants.
+sid.filter(mode, cutoff, resonance) règle le filtre : off, lowpass, highpass,
+bandpass ou combinaisons, coupure 0..2047, résonance 0..15. volume vaut 0..15.
+sid.note(voix, nom, durée), sid.freq et sid.rest sont des outils directs : les
+attentes note/rest conviennent aux essais séquentiels ; préférez playSong et
+les effets non bloquants pendant un jeu. Ne pilotez pas la même voix depuis
+le lecteur et une routine indépendante sans prévoir leur coordination.
 
 
-12.5 Dessiner une boite texte
------------------------------
+13. DESSIN HAUTE RÉSOLUTION : LE MODE HR
+======================================
+Le bitmap HR mesure 320 × 200 pixels : x = 0..319, y = 0..199. Une abscisse
+variable dépassant 255 doit être un word.
 
+--- Programme complet : 09-haute-resolution ---
+"use c64";
 import { c64 } from "js-c64";
 
-c64.fillRect(0, 0, 40, 25, 32, c64.COLOR_BLUE);
-c64.drawFrame(2, 2, 20, 8, 81, c64.COLOR_WHITE);
-c64.printCentered(5, "MENU");
+c64.screen.setup({ mode: "hires", background: c64.COLOR_BLACK });
+for (let i = 0; i < 5; i++) {
+  let x = c64.word(i) * 60 + 10;
+  let taille = 16 + i * 3;
+  let couleur = i + 1;
+  c64.hires.rect(x, 20, taille, taille, couleur);
+  c64.hires.fillRect(x, 65, taille, taille, couleur);
+  c64.hires.circle(x + 16, 125, 6 + i * 2, couleur);
+  c64.hires.fillCircle(x + 16, 170, 6 + i * 2, couleur);
+}
+--- Fin du programme ---
+
+Outils
+------
+  hires.point(x, y, couleur)
+  hires.line(x1, y1, x2, y2, couleur)
+  hires.rect(x, y, largeur, hauteur, couleur)
+  hires.fillRect(x, y, largeur, hauteur, couleur)
+  hires.circle(x, y, rayon, couleur)
+  hires.fillCircle(x, y, rayon, couleur)
+  hires.clear(couleur)
+
+Préfixez par c64. Les coordonnées, dimensions et couleurs peuvent être calculées.
+Une forme dynamique hors limites peut être ignorée entièrement ; pas de clipping
+général. Le centre d'un cercle doit rester à une distance du bord au moins égale
+à son rayon.
+
+Couleurs par cellule
+--------------------
+Le bitmap a un bit par pixel, pas une couleur indépendante par point. Chaque
+cellule de 8 × 8 pixels partage un premier plan et un fond. Dessiner une autre
+couleur dans la même cellule peut recolorer des pixels déjà allumés : c'est
+une contrainte matérielle, même quand le dessin géométrique est correct.
+clear(0) efface en noir ; clear() sans argument utilise le blanc. Effacer le
+bitmap à chaque frame coûte cher. Dessinez seulement quand quelque chose change,
+comme dans natural-hires-interactive.js.
+
+Par défaut, écran HR à $5C00 et bitmap à $6000. hires.screen/bitmap changent ces
+adresses : écran aligné sur 1 Ko, bitmap sur 8 Ko, dans une banque vidéo cohérente
+de 16 Ko. Vérifiez les autres réservations. hires.enabled/disabled changent le
+mode. screen.setup({ mode: "text" }) prépare le retour au texte standard ;
+réinstallez ensuite un éventuel charset personnalisé. Ce chapitre ne décrit
+pas une API de dessin bitmap multicolore.
 
 
-12.6 Mode hires bitmap
-----------------------
+14. RASTER ET INTERRUPTIONS
+==========================
+Le raster est la ligne affichée par le VIC-II. Une interruption raster exécute
+une courte routine à une ligne choisie, par exemple pour changer une couleur.
 
-La version actuelle ajoute un premier support du mode bitmap hires du C64.
-
-Fonctions disponibles :
-
-- c64.hires.screen(adresse)
-- c64.hires.bitmap(adresse)
-- c64.hires.enabled()
-- c64.hires.disabled()
-- c64.hires.clear(couleur)
-- c64.hires.point(x, y, couleur)
-- c64.hires.line(x1, y1, x2, y2, couleur)
-- c64.hires.rect(x, y, largeur, hauteur, couleur)
-- c64.hires.fillRect(x, y, largeur, hauteur, couleur)
-- c64.hires.circle(x, y, rayon, couleur)
-- c64.hires.fillCircle(x, y, rayon, couleur)
-
-Exemple simple :
-
+--- Programme complet : 10-raster ---
+"use c64";
 import { c64 } from "js-c64";
 
-c64.hires.screen(0x0400);
-c64.hires.bitmap(0x2000);
-c64.hires.enabled();
-c64.hires.clear(c64.COLOR_WHITE);
-c64.hires.line(10, 10, 310, 190, c64.COLOR_BLACK);
-c64.hires.rect(60, 50, 200, 90, c64.COLOR_RED);
-c64.hires.fillRect(90, 70, 40, 20, c64.COLOR_CYAN);
-c64.hires.circle(180, 80, 24, c64.COLOR_ORANGE);
-c64.hires.fillCircle(260, 140, 20, c64.COLOR_GREEN);
-c64.waitKey();
-c64.hires.disabled();
-c64.clearScreen();
+function init() {
+  c64.screen.setup();
+  c64.printCentered(12, "DEUX COULEURS DE BORDURE");
+}
+function update() {
+}
+c64.irq.raster(60, () => c64.borderColor(c64.COLOR_CYAN));
+c64.irq.raster(160, () => c64.borderColor(c64.COLOR_BLUE));
+c64.irq.install();
+c64.game.run({ init, update });
+--- Fin du programme ---
 
-Adresses par defaut :
+raster déclare l'action ; install installe le gestionnaire. Celui-ci acquitte
+les interruptions prises en charge. irq.ack est un outil bas niveau, pas un
+appel à ajouter systématiquement dans chaque callback.
+PAL a 312 lignes, NTSC moins : commencez par des lignes inférieures à 256 et
+vérifiez chaque standard ciblé. Le nombre de cycles par ligne reste limité.
 
-- memoire ecran hires : $5C00
-- memoire bitmap hires : $6000
+  irq.chainToKernal()       enchaînement vers les services du KERNAL
+  irq.disableKernalTimer()  désactivation de l'IRQ du timer KERNAL
+  irq.enableKernalTimer()   réactivation du timer
 
-Vous pouvez les changer si besoin :
+irq.rasterLoop(ligne, callback, options) regroupe déclaration et installation.
+Options : disableKernalTimer, chainToKernal, install. Les deux dernières sont
+activées par défaut ; la désactivation du timer est explicite. Couper les
+services KERNAL affecte leur clavier et leur horloge ; les entrées directes du
+moteur ne dépendent pas toutes de ces services.
 
-c64.hires.screen(0x5c00);
-c64.hires.bitmap(0x6000);
-
-Explication des nouvelles fonctions :
-
-- c64.hires.enabled() active le mode hires bitmap
-- c64.hires.disabled() quitte le mode hires et remet le VIC en mode texte
-- c64.waitKey() attend qu'une touche soit appuyee avant de continuer
-
-Exemple typique :
-
-c64.hires.screen(0x0400);
-c64.hires.bitmap(0x2000);
-c64.hires.enabled();
-c64.hires.clear(c64.COLOR_BLACK);
-c64.hires.line(20, 20, 300, 180, c64.COLOR_WHITE);
-c64.waitKey();
-c64.hires.disabled();
-c64.clearScreen();
-
-Le c64.clearScreen() final est souvent utile pour retrouver un ecran BASIC propre.
-
-Important a comprendre :
-
-En hires C64 standard, la couleur n'est pas vraiment definie pour chaque pixel.
-Elle est definie par bloc de 8x8 pixels.
-
-Cela veut dire que :
-
-- deux lignes de couleurs differentes dans le meme bloc 8x8 peuvent partager
-  la meme couleur visible
-- une couleur peut sembler changer par petits morceaux
-- ce n'est pas forcement un bug du compilateur, c'est souvent une limite
-  normale du hardware du Commodore 64
+Audio, multiplexeur et scroll utilisent le dispatcher commun. Déclarez vos
+effets avec irq.raster au lieu de remplacer le vecteur IRQ. Gardez les handlers
+courts ; dessinez les grandes formes et calculez le jeu dans update.
+Les fonctions JavaScript utilisent des paramètres/variables statiques et ne
+sont pas réentrantes : le compilateur refuse les usages incompatibles entre
+boucle principale et IRQ. Les écritures de word ne sont pas atomiques sur 6502.
+Évitez aussi que deux routines concurrentes utilisent les mêmes temporaires
+de dessin. Une synchronisation avancée demande une conception explicite.
 
 
-13. LIMITES IMPORTANTES
------------------------
+15. PRÉPARER LES GRAPHISMES, MAPS ET OBJETS
+========================================
+Le dépôt inclut « studio graphique/index.html », à ouvrir dans un navigateur.
+Ce dossier n'est pas livré dans le paquet npm. Préparez et exportez vos sprites
+et maps en JSON ; les schémas du dossier schemas décrivent les formats.
+assets.defineMap accepte aussi une description constante, mais loadMap garde
+le programme plus court.
 
-- Ce n'est pas un compilateur JavaScript complet.
-- Le fichier source est execute par Node.js.
-- Il ne faut pas compiler un fichier .js non fiable.
-- Certaines fonctions sont surtout la pour aider a generer du code simple
-  et direct.
-- Pour des effets tres avances, il faut souvent utiliser c64.asm.
-- En hires standard, la couleur est limitee par bloc de 8x8 pixels.
-- waitKey() attend maintenant une vraie touche du clavier C64, pas seulement Return.
-- Une condition de jeu doit utiliser c64.control.if(), pas un if JavaScript normal.
-- c64.game.frame() accepte une seule boucle et normalise hz: 50 sur PAL/NTSC.
+Ne confondez pas les unités :
+  caractère : 8 × 8 pixels ;
+  tuile     : assemblage de caractères, selon tileWidth/tileHeight ;
+  monde     : positions des entités, en pixels.
+Une tuile peut mesurer 1..8 caractères sur chaque axe.
+
+Extrait, après création de votre asset :
+
+    const level = c64.assets.loadMap("assets/mon-niveau.json");
+    c64.screen.setup();
+    c64.charset.use(level.charset, { address: 0x3000 });
+    c64.map.draw(level, { x: 0, y: 0 });
+
+Les chemins sont relatifs au source. drawViewport affiche une fenêtre :
+sourceX/sourceY, width/height, x/y. Les dimensions sont constantes ; les positions
+source acceptent des références numériques selon la fonction utilisée.
+Pour drawViewport, sourceX/sourceY et width/height sont en tuiles ; x/y sont
+en caractères écran. La fenêtre occupe donc width × tileWidth caractères de
+large, et height × tileHeight de haut. Une map conserve une taille de fenêtre
+et une position d'affichage définies pour la compilation.
+Les exports récents conservent les glyphes système 0..63 et placent les dessins
+personnalisés à partir de 64. Vérifiez les codes des anciens charsets.
+
+Tuiles et conversions
+--------------------
+    let tuile = 0;
+    level.map(3, 4).load(tuile);
+    level.map(3, 4).set(2);
+    level.map.redraw();
+    if (level.map(3, 4).isSolid()) { ... }
+
+load écrit dans une variable de sortie ; set modifie la grille ; redraw rafraîchit
+la map, pas une cellule passée en argument. La cellule propose aussi eq(valeur),
+ne(valeur), hasCollision(code). Ce sont des accès
+spécialisés à une ressource ; load n'est pas un retour numérique ordinaire.
+map.tileAt/setTile sont les accès équivalents via le module map.
+
+    let tileX = 0;
+    let tileY = 0;
+    c64.map.pixelToTile(level, { x: 80, y: 40 }, { x: tileX, y: tileY });
+
+pixelToTile, tileToPixel, characterToTile, tileToCharacter utilisent des variables
+de sortie. Choisissez des word pour les positions monde dépassant 255.
+map.object(level, "player") retrouve un objet décrit dans le niveau ; objects
+sélectionne plusieurs descriptions par identifiant/type. Ces descriptions sont
+connues à la compilation ; spawn les transforme en entités actives.
 
 
-14. CONSEIL POUR BIEN COMMENCER
--------------------------------
+16. SCROLL, CAMÉRA ET INTERFACE FIXE
+===================================
+Le scroller combine le défilement fin du VIC-II et les déplacements de caractères.
+Commencez par une petite fenêtre et une vitesse d'un ou deux pixels.
+Le scroll fin demande actuellement des tuiles de 1 × 1 caractère et un seul
+scroller raster par programme. La fenêtre doit rester dans les colonnes 1..38 :
+x >= 1 et x + width <= 39, avec une largeur d'au moins deux caractères.
 
-Pour debuter, apprenez d'abord ces 6 fonctions :
+Extrait avec level chargé précédemment :
 
-- c64.clearScreen()
-- c64.borderColor()
-- c64.backgroundColor()
-- c64.textColor()
-- c64.printAt()
-- c64.poke()
+    const camera = c64.map.scroller(level, {
+      sourceX: 0, sourceY: 0, width: 36,
+      x: 2, y: 1, panel: { bottom: 5 }
+    });
 
-Puis essayez ensuite :
+Appelez camera.draw() dans init, puis dans update :
 
-- c64.printCentered()
-- c64.fillRect()
-- c64.drawFrame()
-- c64.memset()
-- c64.memcpy()
-- c64.copyDataTo()
-- c64.var.byte()
-- c64.data.screenString()
-- c64.irq.rasterLoop()
-- c64.asm.lda(), c64.asm.sta(), c64.asm.jmp()
+    joystick.scroll(camera, 2);
+
+Cette abstraction lit les directions ; elle ne crée pas un personnage ni sa
+physique. Les méthodes séparées sont left/right/up/down(vitesse). Une vitesse
+constante va de 1 à 8 ; une vitesse calculée doit rester dans 0..8, où 0 ne bouge
+pas. Les directions opposées sont traitées successivement ; une diagonale peut
+faire avancer les deux axes.
+
+Le panneau réserve des lignes d'interface : { bottom: nombre }, { top: nombre },
+"bottom" ou "top". Le scroll vertical a des contraintes supplémentaires et
+nécessite le panneau inférieur prévu par le moteur. Reprenez d'abord une
+configuration validée. Affichez le HUD avec printAt/printNumber : un POKE brut
+peut ignorer les ajustements d'adressage liés au défilement.
+Avec un nombre de lignes explicite, le moteur calcule la hauteur de la fenêtre
+à partir de la place laissée au panneau ; inutile d'indiquer aussi height.
+Le scroll vertical réserve en outre une ligne de transition en bas de la
+fenêtre. Le compilateur refuse les directions dépassant le budget prévu :
+réduisez alors la fenêtre au lieu de contourner le diagnostic.
+
+Suivi et projection
+-------------------
+    camera.follow(player, {
+      axis: "x", deadZone: { x: 104, y: 48, width: 96, height: 48 },
+      maxSpeed: 2, cullingMargin: { x: 24, y: 21 }
+    });
+    camera.project(enemy, { cullingMargin: { x: 24, y: 21 } });
+
+La zone morte laisse bouger le personnage avant de déplacer la caméra. axis
+accepte x, y ou both selon le scroller. offsetX/offsetY ajustent le cadrage.
+follow projette aussi le joueur ; project convertit la position des autres
+entités et gère leur marge de visibilité. Votre logique décide si un ennemi
+hors champ continue à évoluer dans le monde.
+Le moteur planifie copies de caractères/couleurs et présentation des sprites.
+Ne remplacez pas ce timing par des copies manuelles. Grande fenêtre, musique
+et sprites consomment ensemble le budget disponible : testez la combinaison.
+
+Pour essayer sans créer un niveau, copiez
+node_modules/js-c64/examples/assets/maze-room.json vers assets/maze-room.json. Voici une fenêtre adaptée à cette petite map :
+
+--- Programme complet : 11-scroll ---
+"use c64";
+import { c64 } from "js-c64";
+
+const room = c64.assets.loadMap("assets/maze-room.json");
+const joystick = c64.input.joystick(2);
+const camera = c64.map.scroller(room, {
+  width: 12, height: 8, x: 4, y: 5, panel: "bottom"
+});
+function init() {
+  c64.screen.setup();
+  c64.charset.use(room.charset);
+  c64.printAt(1, 20, "JOYSTICK 2 : SCROLL");
+  camera.draw();
+}
+function update() {
+  joystick.scroll(camera, joystick.fire() ? 4 : 1);
+}
+c64.game.run({ init, update });
+--- Fin du programme ---
 
 
-15. FICHIERS D'EXEMPLE A REGARDER
+17. ENTITÉS, COLLISIONS DE TERRAIN ET PLATFORMER
+===============================================
+Une entité associe un objet de map, un sprite, une position monde et les tests
+de terrain. Extrait basé sur les assets de natural-platformer.js :
+
+    const collisions = { 1: "solid", 2: "danger", 3: "exit", 4: "ladder" };
+    const player = c64.map.spawn(level, "player", {
+      sprite: 0, maxCollisionSpeed: 8, collisionBehaviors: collisions
+    });
+
+Chargez auparavant les assets sprites référencés par le niveau. Le numéro
+appartient aux données de collision ; le comportement indique son interprétation.
+platform et passable existent également. ladder permet un test, pas des commandes
+d'escalade automatiques.
+
+Extrait de update :
+
+    player.velocityX = 0;
+    if (joystick.left()) player.velocityX = -2;
+    if (joystick.right()) player.velocityX = 2;
+    if (player.isOnGround() && joystick.firePressed()) player.jump(8);
+    player.velocityY += 1;
+    player.moveAndCollide();
+    camera.follow(player, { axis: "x", maxSpeed: 2 });
+
+velocityY += 1 applique la gravité. moveAndCollide résout les contacts selon
+les limites configurées. Accordez maxCollisionSpeed au saut et aux vitesses ;
+un déplacement arbitrairement grand peut dépasser les contraintes prévues.
+
+État et actions
+---------------
+  worldX/worldY             positions du monde sur 16 bits
+  screenX/screenY           coordonnées projetées
+  velocityX/velocityY       vitesses interprétées par le moteur
+  isOnGround()/isActive()   état de déplacement/activation
+  isOnDanger()/isOnLadder()/isAtExit()
+  setWorldPosition(x,y), setVelocity(vx,vy), moveAndCollide(), jump(force)
+  project(options), enable(), disable(), respawn("identifiant")
+  collides(autreEntite), play("nomAnimation")
+  pauseAnimation(), resumeAnimation()
+
+Le niveau peut fournir les animations. Choisissez-les avec if/else et gardez
+un booléen de direction pour éviter les comparaisons signées ambiguës.
+spawnAll crée plusieurs entités avec firstSprite et des options communes, mais
+le tableau de handles est statique : ce n'est pas un tableau typé à indice
+dynamique. Commencez avec des entités nommées ou des indices constants.
+Pour une pièce ramassée, mémorisez collected, désactivez l'entité et augmentez
+le score une seule fois. respawn remet à un point nommé ; votre jeu décide
+quelles autres données sont conservées après une mort.
+
+
+18. PLUSIEURS NIVEAUX ET CHARGEMENT SUR DISQUE
+============================================
+Un PRG inline embarque ses ressources. Un D64 peut séparer programme et assets :
+
+    npx c64js build main.js -o dist/jeu.d64 --assets disk --device 8
+
+Le format d64 choisit les assets disque par défaut. --disk-name et --program-name
+règlent les noms. Montez le D64 dans l'émulateur ; depuis BASIC :
+
+    LOAD"*",8,1
+    RUN
+
+Extrait d'organisation :
+
+    const level1 = c64.assets.loadMap("assets/niveau1.json");
+    const level2 = c64.assets.loadMap("assets/niveau2.json");
+
+    // Dans init :
+    level1.activate({ draw: true });
+
+    // Dans update :
+    if (joystick.firePressed()) {
+      if (level1.isActive()) level2.activate({ draw: true });
+      else level1.activate({ draw: true });
+    }
+
+activate accepte aussi { draw: { x: 0, y: 0 }, sprites: [dessin] }. Le changement
+est appliqué à une frontière de frame ; ne demandez pas plusieurs activations
+en supposant que isActive change immédiatement pendant la même étape.
+loadSprite(..., { resident: false }) prépare un sprite chargé avec son niveau.
+Des ressources mutuellement exclusives peuvent partager de la mémoire ; cela
+ne rend pas deux maps accessibles simultanément dans la même zone.
+Le chargement KERNAL est bloquant : prévoyez une transition, pas un scroll
+continu pendant la lecture. Les assets générés sont des fichiers PRG adaptés
+au chargement du moteur. Inspectez les fichiers et réservations avec --report.
+
+19. COMPILER, EXAMINER ET OPTIMISER UN PROGRAMME
+==============================================
+    npx c64js build main.js -o dist/jeu.prg
+    npx c64js build main.js -o dist/jeu.asm
+    npx c64js build main.js -o dist/jeu.lst
+    npx c64js build main.js -o dist/jeu.bin
+    npx c64js build main.js -o dist/jeu.bas
+    npx c64js build main.js -o dist/jeu.d64
+
+  prg   programme avec adresse de chargement et lanceur de la compilation
+  bin   binaire brut pour une intégration maîtrisée
+  asm   représentation assembleur
+  lst   listing avec adresses et octets
+  data  BASIC/DATA, extension habituelle .bas
+  d64   image de disquette avec programme et ressources
+
+L'extension sélectionne le format ; --format permet de le préciser. --sys règle
+l'adresse demandée au lanceur selon votre configuration ; program.start est le
+moyen lisible de fixer le placement dans le source. Dans les options, écrivez
+un nombre décimal ou 0x4000, pas $4000.
+
+    npx c64js build main.js -o dist/jeu.prg --opt balanced --map dist/symboles.json --report dist/rapport.json
+
+--opt accepte size, speed, balanced. Ces profils choisissent les stratégies
+prévues par le moteur, notamment pour les ressources ; comparez les résultats
+pour votre jeu. --map exporte les symboles ; --report décrit ressources,
+réservations et décisions, y compris les optimisations du compilateur.
+
+Les optimisations du compilateur sont actives par défaut : réutilisation prudente
+des temporaires, suppression de copies inutiles et reconnaissance de certains
+remplissages de tableaux. Le compilateur respecte les limites entre fonctions,
+API et interruptions. Écrivez d'abord clairement : tableau.fill(0) exprime
+mieux un remplissage qu'une manipulation manuelle de pointeurs.
+
+Validation conseillée
+---------------------
+  1. Compilez ; corrigez types, constantes et conflits de placement.
+  2. Lancez le PRG : affichage, commandes, collisions, redémarrage.
+  3. Testez les limites : bords, 255/256, tableau plein, vie zéro.
+  4. Ajoutez musique, scroll et sprites ensemble et observez leur timing.
+  5. Examinez le listing et le rapport si taille ou fluidité posent problème.
+  6. Vérifiez PAL et NTSC si vous ciblez les deux.
+
+Compiler prouve que le source est accepté et assemblé, pas que chaque effet
+visuel ou sonore est correct. Un microbenchmark ne garantit pas la fluidité
+de tous les niveaux d'un jeu.
+
+
+20. TROIS PROGRAMMES COMPLETS POUR ALLER PLUS LOIN
+=================================================
+Les exemples sont fournis avec le paquet, dans node_modules/js-c64/examples.
+Depuis votre projet, vous pouvez les compiler directement :
+
+    npx c64js build node_modules/js-c64/examples/natural-tetris.js -o dist/tetris.prg
+    npx c64js build node_modules/js-c64/examples/natural-platformer.js -o dist/platformer.prg
+    npx c64js build node_modules/js-c64/examples/natural-hires-interactive.js -o dist/hires-interactive.prg
+
+Tetris — examples/natural-tetris.js
+  Grille, tableaux, fonctions, rotations, suppression de lignes. Suivez une
+  pièce de sa création à sa fixation, puis modifiez la vitesse ou les couleurs.
+
+Platformer — examples/natural-platformer.js
+  Étudiez dans l'ordre : assets, spawn, commandes et gravité, moveAndCollide,
+  follow/project, animation, collecte, réapparition. Conservez au début les
+  adresses et l'organisation raster validées par cet exemple.
+
+HR interactive — examples/natural-hires-interactive.js
+  Le joystick déplace le pinceau. Feu maintenu : directions pour taille, couleur
+  et forme. Espace efface ; Entrée revient au texte. Le dessin n'est actualisé
+  que lorsqu'un paramètre change.
+
+Autres exemples :
+  natural-lights.js     conditions et couleurs
+  natural-score.js      calculs et affichage numérique
+  natural-helpers.js    préparation écran, tableaux et boucle de jeu
+  natural-sprites.js    coordonnées et propriétés des sprites
+  natural-scroll.js     joystick et scroller
+  natural-hires.js      formes calculées
+
+Pour modifier un exemple, copiez son source dans votre projet ainsi que les
+JSON référencés, puis remplacez son import interne par "js-c64". Un fichier de jeu seul ne suffit pas
+s'il dépend d'assets externes.
+
+
+21. DÉPANNAGE ET BONNES HABITUDES
+================================
+« Cela fonctionne en JS, pas dans js-c64. »
+  Vérifiez le sous-ensemble du chapitre 3 : pas de Math.random, setInterval,
+  console.log ou chaînes dynamiques. Les ressources/options sont souvent fixes.
+
+« Ma variable revient à zéro ; ma boucle ne finit jamais. »
+  Un octet déborde à 256. Élargissez avant le calcul, y compris les compteurs.
+
+« Le programme reste figé. »
+  Cherchez while infini, waitKey dans update, son bloquant ou frame trop chargée.
+
+« Les lettres deviennent des dessins. »
+  Vérifiez le charset, les codes écran et les glyphes système réservés.
+
+« Un dessin HR recolore son voisin. »
+  Deux couleurs seulement par cellule de 8 × 8 pixels : chapitre 13.
+
+« Ma forme a une mauvaise taille. »
+  Vérifiez la largeur des calculs, puis les unités : cases, pixels, coordonnées
+  de sprites. Examinez le listing si nécessaire.
+
+« Des sprites disparaissent ou clignotent. »
+  Vérifiez leur activation, coordonnées, pointeurs, banque VIC et recouvrement
+  sur la même ligne raster.
+
+« Le scroll laisse des traces. »
+  Reprenez une configuration validée. Vérifiez panneau, charge de la frame et
+  écritures directes concurrençant le moteur.
+
+« Le son coupe une note. »
+  Réservez une voix aux effets ; un nouvel effet remplace le précédent.
+
+« Je manque de mémoire. »
+  Examinez --report et --map. Réduisez les ressources, partagez les données
+  identiques ou répartissez les niveaux sur disque ; ne déplacez pas une zone
+  au hasard dans la RAM du moteur.
+
+« Les conditions ou les variables ne sont pas compilées comme prévu. »
+  Vérifiez la présence de "use c64" au début du fichier et compilez avec
+  « npx c64js build ». « npm ls js-c64 » affiche la version installée ; ce guide
+  correspond à la 1.1.0.
+
+Gardez sources, JSON et commandes de construction dans Git. Les PRG ne remplacent
+pas les sources. Après une correction du compilateur, reconstruisez avant de
+comparer le comportement dans l'émulateur.
+
+
+22. RÉFÉRENCE RAPIDE DES FONCTIONS
+=================================
+Cette liste renvoie aux chapitres ; les signatures détaillées des objets et
+options sont également disponibles dans index.d.ts, livré avec le paquet.
+
+Langage [3, 5, 6]
+  "use c64" ; let/const ; if/else ; for/while ; break/continue ; function/return
+  byte/word ; Uint8Array/Uint16Array ; length/fill ; accès indexés
+
+Texte [4]
+  screen.setup ; clearScreen ; borderColor/backgroundColor/textColor
+  print/printAt/printCentered/printNumber ; writeChar/fillRect/drawFrame/clearLine
+  COLOR_* ; waitKey
+
+Entrées et rythme [7]
+  input.joystick : directions/fire, suffixes Pressed/Released, scroll
+  input.keyboard : held/pressed/released ; KEY_SPACE/KEY_RETURN/KEY_F1
+  game.run/every/init/frame
+
+État du jeu [8]
+  game.scene/start/go/is ; game.counter/score/lives
+  compteur.set/add/sub/inc/dec/draw ; random.seed/byte/range
+
+Mémoire et machine [9, 10]
+  poke/peek/memset/memsetColor/memcpy/copyDataTo
+  data.byte/word/string/screenString/length ; dataRef/varRef ; screen/colorRam
+  program.start ; asm.<instruction> ; asm.label/comment/byte ; label/comment/sys
+  imm/immLo/immHi ; zp/zpx/zpy ; abs/absx/absy ; ind/indx/indy ; rel/acc/impl
+
+Sprites [11]
+  assets.loadSprite/defineSprite ; sprite.frames/create/sharedColor1/sharedColor2
+  sprite créé : x/y/vx/vy/active ; setPosition/setVelocity/setBounds
+  reverseX/reverseY/update/sync/enable/disable
+  color/multicolor/expandX/expandY/priority
+  sequence/play/pauseAnimation/resumeAnimation
+  collides/vicCollides/collidesWithBackground
+
+Audio [12]
+  sid.volume/filter/voice ; frequency/pulseWidth/waveform/gate
+  attackDecay/sustainRelease ; sid.note/freq/rest
+  instrument/pattern ; pattern.repeat ; playSong/installPlayer/reserveSfxVoice
+  pauseSong/resumeSong/fadeSong/stopSong ; beep/noise/click/explosion/laser/pickup
+
+HR et IRQ [13, 14]
+  hires.screen/bitmap/enabled/disabled/clear/point/line/rect/fillRect/circle/fillCircle
+  irq.raster/rasterLoop/install/ack/chainToKernal/disableKernalTimer/enableKernalTimer
+
+Maps et entités [15–18]
+  assets.loadMap/defineMap ; charset.use ; map.draw/drawViewport/tileAt/setTile
+  asset.map(x,y).load/set/eq/ne/isSolid/hasCollision ; asset.map.redraw
+  map.pixelToTile/tileToPixel/characterToTile/tileToCharacter
+  map.object/objects/spawn/spawnAll ; map.scroller/horizontalScroller
+  scroller.draw/left/right/up/down/follow/project
+  entité.setWorldPosition/setVelocity/moveAndCollide/jump/project
+  enable/disable/respawn/collides/play
+  pauseAnimation/resumeAnimation
+  isOnGround/isActive/isOnDanger/isOnLadder/isAtExit
+  asset.activate/isActive
+
+Cas spécialisés et compatibilité
 ---------------------------------
+var.byte/word/bool et dataRef/varRef restent utiles aux réservations nommées et
+à l'assembleur. Ils ne sont pas nécessaires aux variables déclarées avec let.
+L'API de sprites indexés reste disponible pour les besoins spécialisés :
+  sprite.enable/disable/show/hide/position/setX/setY/color/data/pointer
+  moveX/moveY/moveToX/moveToY/animateTo/stop/stopX/stopY/installAnimator
+  multicolor/expandX/expandY/priority
+Préférez les handles pour un nouveau jeu ; ne mélangez pas deux pilotes.
 
-examples/hello.js
-examples/colors.js
-examples/comfort-frame.js
-examples/comfort-data-vars.js
-examples/screen-fill.js
-examples/game-loop-input.js
-examples/raster-bars.js
-examples/raster-ready-border-cycle.js
-examples/vice-showcase.js
+pool.fixed appartient à l'API de construction, mais sa fabrique avec paramètre
+n'est pas prise en charge dans les sources compilés avec "use c64".
+Réservez explicitement les entités, puis activez/désactivez-les. Écrivez vos
+conditions, boucles et fonctions directement en JavaScript.
 
-Le plus simple pour commencer :
 
-examples/hello.js
+23. API DE COMPILATION ET OUTILS POUR LES DÉVELOPPEURS
+====================================================
+Cette partie concerne un script Node.js sur votre ordinateur, pas un programme
+C64. N'y ajoutez pas "use c64".
 
-Pour comprendre les nouvelles fonctions de confort :
+    import { writeFile } from "node:fs/promises";
+    import { compileFile } from "js-c64";
 
-examples/comfort-frame.js
-examples/comfort-data-vars.js
+    const result = await compileFile("main.js", { opt: "balanced" });
+    await writeFile("jeu.prg", result.prgBytes);
+    console.log(result.assetReport);
 
-Le plus interessant pour voir un effet qui continue pendant READY. :
+compileFile charge un fichier ; compileJsToC64Outputs compile un texte. Le
+résultat donne bytes, prgBytes, asmText, listingText, symbols, basicText,
+assetReport et diskFiles. Options : opt, assets, device, placement du code.
+naturalOptimizations: false permet une comparaison diagnostique sans cette
+passe ; ce n'est pas nécessaire pour programmer un jeu normalement.
 
-examples/raster-ready-border-cycle.js
+Autres exports :
+  compileJsToBasicData       représentation BASIC/DATA
+  compileInstructions       compilation d'une représentation intermédiaire
+  Assembler6502             construction directe d'assembleur
+  createBasicSysStub        lanceur BASIC
+  createPrg/createRawBinary emballage des octets assemblés
+  createBasicDataProgram/exportBasicData
+  loadMapAsset/normalizeMapAsset/expandMapAsset
+  loadSpriteAsset/normalizeSpriteAsset
+  createD64/d64SectorOffset/D64_SIZE
+
+Sous-chemins npm : js-c64/assembler, /compiler, /assets, /d64 et /irq/raster.
+Consultez les types et exports pour écrire un outil de construction personnalisé.
+Dans le dépôt :
+
+    npm test
+    npm run build:demos
+    npm run package:check
+    npm run release:check
+
+release:check reconstruit et valide les artefacts de livraison ; il n'est pas
+nécessaire après chaque modification d'un jeu. docs, scripts, test et studio
+graphique appartiennent au dépôt. Le paquet npm contient compilateur, types,
+schémas, exemples et assets, README, changelog et ce guide.
+Pour poursuivre, consultez les exemples et le détail des changements
+dans CHANGELOG.md. README.md présente les versions et les points d'entrée.

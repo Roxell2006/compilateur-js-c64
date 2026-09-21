@@ -1,1348 +1,303 @@
 # js-c64
 
-[![CI](https://github.com/Roxell2006/compilateur-js-c64/actions/workflows/ci.yml/badge.svg)](https://github.com/Roxell2006/compilateur-js-c64/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/npm/v/js-c64.svg)](https://www.npmjs.com/package/js-c64)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+[![npm](https://img.shields.io/npm/v/js-c64.svg)](https://www.npmjs.com/package/js-c64)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-`js-c64` is a publishable Node.js library that lets you write a JavaScript DSL and emit Commodore 64 6502 machine code directly, without requiring `cc65`, `KickAssembler` or `ACME`.
+Écrivez des programmes Commodore 64 en JavaScript naturel et compilez-les en
+code machine 6502 : jeux, sprites, scroll, musique SID et graphismes haute
+résolution. Aucun interpréteur JavaScript ne tourne sur le C64.
 
-## Quickstart
+**La version 1.1.0 est en préparation.** Ce README présente le mode naturel de
+la branche de développement. `package.json` reste en **1.0.1** ; les exemples
+ci-dessous demandent le code contenant les nouveautés 1.1.0.
 
-```bash
-npm install js-c64
+## Sommaire
+
+- [Installation](#installation)
+- [Premier programme](#premier-programme)
+- [Fonctionnalités](#fonctionnalités)
+- [JavaScript pris en charge](#javascript-pris-en-charge)
+- [Compilation](#compilation)
+- [API Node.js](#api-nodejs)
+- [Exemples et documentation](#exemples-et-documentation)
+- [Versions](#versions)
+- [Développement](#développement)
+- [Licence](#licence)
+
+## Installation
+
+Prérequis : **Node.js ≥ 18**, npm et un émulateur ou un C64 pour lancer les PRG.
+Le compilateur et l'assembleur sont inclus dans le paquet.
+
+### Essayer la future 1.1.0
+
+Dans votre copie du dépôt, sur la branche contenant le mode naturel :
+
+```sh
+npm install
+node src/cli.js build examples/natural-helpers.js -o dist/natural-helpers.prg
 ```
 
-```js
-import { c64 } from "js-c64";
+Pour créer un projet voisin de cette copie, nommée ici `js-c64` :
 
-c64.clearScreen();
-c64.borderColor(c64.COLOR_BLUE);
-c64.backgroundColor(c64.COLOR_BLUE);
-c64.textColor(c64.COLOR_WHITE);
-c64.printAt(0, 0, "Hello, C64!");
+```sh
+mkdir mon-jeu
+cd mon-jeu
+npm init -y
+npm pkg set type=module
+npm install "../js-c64"
 ```
 
-```bash
-c64js build examples/hello.js -o hello.prg
-c64js build examples/hello.js -o hello.asm --format asm
-c64js build examples/hello.js -o hello.bas --format data
-c64js build examples/hello.js -o hello.bas --format data --sys 49152
-c64js build examples/raster-bars.js -o raster-bars.prg
-c64js build examples/multilevel-d64.js -o multilevel.d64
+Adaptez le chemin à votre dépôt local. Récupérer le dépôt public ne récupère
+pas automatiquement une branche de travail non publiée.
+
+### Après publication de la 1.1.0
+
+L'installation depuis le registre sera :
+
+```sh
+npm install js-c64@^1.1.0
 ```
 
-The generated `.prg` uses a BASIC stub with `10 SYS 2064` and starts machine code at `$0810`.
+Pour utiliser explicitement la génération précédente : `npm install js-c64@1.0.1`.
+Elle ne comprend pas toutes les fonctionnalités naturelles décrites ici.
 
-For AI or emulator integrations, you can also compile a DSL source string directly in memory:
+`c64js init <dossier>` est disponible, mais son modèle utilise encore une
+dépendance `^1.0.0` et un source minimal sans directive naturelle. Le guide
+privilégie la création manuelle ci-dessus en attendant son adaptation.
 
-```js
-import { compileJsToC64Outputs } from "js-c64";
+## Premier programme
 
-const source = `
-  c64.clearScreen();
-  c64.borderColor(c64.COLOR_BLUE);
-  c64.backgroundColor(c64.COLOR_BLUE);
-  c64.textColor(c64.COLOR_WHITE);
-  c64.printAt(0, 0, "Hello, C64!");
-`;
-
-const result = await compileJsToC64Outputs(source, { sysAddress: 49152 });
-console.log(result.basicText);
-```
-
-If you only want the final BASIC text directly, you can use the shortcut helper:
-
-```js
-import { compileJsToBasicData } from "js-c64";
-
-const source = `
-  c64.clearScreen();
-  c64.borderColor(c64.COLOR_BLUE);
-  c64.backgroundColor(c64.COLOR_BLUE);
-  c64.textColor(c64.COLOR_WHITE);
-  c64.printAt(0, 0, "Hello, C64!");
-`;
-
-const basicText = await compileJsToBasicData(source, { sysAddress: 49152 });
-console.log(basicText);
-```
-
-## Features
-
-### Natural JavaScript source (experimental)
-
-Start a source file with `"use c64";` to compile ordinary JavaScript control flow
-to 6502 code. Build it with the same `c64js build` command, or pass its source to
-`compileJsToC64Outputs()` / `compileJsToBasicData()`. Do not execute this source
-directly with Node.js: the directive is interpreted by the js-c64 compiler.
-Files without the directive retain the 1.0.1 recording DSL and its host-side
-JavaScript behavior.
+Créez `main.js` :
 
 ```js
 "use c64";
 import { c64 } from "js-c64";
 
 const joystick = c64.input.joystick(2);
-let color = 0;
+let couleur = 1;
 
-function nextColor() {
-  color = (color + 1) & 15;
-  c64.borderColor(color);
-}
-
-c64.clearScreen();
-c64.borderColor(c64.COLOR_BLACK);
-c64.backgroundColor(c64.COLOR_BLACK);
-
-c64.game.frame(() => {
-  if (joystick.firePressed()) nextColor();
-});
-```
-
-This is a small, explicitly supported JavaScript subset, not a JavaScript VM on
-the C64. The frontend parses source with Acorn and lowers it to the existing DSL
-instructions and 6502 generator. The syntax applies across the API, including
-hires, sprites, scrolling, input, audio and scenes; each API's restrictions on
-compile-time configuration arguments still apply.
-
-Supported in this first implementation:
-
-- `let`, `const`, lexical blocks, scalar function parameters and local variables.
-  Functions also accept constant text, configuration/API objects and fixed typed
-  arrays. These arguments specialize shared routines at compile time; numeric
-  arguments still use runtime parameters. Returns remain numeric/boolean.
-- `if` / `else`, short-circuit `&&` / `||`, `!`, comparisons and `condition ? a : b`.
-- `+`, `-`, `&`, `|`, `^`, `++`, `--` and compound assignments. Multiplication
-  by a constant from 0 to 255 uses shifts/additions. Shift counts must be constants
-  from 0 to 15. Constant expressions are evaluated during compilation.
-- `for`, `while`, `break`, `continue`, named top-level functions and `return`.
-  A function returning a value must return on every path. Callbacks can use a
-  bare `return` and named zero-argument functions can be passed to `game.frame`.
-- Existing `c64` API calls, literal configuration objects/arrays and static
-  member access. Imports currently support only `import { c64 } from ...`.
-
-Numeric storage is explicit and predictable:
-
-```js
-let color = 0;              // unsigned byte, 0..255
-let ready = false;          // boolean
-let x = c64.word(300);      // unsigned 16-bit value, 0..65535
-let low = c64.byte(x);      // explicit truncation to the low byte
-
-x += 2;
-color = (color + 1) & 15;
-```
-
-Plain numeric `let` declarations initialized with a literal use one byte;
-`let x = 300` is rejected and suggests `c64.word(300)`. A variable initialized
-from another runtime value inherits its width. Arithmetic wraps at the width
-of its operands (the widest runtime operand or integer literal wins), and
-comparisons are unsigned. Promote **before** a calculation when its result must
-exceed 255: `c64.word(color) + 300`. Negative literals can encode two's complement
-bit patterns; they do not introduce signed comparisons. Floating-point runtime
-values, dynamic multiplication/division/modulo, recursion, async functions,
-dynamic allocation and dynamically indexed ordinary JS arrays are not implemented.
-Unsupported constructs produce errors instead of running gameplay logic on the PC.
-
-Fixed typed arrays support natural indexed reads, writes and updates:
-
-```js
-const cells = new Uint8Array(16);           // initially zero
-const points = new Uint16Array([100, 500]); // 16-bit elements
-
-function flip(board, index) {
-  board[index] ^= 1;
-}
-
-let selected = 3;
-flip(cells, selected);
-points[0] += 10;
-```
-
-Declare these arrays with `const` at top level, with 1..256 elements and constant
-unsigned initial values of the declared width. Their storage is embedded in the
-PRG and initialized when loaded, with no heap or garbage collector. Reset their
-contents explicitly when restarting a game. `.length` is a compile-time constant;
-use a word loop counter to iterate over all 256 entries without byte wraparound.
-Runtime out-of-bounds reads return zero and writes are ignored; invalid constant
-indices are compilation errors. Indexed byte loads/stores use native 6502 indexed
-addressing; words use two byte tables. Bounds checks cost a few instructions.
-Ordinary `[1, 2, 3]` literals remain compile-time configuration arrays.
-
-Text arguments specialize by text value, objects/arrays by identity, and numeric
-arguments by width. Calls with the same signature share one JSR/RTS routine;
-different text or object arguments can increase code size. Objects and arrays are
-passed by reference, while numbers are passed by value. Text/object parameters
-cannot be reassigned. There are no runtime strings or general JavaScript objects.
-See `examples/natural-lights.js` for a complete Lights Out game using a board,
-reusable functions, joystick input, a move counter, victory detection and restart.
-
-Common helpers reduce repeated setup and update code:
-
-```js
 function init() {
-  c64.screen.setup({ background: c64.COLOR_BLACK, color: c64.COLOR_CYAN });
-  cells.fill(0);
+  c64.screen.setup({ color: c64.COLOR_CYAN });
+  c64.printCentered(10, "FEU : CHANGER LA COULEUR");
 }
 
 function update() {
-  joystick.scroll(camera, 2);
+  if (joystick.firePressed()) {
+    couleur = (couleur + 1) & 15;
+    c64.borderColor(couleur);
+  }
 }
 
 c64.game.run({ init, update });
 ```
 
-- `c64.screen.setup(options)` configures border/background/text color, selects
-  standard text mode, and clears the screen. Defaults are black background,
-  matching border and white text. Use `mode: "hires"` for bitmap mode or
-  `clear: false` to preserve contents. Colors may be runtime values; mode and
-  clear must be constants. The original `c64.screen(address)` remains available.
-  Text setup selects the standard VIC text bank/charset; install custom charsets
-  and configure custom screen addresses afterwards.
-- `c64.game.run({ init, update }, options)` combines optional initialization and
-  a required frame update. It accepts the same `hz`/`rasterLine` options as
-  `game.frame`, and does not replace scene management. It cannot be combined with
-  another frame loop or `game.start`.
-- `joystick.scroll(camera, speed)` checks held left/right/up/down directions in
-  that order and delegates to the existing scroller. Speed defaults to 1 and
-  supports runtime values with the same 0..8 checks as individual scroll calls.
-  Constant speed must be 1..8. Opposite directions are both processed; diagonals
-  move both axes. Call it inside the frame update for fresh joystick snapshots.
-- Typed-array `.fill(value)` overwrites the entire fixed array at runtime and
-  returns that array. Partial ranges are not supported. Values follow the same
-  width rules as indexed assignments; use `c64.byte(...)` to truncate explicitly.
-  A descending 6502 indexed loop fills each byte plane, without per-cell bounds
-  checks or an allocated loop variable. This intrinsic requires natural mode.
+Compilez, puis ouvrez le PRG avec l'autostart de votre émulateur :
 
-Screen, game and joystick helpers also work with the legacy DSL and expand into
-existing instructions, with no additional runtime layer. Old API calls remain
-available. `examples/natural-helpers.js` demonstrates setup, filling and updates;
-the natural hires, scroll and Lights Out examples also use these helpers.
-
-Complete reference rewrites are available as `examples/natural-tetris.js`,
-`examples/natural-platformer.js` and `examples/natural-hires-interactive.js`.
-Their source includes the controls. They cover board rotations/line clearing,
-sprite physics/collisions/raster scrolling, and interactive bitmap drawing.
-Executed-code tests validate gameplay and PAL presentation; see
-[`docs/natural-reference-validation.md`](docs/natural-reference-validation.md)
-in the repository for measured code/RAM costs, timing scope and remaining limits.
-
-Configuration handles use `const`. Their runtime fields can be changed naturally:
-
-```js
-const player = c64.sprite.create(0, { x: 160, y: 120 });
-c64.game.frame(() => {
-  if (joystick.right() && player.x < 320) player.x += 2;
-  player.sync(); // publish the position to the VIC-II
-});
+```sh
+npx c64js build main.js -o dist/mon-jeu.prg
 ```
 
-Functions compile to shared `JSR`/`RTS` routines, specialized by parameter widths.
-Parameters, locals and temporary values use static RAM; a function cannot be
-shared between raster IRQ and main/frame code. Unused functions do not generate
-code. Simple increments use `INC`/`DEC`; a regression test checks identical bytes
-and cycle counts against an equivalent recording-DSL program. Complex expressions
-and function calls still have their own RAM/cycle costs. Natural loops have no
-hidden iteration limit and must be written to terminate or fit the frame budget.
+Le source C64 passe par `c64js build`, pas par `node main.js`. Les appels simples
+comme `c64.clearScreen()`, `c64.borderColor(...)` et `c64.backgroundColor(...)`
+restent disponibles.
 
-Runtime values now work across drawing, sprites, counters and scrolling, both
-in natural sources and through typed references in the recording DSL:
+## Fonctionnalités
 
-| API | Runtime arguments |
+| Domaine | Outils |
 | --- | --- |
-| `hires.point`, `line`, `rect`, `fillRect`, `circle`, `fillCircle` | Coordinates, dimensions/radius and color (byte or word) |
-| `hires.clear` | Color |
-| `printAt`, `writeChar`, `fillRect`, `drawFrame`, `clearLine` | Positions, sizes, character codes and colors; text strings remain constants |
-| `printNumber(x, y, value, options)` | Position, unsigned 16-bit value and color |
-| `score.set`, `add`, `sub`, `draw` | Amounts, draw position and color |
-| `sprite.color`, `multicolor`, `expandX`, `expandY`, `priority` | Colors/flags, on sprite handles or the indexed API |
-| `sprite.setPosition` / indexed `setY` | Word-sized Y inputs are checked before conversion to a byte |
-| `camera.left`, `right`, `up`, `down` | Pixel count from a byte or word variable |
+| Langage naturel | Variables byte/word, conditions, boucles, fonctions, tableaux typés fixes |
+| Écran texte | Préparation écran, texte positionné, nombres, cadres et rectangles |
+| Boucle de jeu | Initialisation, mise à jour, cadence logique 50 Hz adaptée PAL/NTSC |
+| Entrées | Joystick, clavier, appui/maintien/relâchement |
+| Organisation | Scènes, compteurs décimaux, hasard reproductible, actions périodiques |
+| Sprites | Propriétés naturelles, animations, collisions, multiplexage jusqu'à 16 sprites logiques |
+| Maps et scroll | Charsets, tuiles, objets, entités, collisions de terrain, caméra et panneau fixe |
+| Audio SID | Trois voix, instruments, patterns, musique et effets non bloquants |
+| Haute résolution | Points, lignes, rectangles et cercles, paramètres calculés |
+| Matériel | Assembleur 6502 intégré, mémoire et dispatcher raster partagé |
+| Livraison | PRG, binaire brut, ASM, listing, BASIC/DATA et disquettes D64 |
+| Diagnostic | Symboles, rapports de ressources, profils de compilation et optimisations naturelles |
+
+Le multiplexeur réutilise les huit sprites matériels à différentes hauteurs ;
+il ne permet pas seize sprites simultanés sur une même ligne raster. En HR,
+les couleurs restent partagées par cellules de 8 × 8 pixels. Le budget CPU et
+la mémoire du C64 restent des contraintes réelles.
+
+## JavaScript pris en charge
+
+La directive `"use c64"` active un **sous-ensemble de JavaScript compilé** :
+
+- `let`, `const`, `if/else`, `for`, `while`, `break`, `continue` ;
+- fonctions nommées, paramètres et retours scalaires, sans récursion ;
+- entiers non signés 8 bits et 16 bits via `c64.byte(...)` / `c64.word(...)` ;
+- comparaisons, logique court-circuitée, calculs entiers et opérations binaires ;
+- multiplication par constante et décalages constants ;
+- `Uint8Array` / `Uint16Array` de 1 à 256 éléments, indices, `length` et `fill` ;
+- références aux sprites, entités, tableaux et autres ressources du moteur.
+
+Il n'y a ni allocation dynamique générale, ni flottants, ni DOM, ni API Node.js
+sur la cible. La division et le modulo dynamiques, les classes, les promesses
+et les méthodes générales de `Array` ne sont pas disponibles. Les assets,
+configurations et noms de ressources sont préparés à la compilation.
+
+Les calculs débordent selon leur largeur : élargissez **avant** l'opération
+avec `c64.word(valeur)` pour dépasser 255. Les paramètres signés de mouvement
+ont leur propre convention ; les comparaisons naturelles restent non signées.
+
+Les optimisations des temporaires, copies et boucles reconnues sont actives
+par défaut. Le [guide](MODE_EMPLOI_DEBUTANT.txt) explique le langage et les limites
+sans imposer de manipuler les détails du code 6502 au quotidien.
+
+## Compilation
+
+```text
+c64js build <source.js> -o <sortie>
+  --format prg|bin|asm|lst|data|d64
+  --assets inline|disk
+  --device 8
+  --disk-name NOM
+  --program-name NOM
+  --sys ADRESSE
+  --opt size|speed|balanced
+  --map symboles.json
+  --report rapport.json
+```
+
+Le format est déduit de l'extension si `--format` est omis.
+
+| Extension | Résultat |
+| --- | --- |
+| `.prg` | Programme C64 chargeable avec lanceur BASIC |
+| `.bin` | Octets bruts |
+| `.asm` | Assembleur généré |
+| `.lst` | Listing avec adresses et octets |
+| `.bas` | Programme BASIC/DATA (`--format data`) |
+| `.d64` | Image disque, assets séparés par défaut |
+
+```sh
+npx c64js build main.js -o dist/jeu.prg --opt balanced --report dist/rapport.json
+npx c64js build main.js -o dist/jeu.lst --map dist/symboles.json
+npx c64js build main.js -o dist/jeu.d64 --assets disk --device 8
+```
+
+Les profils choisissent les stratégies disponibles ; mesurez les gains sur
+votre programme. Une compilation réussie ne remplace pas un test visuel,
+sonore et de timing dans l'émulateur ou sur la machine ciblée.
+
+## API Node.js
+
+Pour vos outils de construction, dans un script Node.js distinct du source C64 :
 
 ```js
-let x = c64.word(260);
-let size = 24;
-let ink = 7;
-c64.hires.fillRect(x, 40, size + 8, size, ink);
+import { writeFile } from "node:fs/promises";
+import { compileFile } from "js-c64";
 
-let points = c64.word(1250);
-const score = c64.game.score({ digits: 5 });
-score.add(points);
-c64.printNumber(2, 3, points, { digits: 5, color: ink });
+const result = await compileFile("main.js", { opt: "balanced" });
+await writeFile("jeu.prg", result.prgBytes);
+console.log(result.assetReport);
 ```
 
-`printNumber` displays 1 to 5 digits (5 by default), padded with zeros. `digits`
-is a compile-time option; values wider than the chosen decimal field display
-their least significant digits. Dynamic counter amounts use the same decimal
-conversion, and arithmetic wraps modulo the counter's decimal capacity. Conversion
-uses one shared 6502 routine with bounded work, not a loop repeated once per point.
-
-Invalid runtime drawing coordinates or dimensions skip the whole operation;
-shapes/text are not clipped or allowed to wrap into adjacent RAM. Dynamic strings
-at a variable position must fit on one 40-character row. Runtime scroll counts
-of 0 or outside 1..8 do nothing; valid counts reuse the existing pixel-step
-routines and their viewport/raster restrictions. Color registers use the low
-nibble. Constant drawing calls retain their specialized paths; dynamic HUD
-values at constant positions still use direct screen addresses.
-
-`textColor(value)` captures the value when executed. In a natural source that
-uses `textColor`, implicit text colors are read at runtime, including across
-branches and repeated function calls; the initial color is white. `printAt`
-also accepts an optional fourth color argument. For callbacks and functions
-without an explicit color, this avoids baking the host's recording order into
-the result. Drawing/formatting helpers use shared scratch RAM and are not
-reentrant: keep these operations in main/frame code rather than interrupting
-them with another drawing operation in a raster IRQ.
-
-Asset definitions, memory addresses, sprite indexes, viewport geometry, text
-strings, animation definitions and timer configuration remain compile-time
-settings. Changing an API to accept calculated values does not make those
-configuration objects dynamically allocated on the C64.
-
-Complete examples:
-
-- [Hires shapes with calculated dimensions and colors](examples/natural-hires.js)
-- [Sprite movement, expansion, color and coordinate display](examples/natural-sprites.js)
-- [Scrolling with a variable speed](examples/natural-scroll.js)
-- [Score, increasing bonus and numeric HUD](examples/natural-score.js)
-
-```bash
-c64js build examples/natural-hires.js -o natural-hires.prg
-c64js build examples/natural-sprites.js -o natural-sprites.prg
-c64js build examples/natural-scroll.js -o natural-scroll.prg
-c64js build examples/natural-score.js -o natural-score.prg
-```
-
-### Existing compiler features
-
-- Full internal NMOS 6502 opcode table for the official instructions commonly used on the C64
-- Labels, forward references, relative branches, symbol map and `.lst` listing generation
-- High-level C64 DSL for screen, color RAM, memory and KERNAL interactions
-- Raster IRQ support with multiple raster lines
-- Exporters for `.prg`, raw `.bin`, readable `.asm`, `.lst` and BASIC loader + `DATA`
-- CLI for `build` and `init`
-- Vitest-based automated tests
-
-## Library API
-
-### High-level C64 DSL
-
-- `c64.borderColor(color)`
-- `c64.backgroundColor(color)`
-- `c64.textColor(color)`
-- `c64.clearScreen()`
-- `c64.print(text)`
-- `c64.printAt(x, y, text)`
-- `c64.printCentered(y, text)`
-- `c64.poke(address, value)`
-- `c64.peek(address)`
-- `c64.memset(address, value, length)`
-- `c64.memcpy(dest, src, length)`
-- `c64.copyDataTo(address, dataRefOrName, length)`
-- `c64.memsetColor(address, color, length)`
-- `c64.writeChar(x, y, char, color)`
-- `c64.fillRect(x, y, w, h, char, color)`
-- `c64.drawFrame(x, y, w, h, char, color)`
-- `c64.clearLine(y, char, color)`
-- `c64.screen(address = 0x0400)`
-- `c64.colorRam(address = 0xD800)`
-- `c64.sys(address)`
-- `c64.label(name)`
-- `c64.comment(text)`
-
-### Data and variables
-
-- `c64.data.byte(name, values)`
-- `c64.data.word(name, values)`
-- `c64.data.string(name, text)`
-- `c64.data.screenString(name, text)`
-- `c64.data.length(name)`
-- `c64.var.byte(name, address, initialValue)` (legacy explicit address)
-- `c64.var.byte(name, { initial, address? })` (typed runtime reference)
-- `c64.var.word(name, address, initialValue)`
-- `c64.varRef(name)`
-- `c64.dataRef(name, length?)`
-
-### Sprite API
-
-The gameplay API represents a sprite as one object. Its X coordinate is a
-9-bit runtime value, so positions from `0` through `511` work and the compiler
-updates both `$D000..$D00E` and the matching bit in `$D010`.
-
-Example:
-
-```js
-import { c64 } from "js-c64";
-
-const pixels = Array(63).fill(0xff);
-const player = c64.sprite.create(0, {
-  x: 100, y: 120, data: pixels, color: c64.COLOR_RED,
-  minX: 24, maxX: 320, minY: 50, maxY: 220,
-  bounceX: true
-});
-
-player.setVelocity(2, 0);
-c64.game.frame(() => player.update());
-```
-
-`player.x`, `y`, `vx`, `vy` and `active` are runtime variables. Use
-`setPosition()`, `setVelocity()`, `setBounds()`, `update()`, `sync()`,
-`enable()`, `disable()`, `reverseX()` and `reverseY()` to control them.
-
-Animations use `c64.sprite.frames()`, then `sequence()`, `play()`,
-`pauseAnimation()` and `resumeAnimation()`. Software hitboxes use
-`a.collides(b)`. Hardware collision snapshots are available through
-`vicCollides()` and `collidesWithBackground()`; the compiler reads the VIC-II
-collision registers only once per frame because reading them clears them.
-
-### Hires bitmap API
-
-- `c64.hires.screen(address = 0x5C00)`
-- `c64.hires.bitmap(address = 0x6000)`
-- `c64.hires.enabled()`
-- `c64.hires.disabled()`
-- `c64.hires.clear(color = c64.COLOR_WHITE)`
-- `c64.hires.point(x, y, color = c64.COLOR_WHITE)`
-- `c64.hires.line(x1, y1, x2, y2, color = c64.COLOR_WHITE)`
-- `c64.hires.rect(x, y, width, height, color = c64.COLOR_WHITE)`
-- `c64.hires.fillRect(x, y, width, height, color = c64.COLOR_WHITE)`
-- `c64.hires.circle(x, y, radius, color = c64.COLOR_WHITE)`
-- `c64.hires.fillCircle(x, y, radius, color = c64.COLOR_WHITE)`
-
-Example:
-
-```js
-import { c64 } from "js-c64";
-
-c64.hires.screen(0x0400);
-c64.hires.bitmap(0x2000);
-c64.hires.enabled();
-c64.hires.clear(c64.COLOR_WHITE);
-c64.hires.line(10, 10, 310, 190, c64.COLOR_BLACK);
-c64.hires.rect(60, 50, 200, 90, c64.COLOR_RED);
-c64.hires.fillRect(90, 70, 40, 20, c64.COLOR_CYAN);
-c64.hires.circle(180, 80, 24, c64.COLOR_ORANGE);
-c64.hires.fillCircle(260, 140, 20, c64.COLOR_GREEN);
-c64.waitKey();
-c64.hires.disabled();
-c64.clearScreen();
-```
-
-Current implementation notes:
-
-- `enabled()` activates bitmap hires mode using the current `screen()` and `bitmap()` addresses
-- `disabled()` switches the VIC back to standard text mode
-- `point`, `line`, `rect` and `fillRect` use shared runtime routines to keep PRG size compact
-- default hires screen RAM is `$5C00`
-- default hires bitmap RAM is `$6000`
-- hires color is limited by the C64 hardware to one foreground/background pair per `8x8` cell
-- this means two differently colored lines crossing the same `8x8` block may visually share or overwrite the block color
-
-### Keyboard wait helper
-
-- `c64.waitKey()`
-
-Example:
-
-```js
-import { c64 } from "js-c64";
-
-c64.printAt(0, 0, "PRESS ANY KEY");
-c64.waitKey();
-c64.clearScreen();
-```
-
-`waitKey()` blocks the generated program until the user presses and releases a key on the C64 keyboard matrix.
-
-### v0.7 gameplay language and loop
-
-The v0.7 gameplay layer provides typed runtime variables, explicit conditions,
-bounded control flow, frame-snapshot input and a normalized game loop:
-
-```js
-import { c64 } from "js-c64";
-
-const joystick = c64.input.joystick(2);
-const player = c64.sprite.create(0, {
-  x: 100, y: 120, data: Array(63).fill(255),
-  minX: 24, maxX: 320
-});
-
-c64.game.frame(() => {
-  player.setVelocity(0, 0);
-  c64.control.if(joystick.left(), () => player.setVelocity(-2, 0));
-  c64.control.if(joystick.right(), () => player.setVelocity(2, 0));
-  player.update();
-});
-```
-
-Runtime types are `c64.var.byte()`, `word()` and `bool()`. Operations include
-`set`, `add`, `sub`, `inc`, `dec`, `and`, `or`, `xor` and `toggle`. Comparisons
-are `eq`, `ne`, `lt`, `lte`, `gt` and `gte`. Joystick directions and fire expose
-held conditions such as `left()`, edge conditions such as `firePressed()`, and
-release conditions such as `fireReleased()`.
-
-Additional v0.7 helpers include:
-
-- `c64.game.init(fn)` and `c64.game.every(frameCount, fn)`
-- `c64.control.repeat()`, bounded `while()`, named `routine()` and `call()`
-- `c64.input.keyboard({ action: matrixKeyCode })`
-- `c64.table.byte()` with runtime indexed `load()` and `store()`
-- automatic PAL/NTSC detection
-
-Runtime decisions must use `c64.control.if()`. A normal JavaScript `if` is
-evaluated by Node.js while compiling and therefore does not represent a decision
-made by the C64.
-
-Only one `c64.game.frame()` loop may be declared. `{ hz: 50 }` produces 50
-logical updates per second on PAL and NTSC; `{ hz: "video" }` follows the native
-video rate (50 PAL, 60 NTSC). Frame tasks must always be bounded.
-See [examples/game-loop-input.js](./examples/game-loop-input.js).
-
-### v1.0 fixed game scenes and level activation
-
-The stable v1.0 game API provides four deliberately fixed scenes: `title`,
-`game`, `pause` and `gameOver`. `c64.game.start()` creates the only frame loop,
-so it must not be combined with `c64.game.frame()`.
-
-```js
-c64.game.scene("title", {
-  enter: () => c64.printCentered(12, "FIRE TO START"),
-  update: () => c64.control.if(joystick.firePressed(), () => c64.game.go("game"))
-});
-
-c64.game.scene("game", {
-  update: () => player.update()
-});
-
-c64.game.start("title", { hz: 50 });
-```
-
-Each scene accepts optional `enter`, `update` and `exit` callbacks. `go()` only
-stores one pending transition; the generated engine applies it after the current
-frame and calls exit/enter in a deterministic order. Use `c64.game.is(name)` for
-a runtime scene condition. See [examples/game-scenes.js](./examples/game-scenes.js).
-
-A map asset now exposes `activate()` and `isActive()`. Embedded builds restore
-the original map cells and charset when activation is applied. An activation requested by
-`game.init()` completes before the first frame; one requested during gameplay is
-processed at the safe end-of-frame boundary. `activate({ draw: true })` also
-redraws the complete map after it has loaded.
-
-### v1.0 counters, deterministic random and fixed pools
-
-Scores and lives use unpacked decimal digits. Updating or drawing them never
-performs a binary-to-decimal division in the frame loop:
-
-```js
-const score = c64.game.score({ digits: 5, initial: 0 });
-const lives = c64.game.lives({ initial: 3 });
-
-score.add(100);
-score.draw(2, 0, { color: c64.COLOR_YELLOW });
-lives.dec();
-lives.draw(35, 0);
-```
-
-Gameplay randomness is reproducible from a non-zero seed. `range(target, 10)`
-writes a value from 0 through 9 into a byte variable:
-
-```js
-const roll = c64.var.byte("roll", { initial: 0 });
-c64.random.seed(42);
-c64.random.range(roll, 10);
-```
-
-Use `c64.pool.fixed()` for a compile-time bounded collection. Its factory runs
-once during compilation; the generated program receives exactly that many
-variables, enemies or projectiles and never allocates runtime memory:
-
-```js
-const bullets = c64.pool.fixed("bullets", 8, (index) => ({
-  active: c64.var.bool(`bullet${index}Active`, false),
-  x: c64.var.word(`bullet${index}X`, { initial: 0 })
-}));
-
-bullets.forEach((bullet) => bullet.active.set(false));
-```
-
-### D64 builds and disk-backed levels
-
-The same source can produce a standalone PRG or a multi-file 1541 disk image:
-
-```bash
-c64js build examples/multilevel-d64.js -o dist/multilevel.d64
-c64js build examples/multilevel-d64.js -o dist/multilevel.asm --format asm --assets disk
-c64js build examples/multilevel-d64.js -o dist/multilevel.prg --assets inline
-```
-
-`.d64` selects disk assets automatically. The image contains one bootable PRG
-and load-address PRG data modules for maps, charsets, tile/collision tables and
-sprite pixels. Only the first PRG is executable; the other entries use the PRG
-directory type because the C64 KERNAL `LOAD` routine filters out USR entries.
-`--device 9`, `--disk-name "MY GAME"` and `--program-name "START"`
-override the beginner-friendly defaults. Use `--report report.json` to inspect
-every filename, RAM address, dependency and allocated disk block.
-
-Disk maps share `$8000-$9FFF`; their active tile tables share `$3800-$3FFF`.
-The loader uses the KERNAL `SETNAM`, `SETLFS` and `LOAD` routines only at a safe
-level boundary. A missing file stops the transition, restores the interrupt
-state, turns the border red and displays `DISK ERROR` using the ROM charset.
-
-Sprite assets are resident by default. Mark level-only graphics and list them
-when activating that level:
-
-```js
-const enemy = c64.assets.loadSprite("assets/enemy.json", {
-  address: 0x2200,
-  resident: false
-});
-
-level2.activate({ draw: true, sprites: [enemy] });
-```
-
-Several non-resident sprite assets may deliberately use the same aligned
-address so their data modules replace one another. The complete example is
-[examples/multilevel-d64.js](./examples/multilevel-d64.js).
-
-### v0.8 sprites, animation and collisions
-
-Multiple 64-byte frames can be shared by sprites and arranged into named
-sequences:
-
-```js
-const frames = c64.sprite.frames("hero", [idlePixels, walkPixels]);
-const hero = c64.sprite.create(0, {
-  x: 80, y: 120, frames,
-  hitbox: { width: 16, height: 20 }
-});
-
-hero.sequence("walk", [0, 1], { speed: 5, loop: true });
-hero.play("walk");
-
-c64.game.frame(() => {
-  hero.update();
-  c64.control.if(hero.collides(enemy), () => hero.reverseX());
-});
-```
-
-The ordinary eight-sprite movement path has a conservative static budget of at
-most about 1,760 CPU cycles per frame (220 per active sprite, without AABB
-tests). That is below 9% of a PAL frame's 19,656 cycles. Game logic, collision
-tests, raster effects and SID work consume additional budget, so expensive work
-should be distributed across frames. See
-[examples/sprite-animate.js](./examples/sprite-animate.js) and the playable
-[examples/breakout-mini.js](./examples/breakout-mini.js).
-
-The compiler uses balanced size optimization by default. Repeated sprite
-synchronization, AABB comparisons and `sid.click()` effects are emitted once as
-shared 6502 subroutines when sharing is smaller than inline code. Reusing the
-identical sprite pixels also share one VIC-II data block. Passing an explicit
-`dataAddress` keeps a private writable block instead. These optimizations
-require no change to normal user JavaScript. On `breakout-mini`, they reduce the PRG from 4,644 to
-3,361 bytes (about 28%) while retaining the logical state needed for 16 sprites. A shared `JSR`/`RTS` costs 12 additional CPU cycles per
-call, which is the intended balanced tradeoff between speed and size.
-
-The v0.11 optimizer can be selected from the command line:
-
-```powershell
-node .\src\cli.js build .\examples\platformer-mini.js -o .\dist\platformer-mini.prg --opt balanced --report .\dist\platformer-mini.report.json
-```
-
-- `balanced` is the default: it shares repeated routines and accepts RLE only
-  when the complete compressed block saves at least eight bytes;
-- `size` accepts every positive net saving after counting the RLE decoder;
-- `speed` keeps map/charset initialization uncompressed and inlines repeated
-  SID click, sprite synchronization and AABB hot paths.
-
-RLE selection is made independently for each map or charset block, so an asset
-that would grow remains raw. The JSON `optimization-summary` reports actual
-bytes for the selected mode, comparative estimates, initialization cycles,
-shared and omitted routines, audio-table savings and multiplexer cycle budgets.
-The non-selected sizes are estimates because pooled data can be shared across
-assets; compile a final release once with each mode when a byte-exact comparison
-matters.
-
-### v0.8.2 virtual sprites 8..15
-
-`c64.sprite.create()` accepts logical indexes `0..15`. Creating index 8 or
-higher automatically enables a compact Y-sorted multiplexer; no additional API
-call is required. Logical indexes no longer determine an upper or lower zone.
-Every active sprite is sorted from its current Y coordinate once per frame and
-assigned to an available VIC-II channel.
-
-```js
-const sprite0 = c64.sprite.create(0, { x: 80, y: 190, frames });
-const sprite8 = c64.sprite.create(8, { x: 180, y: 60, frames });
-
-c64.game.frame(() => {
-  sprite0.update();
-  sprite8.update();
-});
-```
-
-The generated scheduler keeps each sprite assigned for its complete 21-line
-height, or 42 lines with `expandY`. A sprite crossing the middle of the screen
-is therefore not cut and does not need to be duplicated in two fixed banks.
-Its limits are:
-
-- one `c64.game.frame()` loop is required;
-- the logical update starts near raster line 200, or after the scrolling band
-  when a map scroller is present; an explicit `rasterLine` overrides this;
-- the first channels are prepared in the lower border; recycling waits for
-  the actual frame wrap and checks that register writes can finish before Y;
-- all indexes `0..15` may move freely between the top, middle and bottom;
-- no more than eight sprites can overlap the same raster lines;
-- when a ninth sprite overlaps the same vertical interval, that sprite is
-  omitted for the frame because the VIC-II has no ninth physical channel;
-- software `collides()` works across all 16 logical sprites;
-- `vicCollides()` and `collidesWithBackground()` are unavailable because VIC
-  collision bits refer to reused physical channels;
-- do not mix virtual sprites with the legacy direct `c64.sprite.position()` and
-  related hardware API; use the returned sprite objects;
-- frame work must stay bounded so sorting and the first eight channel writes
-  finish before the next visible frame.
-
-The display list is replayed on every video frame, including NTSC frames that
-skip the 50 Hz gameplay update. KERNAL CIA timer interrupts are disabled by
-default for multiplexing, as they are for scrolling; direct input snapshots
-continue to work. An explicit `c64.irq.enableKernalTimer()` opts back in.
-The budget report includes a conservative 14-line reprogramming gap after the
-previous sprite's height. CPU estimates exclude VIC DMA, IRQ work and waits.
-
-See [examples/sprite-multiplex-16.js](./examples/sprite-multiplex-16.js).
-
-### v0.9 static charset and map assets
-
-The NPM package owns the stable asset format, validation and generated C64
-runtime. The dependency-free visual editor lives in `studio graphique/` and
-exports the same JSON schema without making the compiler depend on a browser UI framework.
-
-```js
-const room = c64.assets.loadMap("assets/room.json");
-
-c64.game.init(() => {
-  c64.charset.use(room.charset, { address: 0x3000 });
-  c64.map.draw(room, { x: 0, y: 0 });
-});
-
-const tileX = c64.var.byte("tileX", { initial: 1 });
-const tileY = c64.var.byte("tileY", { initial: 1 });
-
-c64.game.frame(() => {
-  const tile = room.map(tileX, tileY);
-  c64.control.if(tile.isSolid(), () => tileX.set(0));
-  tile.set(1); // updates runtime map RAM and redraws only this tile
-});
-```
-
-Current v0.9 foundation includes:
-
-- JSON loading relative to the compiled JavaScript file;
-- inline assets through `c64.assets.defineMap()`;
-- lossless hires 8x8 and multicolor 4x8 charset data, padded to the VIC-II 2 KB format;
-- every custom charset automatically copies screen codes 0–63 from the C64
-  character ROM into RAM; assets contain only custom glyphs, so those 512
-  bytes are absent from Studio exports, PRGs and D64 modules;
-- studio projects preserve the original screen-code positions for A-Z, space,
-  common punctuation and 0-9; custom glyphs start at code 64;
-- configurable metatiles from 1x1 to 8x8 characters;
-- per-cell colors and a separate logical collision value per tile;
-- compile-time validation of dimensions, byte values and tile references;
-- charset bank/alignment validation and automatic `$DD00`/`$D018` setup;
-- maps stored as mutable two-dimensional runtime state in `$8000..$9FFF`;
-- callable cells with `level.map(x, y)` and the `set()`, `load()`, `eq()`,
-  `ne()`, `isSolid()` and `hasCollision()` operations;
-- automatic redraw of only the changed character or metatile after `set()`;
-- explicit full redraw through `level.map.redraw()`;
-- 16-bit runtime indexing for maps up to 8,192 cells;
-- pixel/tile and character/tile runtime coordinate conversions;
-- an optional object/spawn layer with typed JSON properties;
-- a detailed `assetReport` with address ranges and overlap detection.
-
-Fine scrolling and line removal helpers remain later milestones. See
-[examples/tilemap-static.js](./examples/tilemap-static.js) and its
-[JSON source](./examples/assets/v09-room.json). The package also ships the
-formal [v1 JSON Schema](./schemas/map-asset-v1.schema.json) for editor and IDE
-integration.
-
-The playable [examples/tetris-mini.js](./examples/tetris-mini.js) demonstrates
-dynamic reads and writes: T, O, I and L tetrominoes are selected with a compact
-pseudo-random generator, move with joystick port 2, rotate with FIRE, test the
-map and become solid when they land.
-The demo intentionally focuses on dynamic-map movement, rotation, spawning and
-collision; complete-line removal and scoring remain future gameplay additions.
-
-The playable [Snake](./examples/snake.js) and [multicolor maze](./examples/maze-game.js)
-examples both use 20x15 (300-cell) maps, logical collisions and JSON object/spawn
-metadata. Coordinate conversion is explicit and allocation-free:
-
-```js
-c64.map.pixelToTile(level, { x: playerPixelX, y: playerPixelY }, { x: tileX, y: tileY });
-c64.map.tileToCharacter(level, { x: tileX, y: tileY }, { x: charX, y: charY });
-```
-
-### v0.10 viewport and horizontal fine scrolling
-
-`c64.map.drawViewport()` draws only a bounded window from a larger 16-bit map.
-The camera origin can be a runtime byte variable and is clamped to the last valid
-source column or row. Screen RAM and Color RAM are updated together.
-
-```js
-const cameraX = c64.var.byte("cameraX", { initial: 0 });
-
-c64.map.drawViewport(level, {
-  sourceX: cameraX,
-  sourceY: 0,
-  width: 16,
-  height: 8,
-  x: 12,
-  y: 8
-});
-```
-
-For a smooth two-axis camera, create one scroller and move it from the game
-frame. Every direction moves one pixel by default (or 1 to 8 pixels when an
-argument is supplied):
-
-```js
-const scroll = c64.map.scroller(level, {
-  sourceX: 0,
-  sourceY: 0,
-  width: 16,
-  height: 8,
-  x: 12,
-  y: 6,
-  panel: "bottom"
-});
-
-c64.game.init(() => scroll.draw());
-c64.game.frame(() => {
-  c64.control.if(joystick.left(), () => scroll.left());
-  c64.control.if(joystick.right(), () => scroll.right());
-  c64.control.if(joystick.up(), () => scroll.up());
-  c64.control.if(joystick.down(), () => scroll.down());
-});
-```
-
-The runtime uses `$D016` for fine X and `$D011` for fine Y. Every eight pixels it
-shifts only the viewport in Screen RAM and Color RAM, then streams only the
-incoming map column or row. The camera stops automatically at all four limits.
-
-`panel: "bottom"` supports fine scrolling on both axes and keeps rows below the
-viewport fixed. `$D011` is installed before the first display badline. Before
-the panel, one early IRQ performs a cycle-stable transition and controls the
-VIC-II row counter (`RC`) as well as its video-matrix base (`VCBASE`). Every
-fine-Y position therefore reaches the panel with the same Screen-RAM address,
-not merely the same number of badlines. `panel: "top"` currently supports horizontal fine
-scrolling only: calling `up()` or `down()` is rejected because changing YSCROLL
-below a fixed character panel needs FLD/badline compensation to avoid duplicated
-character rows. The raster handlers share the existing dispatcher with user
-effects, the SID player and sprite animation. `horizontalScroller()` remains as
-an alias for `scroller()`.
-
-Creating a scroller automatically disables the KERNAL CIA timer and uses a
-VIC-only IRQ chain. This prevents a timer IRQ from delaying the entry split by
-one frame, which previously appeared as an occasional seven-pixel flash even
-while the camera was idle. `c64.input` remains available because it snapshots
-the hardware ports directly; KERNAL jiffy-clock and buffered-keyboard services
-must not be relied on in this timing-critical mode.
-
-For an exact fixed-panel size, use the object form. The compiler derives the
-viewport `y` and `height` from the 25-row screen:
-
-```js
-panel: { position: "bottom", rows: 2 } // shorthand: { bottom: 2 }
-panel: { position: "top", rows: 5 }    // shorthand: { top: 5 }
-```
-
-String values remain backward compatible and keep using the explicitly supplied
-viewport geometry. With the object form, the source map must contain at least
-the resulting number of viewport rows. Without vertical movement, a two-row
-bottom panel leaves 23 scrolling rows when the viewport starts at row zero.
-When `up()` or `down()` is used, the last of those 23 rows becomes the protected
-transition band, leaving 22 rows of map plus the two fixed panel rows.
-
-The bottom-Y split reserves one complete character row between the moving map
-and the fixed panel. During that row it temporarily selects an empty charset,
-then briefly clears `DEN` only after the current VIC-II row has completed. The
-empty glyphs use the current background color, so the guard does not introduce a
-black seam. The saved `$D011`, `$D016` and `$D018` values are restored before the
-panel. Fixed-panel drawing coordinates do not change: the compiler stores those
-characters one Screen-RAM row earlier to match the deliberately normalized
-`VCBASE`. One early IRQ polls the exact transition rasters internally, removing
-dispatcher jitter between closely spaced register writes.
-
-Current limits are deliberate: tiles must be 1x1 character, the visible window
-must stay in columns 1 through 38, and movement should run inside
-`c64.game.frame()`. Coarse X copies finish each row from top to bottom and copy
-two cells per branch (four on the large deferred left-copy path). When `rasterLine` is omitted, the compiler automatically
-synchronizes the game loop just after the scrolling band. The initial `draw()`
-remains a full viewport draw.
-
-Fine-scroll wrap values are published before row copies so the next raster
-entry sees the phase matching the newly streamed characters. In `balanced` and
-`speed` modes, scrolling maps share a table of row addresses (two bytes per map
-row), keeping a tile-address calculation within 42 CPU cycles including `JSR`.
-`size` mode shares an arithmetic address routine instead. Only referenced
-scroll directions are included in the PRG. The frame loop detects crossing
-the target raster, so an IRQ spanning that line does not force an extra frame
-of waiting.
-
-For a large horizontal viewport with one direct `camera.follow()` per frame
-and at most eight logical sprites, the automatic frame loop prepares movement
-after the scroll-entry IRQ, defers character/color copies until the end of the
-scrolling band, and presents sprites in fixed hardware slots at raster 256.
-A pending-frame flag retains a tick received during a copy. This avoids the
-late-copy artifacts and extra polling frame reproduced in `platformer-mini`.
-Explicit frame rasters, manual scroll moves, scene/asset transitions and calls
-to user routines retain the existing scheduling path. The example's PAL
-regression executes both scroll directions across all 45 camera columns with
-three sprites and checks screen/color rows at their raster fetch deadlines.
-
-The build `assetReport` contains `map-scroll` with separate horizontal and
-vertical wrap estimates, raster split lines, PAL/NTSC safety windows and eleven
-runtime state bytes when Y scrolling is used. It also reports `transitionRows`,
-`panelMemoryRowOffset` and the reserved blank-charset address. It reports the automatically selected frame raster, the
-beam-raced row strategy and PAL/NTSC budgets. The coarse `drawViewport()` API
-remains available and still reports `map-viewport`. See
-[examples/tilemap-scroll-x.js](./examples/tilemap-scroll-x.js).
-
-The wrap estimates cover copy CPU work; they do not include user logic, IRQ
-handlers or VIC DMA stalls. A `FitsPal`/`FitsNtsc` estimate alone is therefore
-not a guarantee of tear-free rendering for a complete game. The focused
-`platformer-mini` timing regression currently models PAL, not NTSC.
-
-If an actually used vertical direction cannot finish before the PAL raster beam
-returns, compilation now fails instead of emitting a visibly unstable wrap.
-Reduce the viewport width or height until that direction is marked safe. NTSC
-safety remains visible separately in the build report.
-
-### v0.10.1 map entities (first foundation)
-
-Map objects may now define a stable `id` and an optional sprite-asset name.
-Their tile coordinates are normalized to exact `worldX`/`worldY` pixel
-coordinates. Older v1 maps remain valid and receive deterministic generated ids.
-
-```js
-const hero = c64.assets.loadSprite("assets/hero.sprite.json", { address: 0x2e00 });
-const level = c64.assets.loadMap("assets/room.json");
-const spawn = c64.map.object(level, "player-spawn");
-const player = c64.map.spawn(level, spawn.id, {
-  sprite: 0
-});
-
-c64.game.frame(() => {
-  player.worldX.add(1);
-  player.project({ cameraX, cameraY, viewportWidth: 320, viewportHeight: 200 });
-});
-```
-
-The map object may contain `"sprite": "hero"`. The referenced asset must first
-be loaded with `loadSprite()` (or created inline with `defineSprite()`). The
-versioned `sprite-asset-v1` JSON stores 63-byte 24x21 frames, hires/multicolor
-mode, the sprite and shared colors, origin, hitbox, named animations, speed and
-loop state. The compiler reports the asset file and object id when a sprite or
-animation reference is missing.
-
-An object property such as `"animation": "idle-right"` starts that sequence
-automatically. Runtime code can select another shared animation table with
-`player.play("run-right")` or `player.play("run", "right")`. Calling
-`moveAndCollide()` advances the entity animation once for that gameplay frame.
-Several entities can reuse the same `SpriteAsset` and frame storage.
-
-`worldX` and `worldY` are 16-bit level coordinates. `screenX` and `screenY`
-belong to the linked logical sprite (0..15). `project()` converts from world to
-VIC-II coordinates and hides an entity whose origin is outside the viewport.
-Use `cullingMargin: 24` or `{ x: 24, y: 21 }` to keep sprites alive just beyond
-the viewport edge. Projection preserves an explicit `disable()` state, while
-`respawn(id)` resets position, velocity and contacts without rebuilding the
-engine.
-Entity movement can now use the logical collision layer:
-
-```js
-player.setVelocity(0, 0);
-c64.control.if(joystick.left(), () => player.velocityX.set(-2));
-c64.control.if(joystick.right(), () => player.velocityX.set(2));
-player.moveAndCollide();
-
-c64.control.if(player.isOnGround(), () => player.jump(4));
-```
-
-`moveAndCollide()` resolves X then Y against the entity hitbox. Every non-zero
-tile collision value is solid by default. Movement is split into one-pixel
-steps (up to `maxCollisionSpeed`, 8 by default), preventing fast entities from
-crossing a wall. Contact states are available through `onGround`, `hitCeiling`,
-`hitLeft` and `hitRight`. Dynamic tile changes are read immediately from map
-RAM. Scroller projection includes the VIC-II's initial seven-pixel `$D016`
-phase, so the visual sprite hitbox and the logical tile edge share the same
-world-pixel origin. Vertical projection also includes the four-pixel difference
-between the normal `$D011=3` screen phase and the scrolling `$D011=7` phase.
-
-`collisionBehaviors` can map values to `solid`, `platform`, `danger`, `ladder`,
-`exit` or `passable`. One-way `platform` values block downward motion but remain
-traversable from below and from the sides. Entities expose `isOnDanger()`,
-`isOnLadder()` and `isAtExit()`. `entity.collides(other)` reuses the software
-AABB path for entity/entity contacts.
-
-The fine scroller can now follow an entity and project every other visible
-entity from the same 16-bit camera position:
-
-```js
-const camera = c64.map.scroller(level, {
-  width: 18, height: 12, x: 1, y: 1, panel: "bottom"
-});
-
-c64.game.frame(() => {
-  player.moveAndCollide();
-  camera.follow(player, {
-    axis: "both",
-    deadZone: { x: 48, y: 32, width: 48, height: 32 },
-    maxSpeed: 2
-  });
-  camera.project(enemy);
-});
-```
-
-Call `follow()` after moving the player. It updates the scroller by at most 1 to
-8 pixels per frame, clamps to all map limits, and projects the followed entity
-automatically. `camera.project()` uses the same camera for additional physical
-or multiplexed sprites. A top fixed panel currently supports X-only following;
-Y or `both` requires `panel: "bottom"` until FLD compensation is implemented.
-
-Multicolor sprites all share the VIC-II `$D025`/`$D026` colors. js-c64 therefore
-rejects two used multicolor assets that request incompatible shared colors.
-Frame addresses remain 64-byte aligned inside VIC bank 0, and the normal memory
-report detects overlaps with the program, charset, blank scroll charset and
-other sprite data. See [the schema](./schemas/sprite-asset-v1.schema.json),
-[the example asset](./examples/assets/v10-hero.sprite.json) and
-[examples/map-entity-spawn.js](./examples/map-entity-spawn.js).
-
-The build report adds `map-entity-budget` and `sprite-multiplexer-budget`,
-including sprite memory, visible entity capacity, raster overlap and the stable
-overflow policy. Later Y-sorted sprites are skipped deterministically when no
-hardware slot is free; the CLI prints `SPRITE_RASTER_BUDGET` for unsafe scenes.
-Large games may call `c64.program.start(0x4000)` so generated code does not
-compete with VIC bank-0 assets. Relocated PRGs use a compact `$0810` copy loader
-instead of padding the file with zeroes up to `$4000`. See
-[examples/platformer-mini.js](./examples/platformer-mini.js).
-
-### SID audio API
-
-The SID layer now includes the completed `v0.11.0` game-audio foundation:
-
-- `c64.sid.volume(value)`
-- `c64.sid.filter(mode, cutoff, resonance)`
-- `c64.sid.voice(voice).frequency(value)`
-- `c64.sid.voice(voice).pulseWidth(value)`
-- `c64.sid.voice(voice).waveform(type)`
-- `c64.sid.voice(voice).gate(on = true)`
-- `c64.sid.voice(voice).attackDecay(value)`
-- `c64.sid.voice(voice).sustainRelease(value)`
-- `c64.sid.note(voice, noteName, duration = 0)`
-- `c64.sid.freq(voice, hzOrRawValue)`
-- `c64.sid.rest(voice, duration = 0)`
-- `c64.sid.pattern(name, entries)`
-- `c64.sid.instrument(name, options)`
-- `c64.sid.playSong(songDefinition)`
-- `c64.sid.reserveSfxVoice(voice)`
-- `c64.sid.installPlayer(line = 250)`
-- `c64.sid.pauseSong()`
-- `c64.sid.resumeSong()`
-- `c64.sid.fadeSong(targetVolume, stepEvery = 4)`
-- `c64.sid.stopSong()`
-- `c64.sid.beep()`
-- `c64.sid.click()` (non-blocking envelope retrigger, safe inside the game loop)
-- `c64.sid.noise(duration = 12)`
-- `c64.sid.explosion()`
-- `c64.sid.laser()`
-- `c64.sid.pickup()`
-
-All six effect helpers return immediately. `beep`, `noise`, `explosion`,
-`laser` and `pickup` use a shared IRQ sequencer; `click` joins it when it is
-present, otherwise it retains its compact envelope-only implementation.
-Effects use the reserved SFX voice, or voice 1 by default. A new effect replaces
-the previous one on that voice; consecutive calls do not form a queue.
-`noise(duration)` counts 1/50-second ticks on both PAL and NTSC (`0` means one
-tick). The release envelope continues in the SID after the last gate-off.
-Effect timbres retain their waveforms/envelopes, but their durations now follow
-the video clock rather than CPU busy loops. Onset is on the next logical audio
-tick. `note()` and `rest()` with a positive duration remain synchronous legacy
-calls and produce a `SID_BLOCKING_DELAY` build warning; use `playSong()` for
-background note sequences.
-
-Supported waveforms:
-
-- `triangle`
-- `saw`
-- `pulse`
-- `noise`
-
-Example:
-
-```js
-import { c64 } from "js-c64";
-
-c64.sid.volume(15);
-c64.sid.voice(1).waveform("pulse");
-c64.sid.voice(1).pulseWidth(0x0800);
-c64.sid.voice(1).attackDecay(0x11);
-c64.sid.voice(1).sustainRelease(0xf0);
-c64.sid.filter("lowpass", 1024, 8);
-c64.sid.note(1, "C4", 10);
-c64.sid.rest(1, 4);
-c64.sid.note(1, "G4", 10);
-```
-
-Current notes:
-
-- `note()` accepts names like `C4`, `F#4`, `Bb3`
-- if `duration > 0`, the generated code waits briefly and then closes the gate
-- `freq()` currently treats small values like `440` as Hertz and larger values as raw SID register values
-- `filter(mode, cutoff, resonance)` writes the SID filter registers `$D415` to `$D418`
-- `mode` accepts `off`, `lowpass`, `bandpass`, `highpass`, combinations like `lowpass+highpass`, or an array like `["lowpass", "bandpass"]`
-- `cutoff` must be between `0` and `2047`
-- `resonance` must be between `0` and `15`
-- `playSong()` is now a non-blocking 3-voice IRQ player with a shared tempo
-- `tempo` uses a logical 50 Hz clock on both PAL and NTSC machines
-- `loop: true` restarts the song without stopping its voices
-- `reserveSfxVoice(1..3)` gives effects priority on one voice and removes that
-  voice's unused music tables from the PRG
-- `pauseSong()` and `resumeSong()` preserve the current song position
-- `pattern()` returns a reusable phrase; use `pattern.repeat(count)` without
-  copying note arrays in user code
-- `instrument()` groups waveform, pulse width and ADSR settings and can be
-  assigned through `playSong({ instruments: [lead, bass, null] })`
-- `fadeSong(targetVolume, stepEvery)` changes one volume level every requested
-  logical tick inside the IRQ, without blocking the game loop
-- `playSong()` can coexist with raster IRQ effects and the sprite animator
-- one-shot effects like `beep()` or `laser()` are still simple immediate helpers, while `playSong()` is the background music layer
-- the `sid-audio` build report describes voice ownership, timing and saved bytes;
-  `SID_VOICE_CONFLICT` warns when music and effects still share voice 1
-- identical expanded tables used by several music voices are stored only once
-- an exactly repeated loop stores only its smallest common musical period; the
-  `sid-audio` report keeps both expanded and stored step counts
-
-Song example:
-
-```js
-const lead = c64.sid.instrument("lead", {
-  waveform: "pulse", pulseWidth: 0x0800,
-  attackDecay: 0x11, sustainRelease: 0x98
-});
-const riff = c64.sid.pattern("riff", ["C4", "E4", "G4", "C5"]);
-
-c64.sid.reserveSfxVoice(3);
-c64.sid.playSong({
-  tempo: 8,
-  loop: true,
-  instruments: [lead, null, null],
-  voices: [
-    riff.repeat(2),
-    [{ note: "C3", duration: 2 }, { note: "G2", duration: 2 }],
-    [{ rest: true, duration: 8 }]
-  ]
-});
-```
-
-See [examples/sid-game-audio.js](./examples/sid-game-audio.js) for joystick
-pause/resume controls and a non-blocking effect on the reserved voice.
-
-Music plus raster example:
-
-```js
-import { c64 } from "js-c64";
-
-c64.sid.volume(15);
-c64.sid.filter("lowpass", 1200, 8);
-c64.sid.playSong({
-  tempo: 18,
-  voices: [
-    ["C4", "E4", "G4", "C5"],
-    ["C3", "R", "G2", "R"],
-    ["R", "C5", "R", "G4"]
-  ]
-});
-
-c64.irq.raster(50, () => {
-  c64.borderColor(c64.COLOR_RED);
-});
-
-c64.irq.raster(150, () => {
-  c64.borderColor(c64.COLOR_BLUE);
-});
-
-c64.irq.chainToKernal();
-c64.irq.install();
-```
-
-### Low-level assembler helpers
-
-```js
-import { c64 } from "js-c64";
-
-c64.asm.label("loop");
-c64.asm.lda(c64.imm(0));
-c64.asm.sta(c64.abs(c64.VIC_BORDER_COLOR));
-c64.asm.jmp(c64.abs("loop"));
-```
-
-### Raster IRQ
-
-```js
-import { c64 } from "js-c64";
-
-c64.borderColor(c64.COLOR_BLACK);
-c64.backgroundColor(c64.COLOR_BLACK);
-
-c64.irq.disableKernalTimer();
-
-c64.irq.raster(50, () => {
-  c64.borderColor(c64.COLOR_RED);
-});
-
-c64.irq.raster(150, () => {
-  c64.borderColor(c64.COLOR_BLUE);
-});
-
-c64.irq.install();
-```
-
-For long-running BASIC-friendly effects, you can use `rasterLoop()`:
-
-```js
-import { c64 } from "js-c64";
-
-c64.irq.rasterLoop(245, () => {
-  c64.asm.lda(c64.abs("color_state"));
-  c64.asm.clc();
-  c64.asm.adc(c64.imm(1));
-  c64.asm.and(c64.imm(0x0f));
-  c64.asm.sta(c64.abs("color_state"));
-  c64.asm.sta(c64.abs(c64.VIC_BORDER_COLOR));
-});
-
-c64.asm.label("color_state");
-c64.asm.byte(0x00);
-```
-
-`rasterLoop()` is a convenience helper:
-
-- it registers one raster handler
-- it keeps the KERNAL CIA timer IRQ active by default
-- it installs the IRQ automatically unless disabled in options
-
-This emits IRQ setup code including:
-
-- `SEI`
-- CIA IRQ masking when requested
-- IRQ vector writes to `$0314/$0315`
-- raster target setup via `$D012`
-- high raster bit management through `$D011`
-- VIC IRQ enable via `$D01A`
-- IRQ acknowledge via `$D019`
-- VIC/CIA source filtering through `$D019`
-- a fast raster exit through the KERNAL epilogue at `$EA81`
-- optional chaining of CIA timer IRQs to the KERNAL routine at `$EA31`
-
-## CLI
-
-```bash
-c64js build examples/hello.js -o hello.prg
-c64js build examples/hello.js -o hello.bin --format bin --sys 8192
-c64js build examples/hello.js -o hello.asm --format asm --sys 8192
-c64js build examples/hello.js -o hello.lst --format lst --sys 8192 --map symbols.json
-c64js build examples/hello.js -o hello.bas --format data --sys 49152
-c64js init my-c64-demo
-```
-
-## Outputs
-
-- `.prg`: C64 executable with load address `$0801`
-- `.bin`: raw machine code
-- `.asm`: readable 6502 assembly
-- `.lst`: address and opcode listing
-- `.bas`: BASIC loader plus `DATA`
-
-## Examples
-
-- [examples/hello.js](./examples/hello.js)
-- [examples/colors.js](./examples/colors.js)
-- [examples/comfort-frame.js](./examples/comfort-frame.js)
-- [examples/comfort-data-vars.js](./examples/comfort-data-vars.js)
-- [examples/screen-fill.js](./examples/screen-fill.js)
-- [examples/keyboard.js](./examples/keyboard.js)
-- [examples/joystick.js](./examples/joystick.js)
-- [examples/game-loop-input.js](./examples/game-loop-input.js)
-- [examples/breakout-mini.js](./examples/breakout-mini.js)
-- [examples/raster-bars.js](./examples/raster-bars.js)
-- [examples/raster-ready-border-cycle.js](./examples/raster-ready-border-cycle.js)
-- [examples/vice-showcase.js](./examples/vice-showcase.js)
-- [examples/sprite-api.js](./examples/sprite-api.js)
-- [examples/sprite-animate.js](./examples/sprite-animate.js)
-- [examples/sprite-multiplex-16.js](./examples/sprite-multiplex-16.js)
-- [examples/tilemap-static.js](./examples/tilemap-static.js)
-- [examples/tetris-mini.js](./examples/tetris-mini.js)
-- [examples/sid-beep.js](./examples/sid-beep.js)
-- [examples/combo-irq.js](./examples/combo-irq.js)
-- [examples/sprite-basic.js](./examples/sprite-basic.js)
-
-`examples/raster-bars.js` is the stable-timing IRQ reference to try in VICE
-first. It disables the CIA timer so nothing can delay its two raster splits.
-`examples/raster-ready-border-cycle.js` shows a single raster IRQ that cycles the border color from `0` to `15` forever while chaining back to the KERNAL IRQ so the `READY.` prompt remains responsive.
-`examples/vice-showcase.js` is the more presentation-oriented demo for VICE with animated border and background colors.
-`examples/sprite-animate.js` shows v0.8 multi-frame animation and bounded movement.
-`examples/sprite-multiplex-16.js` shows the dynamic Y-sorted renderer displaying all 16 logical sprites.
-`examples/breakout-mini.js` combines seven sprites, AABB collisions, sound and a minimal score.
-`examples/combo-irq.js` shows the current `v0.6.0` direction: background SID music plus raster color changes on the same IRQ system.
-
-## Keeping READY Alive
-
-If you want an IRQ effect to continue after `SYS 2064` returns to BASIC, prefer this pattern:
-
-- install a raster IRQ
-- do not disable the KERNAL timer IRQ unless you really need to
-- call `c64.irq.chainToKernal()`
-- store effect state in your own program variable or RAM location instead of relying on fragile temporary zero-page values
-
-The `examples/raster-ready-border-cycle.js` demo follows this model.
-
-Raster hits themselves use the short KERNAL exit at `$EA81`; only CIA timer
-hits run the full `$EA31` handler. This keeps raster splits deterministic while
-the keyboard, clock and `READY.` prompt continue to work normally.
-
-## Development
-
-```bash
+`compileJsToC64Outputs` accepte un texte source. Les résultats exposent notamment
+`prgBytes`, `bytes`, `asmText`, `listingText`, `symbols`, `basicText`, `assetReport`
+et `diskFiles`. L'option `naturalOptimizations: false` permet une comparaison
+diagnostique avec la passe naturelle désactivée.
+
+Exports spécialisés : `js-c64/assembler`, `js-c64/compiler`, `js-c64/assets`,
+`js-c64/d64`, `js-c64/irq/raster`. Les [types](index.d.ts) décrivent les objets et
+options publics ; les [schémas](https://github.com/Roxell2006/compilateur-js-c64/tree/main/schemas)
+décrivent les ressources JSON.
+
+## Exemples et documentation
+
+**Commencer : [Guide progressif en français](MODE_EMPLOI_DEBUTANT.txt).**
+Installation, langage naturel, écran, jeu, assembleur, sprites, SID, HR,
+interruptions, maps, scroll et disque, avec table des matières et référence rapide.
+
+| Programme | Ce qu'il montre |
+| --- | --- |
+| [Tetris naturel](examples/natural-tetris.js) | Grille, tableaux, fonctions et rotations |
+| [Platformer naturel](examples/natural-platformer.js) | Entités, physique, animation, caméra, collisions et scroll |
+| [HR interactive](examples/natural-hires-interactive.js) | Calculs, pinceau et dessin conditionnel |
+| [Helpers](examples/natural-helpers.js) | Préparation écran, tableaux et boucle de jeu |
+| [Sprites](examples/natural-sprites.js) | Coordonnées, couleurs et entrées |
+| [Scroll](examples/natural-scroll.js) | Commandes et scroller |
+
+Les exemples et leurs assets sont livrés avec le paquet. Dans un projet
+indépendant, adaptez leur import interne en `import { c64 } from "js-c64"` et
+copiez les JSON référencés.
+
+Le [dépôt source](https://github.com/Roxell2006/compilateur-js-c64) contient aussi
+le Studio graphique (`studio graphique/index.html`), les tests, scripts et
+rapports de validation (`docs/`). Ces dossiers ne sont pas inclus dans le paquet npm.
+Les [notes de version](CHANGELOG.md) détaillent les changements.
+
+## Versions
+
+### 1.1.0 
+
+L'objectif est de rendre l'écriture des programmes plus directe tout en
+conservant la compilation native 6502 et les appels existants.
+
+- Mode naturel : conditions, calculs, boucles, fonctions, valeurs byte/word et
+  tableaux typés fixes, avec vérifications et diagnostics adaptés au C64.
+- Accès naturel aux propriétés des sprites et entités ; paramètres calculés
+  pour le texte, les formes HR et les opérations prises en charge.
+- Abstractions communes : `screen.setup`, `game.run`, `game.every`, remplissage
+  de tableaux et `joystick.scroll`.
+- Trois références réécrites : Tetris, Platformer et démo HR interactive.
+- Corrections HR et validation des formes calculées.
+- Optimisation conservatrice des temporaires, copies et boucles de remplissage,
+  avec garde-fous pour les interruptions et les accès aux API.
+- Guide réorganisé autour du mode naturel.
+
+Les interfaces de la génération 1.0 restent conservées ; le parcours conseillé
+pour les nouveaux programmes est le mode naturel. **Cette section décrit le
+travail de développement, pas une version 1.1.0 déjà publiée sur npm.**
+
+### 1.0.1 — corrections et fiabilisation
+
+- Corrections de timing du Platformer et du scroll : préparation des déplacements,
+  copies d'écran, phases fines/grossières et présentation des sprites.
+- Fiabilisation des attentes raster et du multiplexeur, notamment au passage
+  des lignes 255/256 et avec l'adaptation NTSC.
+- Bruitages non bloquants à cadence 50 Hz PAL/NTSC, redéclenchement et préservation
+  des temporaires de page zéro utilisés par les interruptions audio.
+- Routines de lignes de maps partagées pour les grands niveaux ; corrections
+  de références de labels en page zéro.
+- Préservation des caractères système dans les charsets personnalisés,
+  ajustements du Studio et corrections de Snake.
+- Tests d'exécution renforcés pour maps, timing, audio et coexistence des moteurs.
+
+### 1.0.0 — première version npm
+
+- Compilation JavaScript vers 6502 et assembleur intégré.
+- Écran texte, HR, sprites, animation, collisions, maps, scroll, SID et raster.
+- Organisation des jeux : scènes, scores/vies, hasard déterministe et ressources
+  fixes ; assets et chargement de niveaux.
+- Sorties PRG, BIN, ASM, listing, BASIC/DATA et D64 ; profils d'optimisation et
+  rapports de compilation.
+- Distribution npm avec CLI, API, types, schémas, exemples et contrôles de livraison.
+
+## Développement
+
+Depuis le dépôt :
+
+```sh
 npm install
 npm test
 npm run build:demos
-npm run release:check
+npm run package:check
 ```
 
-`release:check` runs the full test suite, builds every example and the
-multi-level D64, enforces the four game budgets in `release-budgets.json`, packs
-the exact NPM tarball, installs it in an empty project and executes the installed
-`npx c64js`. CI performs the same release gate on Windows and Linux with Node
-18, 20 and 22. Generated release evidence is written to `dist/release/validation.json`.
+`npm run release:check` reconstruit et valide la livraison, dont l'installation
+du paquet produit. Les mesures et rapports d'optimisation se trouvent dans
+`scripts/measure-natural-optimizations.js` et `docs/natural-compiler-optimization.md`.
 
-## Security Considerations
+Pour signaler un problème, joignez un source minimal, les assets nécessaires,
+la commande de compilation, la version utilisée et le contexte PAL/NTSC dans
+les [issues](https://github.com/Roxell2006/compilateur-js-c64/issues).
 
-The DSL works by executing the input JavaScript file in Node.js and capturing calls made to the `c64` API. This means source files passed to `c64js build` are code, not passive data.
+## Licence
 
-Do not compile untrusted `.js` DSL files without sandboxing them yourself first. Running a malicious input file can execute arbitrary Node.js code with the permissions of the current user.
-
-## Limits
-
-This is not a full JavaScript compiler. It is a JavaScript DSL executed by Node.js that emits 6502 machine code.
-
-Known limits in `1.0.0`:
-
-- high-level operations are intentionally small and direct
-- `peek()` is mainly useful together with `poke()` or custom low-level assembly flows
-- IRQ helpers focus on raster setup and dispatch, not full interrupt framework abstraction
-- sprite AABB collisions are rectangle-based; tile collisions use map collision values and behaviors rather than pixel-perfect masks
-- screen text conversion is intentionally simple
-- hires bitmap support is currently focused on the standard monochrome `320x200` mode with per-cell `8x8` color limits
-- disk level loading is intentionally blocking and uses the stock KERNAL loader; a fastloader is outside the 1.0 scope
-- pools, scenes and the logical sprite count are deliberately bounded at compile time; there is no heap or garbage collector on the C64
+[MIT](LICENSE) — Roxell2006.

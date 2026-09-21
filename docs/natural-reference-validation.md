@@ -3,6 +3,10 @@
 These are complete opt-in `"use c64"` rewrites. The original examples remain
 available for compatibility comparisons. This validation does not publish 1.1.
 
+The figures below record the initial rewrites, before temporary/copy optimization.
+For current optimized costs and a reproducible comparison script, see
+[natural compiler optimization](natural-compiler-optimization.md).
+
 | Program | Original JS lines | Natural JS lines | Original PRG | Natural PRG |
 | --- | ---: | ---: | ---: | ---: |
 | Tetris Mini | 304 | 151 | 3,432 bytes | 3,906 bytes |

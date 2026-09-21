@@ -30,6 +30,8 @@ export interface CompileResult {
 }
 
 export interface CompileOptions {
+  /** Disable natural-mode IR/loop optimizations for diagnostics and comparisons. Default true. */
+  naturalOptimizations?: boolean;
   codeStart?: number;
   sysAddress?: number;
   opt?: "size" | "speed" | "balanced";

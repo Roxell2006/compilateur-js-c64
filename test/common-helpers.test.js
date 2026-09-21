@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import { compileJsToC64Outputs } from "../src/compiler.js";
 import { Cpu6502 } from "./helpers/cpu6502.js";
 
-async function execute(source) {
-  const result = await compileJsToC64Outputs(`"use c64"; ${source}`);
+async function execute(source, options = {}) {
+  const result = await compileJsToC64Outputs(`"use c64"; ${source}`, options);
   const cpu = new Cpu6502(result);
   cpu.push(255); cpu.push(254);
   cpu.runUntil(c => c.pc === 65535, 2000000);
@@ -64,7 +64,7 @@ describe("common program helpers", () => {
   it("fills through array parameters, returns the array and emits less work than an indexed loop", async () => {
     const source = `const cells = new Uint8Array(16);`;
     const fast = await execute(source + `function reset(board) { board.fill(4).fill(2); } reset(cells);`);
-    const slow = await execute(source + `for (let i = 0; i < cells.length; i++) cells[i] = 2;`);
+    const slow = await execute(source + `for (let i = 0; i < cells.length; i++) cells[i] = 2;`, { naturalOptimizations: false });
     expect(fast.cpu.memory.slice(fast.result.symbols.__js_array_0, fast.result.symbols.__js_array_0 + 16)).toEqual(new Uint8Array(16).fill(2));
     // Even two fills and a function call cost less than one checked JS loop.
     expect(fast.cpu.cycles).toBeLessThan(slow.cpu.cycles);

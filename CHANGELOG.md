@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Optimized natural-mode private temporaries and expression copies, with separate routine/IRQ storage and conservative lifetime checks
+- Recognized full typed-array fill loops without changing side effects, counter wrapping or IRQ-observable write ordering; added optimization reports and a compiler API comparison switch
+- Reduced natural Tetris from 104 to 64 scalar RAM bytes and from 3,906 to 3,768 PRG bytes without changing its source; added reproducible measurements and differential 6502 tests
+
 - Added complete natural-mode Tetris, Platformer and interactive hires reference programs, with executed-6502 gameplay checks and PAL raster parity for both Platformer versions
 - Kept deferred scroll scheduling when camera follow is called inside named natural functions; validated the schedule before emitting those routine bodies
 - Fixed runtime-argument validation for entity/sprite resource handles and reset map/scroller IDs between compilations for deterministic outputs

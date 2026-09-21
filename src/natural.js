@@ -1,6 +1,7 @@
 import { parse, tokenizer } from "acorn";
 import { c64 } from "./c64.js";
 import { captureBlock, getProgramState, pushInstruction, setTextColor } from "./runtime.js";
+import { optimizeNaturalIR } from "./natural-optimizer.js";
 
 // This frontend evaluates configuration on the host and lowers gameplay to the
 // same IR as the original DSL. It never executes a user's runtime branch/loop.
@@ -38,7 +39,7 @@ class Scope {
   get(name) { return this.bindings.get(name) ?? this.parent?.get(name); }
 }
 
-export function recordNaturalSource(source, filename = "<source>") {
+export function recordNaturalSource(source, filename = "<source>", { optimize = true } = {}) {
   let tree;
   try { tree = parse(source, { ecmaVersion: "latest", sourceType: "module", locations: true }); }
   catch (error) { throw new Error(`${filename}:${error.loc?.line ?? 1}:${(error.loc?.column ?? 0) + 1}: ${error.message}`); }
@@ -46,6 +47,14 @@ export function recordNaturalSource(source, filename = "<source>") {
   const routines = [];
   const routineNodes = new Map();
   let serial = 0;
+  let fillLoops = 0;
+  let recordingFillFallback = false;
+  function mentionsIrq(node) {
+    if (!node || typeof node !== "object") return false;
+    if (node.type === "MemberExpression" && node.object.name === "c64" && (node.property.name ?? node.property.value) === "irq") return true;
+    return Object.values(node).some(value => Array.isArray(value) ? value.some(mentionsIrq) : value?.type && mentionsIrq(value));
+  }
+  const hasUserIrq = mentionsIrq(tree);
   const objectIds = new WeakMap();
   function signature(value) {
     if (isRef(value) || typeof value === "number" || typeof value === "boolean") return width(value);
@@ -80,12 +89,12 @@ export function recordNaturalSource(source, filename = "<source>") {
     if (env.bindings.has(name) && !env.bindings.get(name).uninitialized) fail(node, `Duplicate declaration: ${name}`);
     env.bindings.set(name, binding);
   }
-  function allocate(type = "byte", hint = "temp") {
+  function allocate(type = "byte", hint = null, temporary = hint === null) {
     let ref;
-    captureBlock(() => { ref = c64.var[type](`__js_${hint.replace(/[^a-zA-Z0-9_]/g, "_")}_${serial++}`, { initial: 0 }); });
+    captureBlock(() => { ref = c64.var[type](`__js_${(hint ?? "temp").replace(/[^a-zA-Z0-9_]/g, "_")}_${serial++}`, { initial: 0 }); });
     // All assignments stay at their source execution point. Reserving storage
     // must not add startup stores for every compiler temporary and parameter.
-    declarations.push({ op: "naturalVariable", args: [ref.name, type] });
+    declarations.push({ op: "naturalVariable", args: [ref.name, type, { temporary }] });
     ref[Symbol.toPrimitive] = () => { throw new Error("This API argument must be a compile-time constant, not a runtime variable"); };
     return ref;
   }
@@ -140,7 +149,7 @@ export function recordNaturalSource(source, filename = "<source>") {
       if ((!isRef(key) && !Number.isInteger(key)) || isCondition(key)) fail(node, "Array index must be an unsigned integer");
       if (!isRef(key) && (key < 0 || key >= object.length)) fail(node, "Array index outside its fixed length");
       const index = writing && isRef(key) ? copy(key, node) : key;
-      const value = allocate(object.valueType, "element");
+      const value = allocate(object.valueType, "element", true);
       if (load) pushInstruction("naturalArrayLoad", object, index, value);
       return { object, key: index, value, commit: () => pushInstruction("naturalArrayStore", object, index, value) };
     }
@@ -578,6 +587,7 @@ export function recordNaturalSource(source, filename = "<source>") {
       case "IfStatement":
         return branch(node.test, env, () => statement(node.consequent, env, context), () => node.alternate && statement(node.alternate, env, context));
       case "WhileStatement": case "ForStatement": {
+        if (optimize && node.type === "ForStatement" && fillLoop(node, env, context)) return;
         const local = new Scope(env);
         if (node.init) node.init.type === "VariableDeclaration" ? statement(node.init, local, context) : expression(node.init, local);
         const start = `__js_loop_${serial++}`;
@@ -615,6 +625,51 @@ export function recordNaturalSource(source, filename = "<source>") {
     }
   }
 
+  function fillLoop(node, env, context) {
+    // An IRQ could observe ascending writes or change the fill value between
+    // iterations. Keep the original loop whenever user IRQ code is present.
+    if (hasUserIrq || recordingFillFallback) return false;
+    const init = node.init;
+    if (init?.type !== "VariableDeclaration" || init.kind !== "let" || init.declarations.length !== 1) return false;
+    const declaration = init.declarations[0], name = declaration.id.name;
+    if (!name || name === "c64") return false;
+    const start = declaration.init;
+    const word = start?.type === "CallExpression" && start.callee.type === "MemberExpression"
+      && start.callee.object.name === "c64" && start.callee.property.name === "word"
+      && start.arguments.length === 1 && start.arguments[0].type === "Literal" && start.arguments[0].value === 0;
+    if (!word && !(start?.type === "Literal" && start.value === 0)) return false;
+    if (node.test?.type !== "BinaryExpression" || node.test.operator !== "<" || node.test.left.type !== "Identifier" || node.test.left.name !== name) return false;
+    const update = node.update;
+    if (!(update?.type === "UpdateExpression" && update.operator === "++" && update.argument.name === name)
+      && !(update?.type === "AssignmentExpression" && update.operator === "+=" && update.left.name === name && update.right.type === "Literal" && update.right.value === 1)) return false;
+    const body = node.body.type === "BlockStatement" && node.body.body.length === 1 ? node.body.body[0] : node.body;
+    const write = body.type === "ExpressionStatement" ? body.expression : null;
+    if (write?.type !== "AssignmentExpression" || write.operator !== "=" || write.left.type !== "MemberExpression"
+      || !write.left.computed || write.left.object.type !== "Identifier" || write.left.object.name === name
+      || write.left.property.type !== "Identifier" || write.left.property.name !== name) return false;
+    const array = env.get(write.left.object.name)?.value;
+    if (array?.type !== "naturalArray") return false;
+    // Resolve constants with the loop counter shadowed, never an outer i.
+    const local = new Scope(env);
+    local.bindings.set(name, { uninitialized: true });
+    if (constant(node.test.right, local) !== array.length || (array.length === 256 && !word)) return false;
+    let value = constant(write.right, local);
+    if (value === unknown && write.right.type === "Identifier" && write.right.name !== name) value = env.get(write.right.name)?.value;
+    if (!(isRef(value) || typeof value === "boolean" || Number.isInteger(value))) return false;
+    if (isRef(value) && !declarations.some(d => d.op === "naturalVariable" && d.args[0] === value.name)) return false;
+    if (!isRef(value) && (value < 0 || value > 65535)) return false;
+    if (array.valueType === "byte" && width(value) === "word") return false;
+    // Retain the ordinary lowering until all API calls have been recorded. An
+    // IRQ registered through an alias later in the file must also disable this
+    // transformation; spelling-based checks alone cannot establish safety.
+    let original;
+    recordingFillFallback = true;
+    try { original = captureBlock(() => statement(node, env, context)); }
+    finally { recordingFillFallback = false; }
+    pushInstruction("naturalFillCandidate", array, value, original);
+    return true;
+  }
+
   block(tree.body, global);
   const state = getProgramState();
   const routineBodies = new Map(routines.map(item => [item.args[0], item.args[1]]));
@@ -638,5 +693,24 @@ export function recordNaturalSource(source, filename = "<source>") {
     if (mainCalls.has(name)) fail(routineNodes.get(name), "A function cannot be shared between raster IRQ and main/frame code: its parameters and locals use static storage");
   }
   const defaults = usesRuntimeTextColor ? [{ op: "textColor", args: [1] }] : [];
-  return { ...state, instructions: [...declarations, ...defaults, ...state.instructions, ...routines] };
+  const code = [...defaults, ...state.instructions, ...routines];
+  function lowerFills(list) {
+    for (let i = 0; i < list.length; i++) {
+      const instruction = list[i], { op, args } = instruction;
+      if (op === "naturalFillCandidate") {
+        if (state.irq.handlers.length) { list.splice(i, 1, ...args[2]); i += args[2].length - 1; }
+        else { list[i] = { op: "naturalArrayFill", args: args.slice(0, 2) }; fillLoops++; }
+      } else if (op === "controlIf") { lowerFills(args[1]); lowerFills(args[2]); }
+      else if (["gameInit", "gameFrame"].includes(op)) lowerFills(args[0]);
+      else if (["gameEvery", "controlRoutine", "controlRepeat", "controlWhile"].includes(op)) lowerFills(args[1]);
+      else if (op === "gameScene") for (const child of Object.values(args[1])) lowerFills(child);
+    }
+  }
+  lowerFills(code);
+  for (const handler of state.irq.handlers) lowerFills(handler.instructions);
+  const retained = references([code, state.irq.handlers]);
+  const liveDeclarations = declarations.filter(d => d.op !== "naturalVariable" || retained.has(d.args[0]));
+  const loopVariableBytesSaved = declarations.filter(d => d.op === "naturalVariable" && !retained.has(d.args[0])).reduce((n, d) => n + (d.args[1] === "word" ? 2 : 1), 0);
+  const optimized = optimize ? optimizeNaturalIR(liveDeclarations, code, state.irq.handlers) : { declarations: liveDeclarations, report: { type: "natural-optimization", copiesRemoved: 0, temporaryBytesSaved: 0 } };
+  return { ...state, instructions: [...optimized.declarations, { op: "naturalOptimization", args: [{ ...optimized.report, enabled: optimize, fillLoops, loopVariableBytesSaved }] }, ...code] };
 }

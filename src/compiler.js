@@ -7024,6 +7024,9 @@ function compileHighLevelInstruction(asm, instruction, compileState) {
   // Central dispatcher: one DSL instruction enters here and is translated into
   // one or more low level assembly operations.
   switch (instruction.op) {
+    case "naturalOptimization":
+      compileState.assets.report.push(instruction.args[0]);
+      break;
     case "naturalVariable": {
       const [name, type] = instruction.args;
       const size = type === "word" ? 2 : 1;
@@ -9038,7 +9041,7 @@ export async function compileFile(inputFile, options = {}) {
   setAssetBaseDirectory(path.dirname(absolute));
   const source = await fs.readFile(absolute, "utf8");
   if (hasNaturalDirective(source)) {
-    const state = recordNaturalSource(source, absolute);
+    const state = recordNaturalSource(source, absolute, { optimize: options.naturalOptimizations !== false });
     return compileInstructions(state.instructions, { ...compileOptions, irqHandlers: state.irq.handlers });
   }
   const moduleUrl = pathToFileURL(absolute);
@@ -9058,7 +9061,7 @@ export async function compileJsToC64Outputs(source, options = {}) {
   resetRuntime();
   setAssetBaseDirectory(process.cwd());
   let state;
-  if (hasNaturalDirective(source)) state = recordNaturalSource(source);
+  if (hasNaturalDirective(source)) state = recordNaturalSource(source, "<source>", { optimize: options.naturalOptimizations !== false });
   else {
     await executeInlineSource(source);
     state = getProgramState();
