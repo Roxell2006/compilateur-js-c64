@@ -1,0 +1,374 @@
+{
+  "id": "js-c64@1.1.0",
+  "name": "js-c64",
+  "version": "1.1.0",
+  "size": 181576,
+  "unpackedSize": 763723,
+  "shasum": "f31ebbf5868980242094c1884627a7d561bfd832",
+  "integrity": "sha512-qe3gFv1KdsMMHvo1TsN87PRabYdsuKXIbFK0U+ppA3QWNAdgldW1xqRRqXHTHihUq7TNhW+kqkl7I7cIGgiAxQ==",
+  "filename": "js-c64-1.1.0.tgz",
+  "files": [
+    {
+      "path": "CHANGELOG.md",
+      "size": 19445,
+      "mode": 420
+    },
+    {
+      "path": "LICENSE",
+      "size": 1088,
+      "mode": 420
+    },
+    {
+      "path": "MODE_EMPLOI_DEBUTANT.txt",
+      "size": 60863,
+      "mode": 420
+    },
+    {
+      "path": "README.md",
+      "size": 11497,
+      "mode": 420
+    },
+    {
+      "path": "examples/assets/d64-level1.json",
+      "size": 969,
+      "mode": 420
+    },
+    {
+      "path": "examples/assets/d64-level2.json",
+      "size": 969,
+      "mode": 420
+    },
+    {
+      "path": "examples/assets/d64-level3.json",
+      "size": 969,
+      "mode": 420
+    },
+    {
+      "path": "examples/assets/maze-room.json",
+      "size": 1502,
+      "mode": 420
+    },
+    {
+      "path": "examples/assets/platformer-actors.sprite.json",
+      "size": 1117,
+      "mode": 420
+    },
+    {
+      "path": "examples/assets/platformer-coin.sprite.json",
+      "size": 496,
+      "mode": 420
+    },
+    {
+      "path": "examples/assets/platformer-enemy.sprite.json",
+      "size": 545,
+      "mode": 420
+    },
+    {
+      "path": "examples/assets/platformer-room.json",
+      "size": 10372,
+      "mode": 420
+    },
+    {
+      "path": "examples/assets/snake-room.json",
+      "size": 1617,
+      "mode": 420
+    },
+    {
+      "path": "examples/assets/tetris-room.json",
+      "size": 1197,
+      "mode": 420
+    },
+    {
+      "path": "examples/assets/v09-room.json",
+      "size": 869,
+      "mode": 420
+    },
+    {
+      "path": "examples/assets/v10-hero.sprite.json",
+      "size": 1131,
+      "mode": 420
+    },
+    {
+      "path": "examples/breakout-mini.js",
+      "size": 2872,
+      "mode": 420
+    },
+    {
+      "path": "examples/c64.js",
+      "size": 40,
+      "mode": 420
+    },
+    {
+      "path": "examples/colors.js",
+      "size": 226,
+      "mode": 420
+    },
+    {
+      "path": "examples/combo-irq.js",
+      "size": 1442,
+      "mode": 420
+    },
+    {
+      "path": "examples/comfort-data-vars.js",
+      "size": 563,
+      "mode": 420
+    },
+    {
+      "path": "examples/comfort-frame.js",
+      "size": 324,
+      "mode": 420
+    },
+    {
+      "path": "examples/game-loop-input.js",
+      "size": 2364,
+      "mode": 420
+    },
+    {
+      "path": "examples/game-scenes.js",
+      "size": 1619,
+      "mode": 420
+    },
+    {
+      "path": "examples/hello.js",
+      "size": 195,
+      "mode": 420
+    },
+    {
+      "path": "examples/joystick.js",
+      "size": 174,
+      "mode": 420
+    },
+    {
+      "path": "examples/keyboard.js",
+      "size": 244,
+      "mode": 420
+    },
+    {
+      "path": "examples/map-entity-spawn.js",
+      "size": 4025,
+      "mode": 420
+    },
+    {
+      "path": "examples/maze-game.js",
+      "size": 1595,
+      "mode": 420
+    },
+    {
+      "path": "examples/multilevel-d64.js",
+      "size": 2680,
+      "mode": 420
+    },
+    {
+      "path": "examples/natural-helpers.js",
+      "size": 674,
+      "mode": 420
+    },
+    {
+      "path": "examples/natural-hires-interactive.js",
+      "size": 1790,
+      "mode": 420
+    },
+    {
+      "path": "examples/natural-hires.js",
+      "size": 562,
+      "mode": 420
+    },
+    {
+      "path": "examples/natural-lights.js",
+      "size": 2273,
+      "mode": 420
+    },
+    {
+      "path": "examples/natural-platformer.js",
+      "size": 2868,
+      "mode": 420
+    },
+    {
+      "path": "examples/natural-score.js",
+      "size": 1006,
+      "mode": 420
+    },
+    {
+      "path": "examples/natural-scroll.js",
+      "size": 631,
+      "mode": 420
+    },
+    {
+      "path": "examples/natural-sprites.js",
+      "size": 1067,
+      "mode": 420
+    },
+    {
+      "path": "examples/natural-tetris.js",
+      "size": 3834,
+      "mode": 420
+    },
+    {
+      "path": "examples/platformer-mini.js",
+      "size": 6350,
+      "mode": 420
+    },
+    {
+      "path": "examples/raster-bars.js",
+      "size": 639,
+      "mode": 420
+    },
+    {
+      "path": "examples/raster-ready-border-cycle.js",
+      "size": 679,
+      "mode": 420
+    },
+    {
+      "path": "examples/screen-fill.js",
+      "size": 222,
+      "mode": 420
+    },
+    {
+      "path": "examples/sid-beep.js",
+      "size": 1099,
+      "mode": 420
+    },
+    {
+      "path": "examples/sid-game-audio.js",
+      "size": 2034,
+      "mode": 420
+    },
+    {
+      "path": "examples/snake.js",
+      "size": 8194,
+      "mode": 420
+    },
+    {
+      "path": "examples/sprite-animate.js",
+      "size": 1226,
+      "mode": 420
+    },
+    {
+      "path": "examples/sprite-api.js",
+      "size": 730,
+      "mode": 420
+    },
+    {
+      "path": "examples/sprite-basic.js",
+      "size": 746,
+      "mode": 420
+    },
+    {
+      "path": "examples/sprite-multiplex-16.js",
+      "size": 1885,
+      "mode": 420
+    },
+    {
+      "path": "examples/tetris-mini.js",
+      "size": 9533,
+      "mode": 420
+    },
+    {
+      "path": "examples/tilemap-scroll-x.js",
+      "size": 2032,
+      "mode": 420
+    },
+    {
+      "path": "examples/tilemap-static.js",
+      "size": 449,
+      "mode": 420
+    },
+    {
+      "path": "examples/vice-showcase.js",
+      "size": 784,
+      "mode": 420
+    },
+    {
+      "path": "index.d.ts",
+      "size": 27252,
+      "mode": 420
+    },
+    {
+      "path": "package.json",
+      "size": 2117,
+      "mode": 420
+    },
+    {
+      "path": "schemas/map-asset-v1.schema.json",
+      "size": 3238,
+      "mode": 420
+    },
+    {
+      "path": "schemas/sprite-asset-v1.schema.json",
+      "size": 3072,
+      "mode": 420
+    },
+    {
+      "path": "src/assembler6502.js",
+      "size": 8946,
+      "mode": 420
+    },
+    {
+      "path": "src/assets.js",
+      "size": 15809,
+      "mode": 420
+    },
+    {
+      "path": "src/basicStub.js",
+      "size": 1115,
+      "mode": 420
+    },
+    {
+      "path": "src/c64.js",
+      "size": 53279,
+      "mode": 420
+    },
+    {
+      "path": "src/cli.js",
+      "size": 8337,
+      "mode": 420
+    },
+    {
+      "path": "src/compiler.js",
+      "size": 385518,
+      "mode": 420
+    },
+    {
+      "path": "src/d64Writer.js",
+      "size": 7688,
+      "mode": 420
+    },
+    {
+      "path": "src/index.js",
+      "size": 675,
+      "mode": 420
+    },
+    {
+      "path": "src/irq/raster.js",
+      "size": 1161,
+      "mode": 420
+    },
+    {
+      "path": "src/natural-optimizer.js",
+      "size": 7364,
+      "mode": 420
+    },
+    {
+      "path": "src/natural.js",
+      "size": 41416,
+      "mode": 420
+    },
+    {
+      "path": "src/opcodes6502.js",
+      "size": 2628,
+      "mode": 420
+    },
+    {
+      "path": "src/prgWriter.js",
+      "size": 3272,
+      "mode": 420
+    },
+    {
+      "path": "src/runtime.js",
+      "size": 6520,
+      "mode": 420
+    }
+  ],
+  "entryCount": 72,
+  "bundled": []
+}

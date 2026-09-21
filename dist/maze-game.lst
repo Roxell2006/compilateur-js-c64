@@ -88,7 +88,7 @@
 08C2  BD FD 0B    LDA str_screen_1,X
 08C5  F0 0B       BEQ printat_done_4
 08C7  9D 07 05    STA $0507,X
-08CA  A9 01       LDA #$01
+08CA  A9 07       LDA #$07
 08CC  9D 07 D9    STA $D907,X
 08CF  E8          INX
 08D0  D0 F0       BNE printat_loop_3
@@ -98,7 +98,7 @@
 08D4  BD 06 0C    LDA str_screen_2,X
 08D7  F0 0B       BEQ printat_done_6
 08D9  9D 2F 05    STA $052F,X
-08DC  A9 01       LDA #$01
+08DC  A9 07       LDA #$07
 08DE  9D 2F D9    STA $D92F,X
 08E1  E8          INX
 08E2  D0 F0       BNE printat_loop_5

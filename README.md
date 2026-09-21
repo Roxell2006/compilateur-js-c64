@@ -3,13 +3,12 @@
 [![npm](https://img.shields.io/npm/v/js-c64.svg)](https://www.npmjs.com/package/js-c64)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Écrivez des programmes Commodore 64 en JavaScript naturel et compilez-les en
+Écrivez des programmes Commodore 64 en JavaScript et compilez-les en
 code machine 6502 : jeux, sprites, scroll, musique SID et graphismes haute
 résolution. Aucun interpréteur JavaScript ne tourne sur le C64.
 
-**La version 1.1.0 est en préparation.** Ce README présente le mode naturel de
-la branche de développement. `package.json` reste en **1.0.1** ; les exemples
-ci-dessous demandent le code contenant les nouveautés 1.1.0.
+**Version 1.1.0.** Écrivez vos conditions, calculs, boucles et fonctions en
+JavaScript ; la directive `"use c64"` active leur traduction en instructions 6502.
 
 ## Sommaire
 
@@ -29,42 +28,20 @@ ci-dessous demandent le code contenant les nouveautés 1.1.0.
 Prérequis : **Node.js ≥ 18**, npm et un émulateur ou un C64 pour lancer les PRG.
 Le compilateur et l'assembleur sont inclus dans le paquet.
 
-### Essayer la future 1.1.0
-
-Dans votre copie du dépôt, sur la branche contenant le mode naturel :
-
-```sh
-npm install
-node src/cli.js build examples/natural-helpers.js -o dist/natural-helpers.prg
-```
-
-Pour créer un projet voisin de cette copie, nommée ici `js-c64` :
+Dans un nouveau dossier de projet :
 
 ```sh
 mkdir mon-jeu
 cd mon-jeu
 npm init -y
 npm pkg set type=module
-npm install "../js-c64"
-```
-
-Adaptez le chemin à votre dépôt local. Récupérer le dépôt public ne récupère
-pas automatiquement une branche de travail non publiée.
-
-### Après publication de la 1.1.0
-
-L'installation depuis le registre sera :
-
-```sh
 npm install js-c64@^1.1.0
 ```
 
-Pour utiliser explicitement la génération précédente : `npm install js-c64@1.0.1`.
-Elle ne comprend pas toutes les fonctionnalités naturelles décrites ici.
-
-`c64js init <dossier>` est disponible, mais son modèle utilise encore une
-dépendance `^1.0.0` et un source minimal sans directive naturelle. Le guide
-privilégie la création manuelle ci-dessus en attendant son adaptation.
+Vous pouvez également utiliser `c64js init <dossier>` depuis une installation
+existante : le projet généré utilise la version courante de js-c64 et contient
+un premier programme avec la directive `"use c64"`. Installez ses dépendances
+avec `npm install`, puis compilez avec `npm run build`.
 
 ## Premier programme
 
@@ -234,7 +211,7 @@ Les [notes de version](CHANGELOG.md) détaillent les changements.
 
 ## Versions
 
-### 1.1.0 
+### 1.1.0
 
 L'objectif est de rendre l'écriture des programmes plus directe tout en
 conservant la compilation native 6502 et les appels existants.
@@ -251,9 +228,9 @@ conservant la compilation native 6502 et les appels existants.
   avec garde-fous pour les interruptions et les accès aux API.
 - Guide réorganisé autour du mode naturel.
 
-Les interfaces de la génération 1.0 restent conservées ; le parcours conseillé
-pour les nouveaux programmes est le mode naturel. **Cette section décrit le
-travail de développement, pas une version 1.1.0 déjà publiée sur npm.**
+Les interfaces de la génération 1.0 restent conservées. Pour les nouveaux
+programmes, utilisez `"use c64"` et les instructions JavaScript présentées dans
+le guide.
 
 ### 1.0.1 — corrections et fiabilisation
 

@@ -1,6 +1,6 @@
 {
-  "packageVersion": "1.0.1",
-  "generatedAt": "2026-09-19T09:41:06.620Z",
+  "packageVersion": "1.1.0",
+  "generatedAt": "2026-09-21T11:39:26.335Z",
   "standards": [
     "PAL",
     "NTSC"
@@ -12,6 +12,7 @@
         "prgBytes": 2859,
         "programBytes": 2842,
         "assetBytes": 2348,
+        "scalarRamBytes": 21,
         "startupCycles": 11570,
         "reportedFrameCycles": 0,
         "memoryConflicts": []
@@ -29,6 +30,7 @@
         "prgBytes": 3371,
         "programBytes": 3354,
         "assetBytes": 254,
+        "scalarRamBytes": 2,
         "startupCycles": 0,
         "reportedFrameCycles": 0,
         "memoryConflicts": []
@@ -46,6 +48,7 @@
         "prgBytes": 1361,
         "programBytes": 1344,
         "assetBytes": 2348,
+        "scalarRamBytes": 4,
         "startupCycles": 10844,
         "reportedFrameCycles": 0,
         "memoryConflicts": []
@@ -63,6 +66,7 @@
         "prgBytes": 10174,
         "programBytes": 10106,
         "assetBytes": 2656,
+        "scalarRamBytes": 56,
         "startupCycles": 39466,
         "reportedFrameCycles": 16148,
         "memoryConflicts": []
@@ -73,6 +77,63 @@
         "maxAssetBytes": 3000,
         "maxStartupCycles": 45000,
         "maxReportedFrameCycles": 16250
+      }
+    },
+    "natural-tetris": {
+      "measured": {
+        "prgBytes": 3768,
+        "programBytes": 3751,
+        "assetBytes": 2248,
+        "scalarRamBytes": 64,
+        "startupCycles": 9592,
+        "reportedFrameCycles": 0,
+        "memoryConflicts": []
+      },
+      "limits": {
+        "maxPrgBytes": 4096,
+        "maxProgramBytes": 4096,
+        "maxAssetBytes": 2400,
+        "maxScalarRamBytes": 80,
+        "maxStartupCycles": 11000,
+        "maxReportedFrameCycles": 20000
+      }
+    },
+    "natural-platformer": {
+      "measured": {
+        "prgBytes": 10335,
+        "programBytes": 10267,
+        "assetBytes": 2656,
+        "scalarRamBytes": 64,
+        "startupCycles": 39466,
+        "reportedFrameCycles": 16148,
+        "memoryConflicts": []
+      },
+      "limits": {
+        "maxPrgBytes": 11000,
+        "maxProgramBytes": 11000,
+        "maxAssetBytes": 3000,
+        "maxScalarRamBytes": 80,
+        "maxStartupCycles": 45000,
+        "maxReportedFrameCycles": 16250
+      }
+    },
+    "natural-hires-interactive": {
+      "measured": {
+        "prgBytes": 3073,
+        "programBytes": 3056,
+        "assetBytes": 0,
+        "scalarRamBytes": 21,
+        "startupCycles": 0,
+        "reportedFrameCycles": 0,
+        "memoryConflicts": []
+      },
+      "limits": {
+        "maxPrgBytes": 3200,
+        "maxProgramBytes": 3200,
+        "maxAssetBytes": 0,
+        "maxScalarRamBytes": 32,
+        "maxStartupCycles": 1000,
+        "maxReportedFrameCycles": 20000
       }
     }
   }

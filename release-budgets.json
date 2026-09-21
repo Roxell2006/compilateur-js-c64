@@ -28,6 +28,30 @@
       "maxAssetBytes": 3000,
       "maxStartupCycles": 45000,
       "maxReportedFrameCycles": 16250
+    },
+    "natural-tetris": {
+      "maxPrgBytes": 4096,
+      "maxProgramBytes": 4096,
+      "maxAssetBytes": 2400,
+      "maxScalarRamBytes": 80,
+      "maxStartupCycles": 11000,
+      "maxReportedFrameCycles": 20000
+    },
+    "natural-platformer": {
+      "maxPrgBytes": 11000,
+      "maxProgramBytes": 11000,
+      "maxAssetBytes": 3000,
+      "maxScalarRamBytes": 80,
+      "maxStartupCycles": 45000,
+      "maxReportedFrameCycles": 16250
+    },
+    "natural-hires-interactive": {
+      "maxPrgBytes": 3200,
+      "maxProgramBytes": 3200,
+      "maxAssetBytes": 0,
+      "maxScalarRamBytes": 32,
+      "maxStartupCycles": 1000,
+      "maxReportedFrameCycles": 20000
     }
   }
 }

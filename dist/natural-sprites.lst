@@ -1,0 +1,510 @@
+0810  A2 00       LDX #$00
+0812        copydata_3000_sprite_frames_hero_0_63_0:
+0812  BD 37 0C    LDA sprite_frames_hero_0,X
+0815  9D 00 30    STA $3000,X
+0818  E8          INX
+0819  E0 3F       CPX #$3F
+081B  D0 F5       BNE copydata_3000_sprite_frames_hero_0_63_0
+081D  A9 00       LDA #$00
+081F  8D 3F 30    STA $303F
+0822  A2 00       LDX #$00
+0824        copydata_3040_sprite_frames_hero_1_63_1:
+0824  BD 76 0C    LDA sprite_frames_hero_1,X
+0827  9D 40 30    STA $3040,X
+082A  E8          INX
+082B  E0 3F       CPX #$3F
+082D  D0 F5       BNE copydata_3040_sprite_frames_hero_1_63_1
+082F  A9 00       LDA #$00
+0831  8D 7F 30    STA $307F
+0834  A9 A0       LDA #$A0
+0836  8D 00 C5    STA $C500
+0839  A9 00       LDA #$00
+083B  8D 01 C5    STA $C501
+083E  A9 78       LDA #$78
+0840  8D 02 C5    STA $C502
+0843  A9 00       LDA #$00
+0845  8D 03 C5    STA $C503
+0848  A9 00       LDA #$00
+084A  8D 04 C5    STA $C504
+084D  A9 01       LDA #$01
+084F  8D 05 C5    STA $C505
+0852  20 0F 0B    JSR runtime_sprite_sync_0
+0855  A9 C0       LDA #$C0
+0857  8D 04 C4    STA $C404
+085A  AD 04 C4    LDA $C404
+085D  8D F8 07    STA $07F8
+0860  A9 07       LDA #$07
+0862  8D 05 C4    STA $C405
+0865  A9 07       LDA #$07
+0867  8D 27 D0    STA $D027
+086A  A9 93       LDA #$93
+086C  20 D2 FF    JSR $FFD2
+086F  A9 00       LDA #$00
+0871  8D 20 D0    STA $D020
+0874  A9 00       LDA #$00
+0876  8D 21 D0    STA $D021
+0879  A2 00       LDX #$00
+087B        printat_loop_2:
+087B  BD 05 0C    LDA str_screen_0,X
+087E  F0 0B       BEQ printat_done_3
+0880  9D 29 04    STA $0429,X
+0883  A9 01       LDA #$01
+0885  9D 29 D8    STA $D829,X
+0888  E8          INX
+0889  D0 F0       BNE printat_loop_2
+088B        printat_done_3:
+088B  A2 00       LDX #$00
+088D        printat_loop_4:
+088D  BD 16 0C    LDA str_screen_1,X
+0890  F0 0B       BEQ printat_done_5
+0892  9D 79 04    STA $0479,X
+0895  A9 01       LDA #$01
+0897  9D 79 D8    STA $D879,X
+089A  E8          INX
+089B  D0 F0       BNE printat_loop_4
+089D        printat_done_5:
+089D  A2 00       LDX #$00
+089F        printat_loop_6:
+089F  BD 22 0C    LDA str_screen_2,X
+08A2  F0 0B       BEQ printat_done_7
+08A4  9D C9 04    STA $04C9,X
+08A7  A9 01       LDA #$01
+08A9  9D C9 D8    STA $D8C9,X
+08AC  E8          INX
+08AD  D0 F0       BNE printat_loop_6
+08AF        printat_done_7:
+08AF        __js_callback_end_0:
+08AF  4C 86 0A    JMP user_routine___js_updatePlayer_1_after
+08B2        user_routine___js_updatePlayer_1:
+08B2  AD 67 C7    LDA $C767
+08B5  29 04       AND #$04
+08B7  F0 03       BEQ condition_pass_9
+08B9  4C DD 08    JMP control_if_else_8
+08BC        condition_pass_9:
+08BC  AD 01 C5    LDA $C501
+08BF  C9 00       CMP #$00
+08C1  90 0B       BCC word_compare_low_11
+08C3  D0 0C       BNE condition_pass_11
+08C5  AD 00 C5    LDA $C500
+08C8  C9 18       CMP #$18
+08CA  F0 02       BEQ word_compare_low_11
+08CC  B0 03       BCS condition_pass_11
+08CE        word_compare_low_11:
+08CE  4C D7 08    JMP control_if_else_10
+08D1        condition_pass_11:
+08D1  4C E0 08    JMP __js_logic_yes_3
+08D4  4C DA 08    JMP control_if_end_10
+08D7        control_if_else_10:
+08D7  4C F4 08    JMP __js_logic_no_4
+08DA        control_if_end_10:
+08DA  4C E0 08    JMP control_if_end_8
+08DD        control_if_else_8:
+08DD  4C F4 08    JMP __js_logic_no_4
+08E0        control_if_end_8:
+08E0        __js_logic_yes_3:
+08E0  AD 00 C5    LDA $C500
+08E3  38          SEC
+08E4  E9 02       SBC #$02
+08E6  8D 00 C5    STA $C500
+08E9  AD 01 C5    LDA $C501
+08EC  E9 00       SBC #$00
+08EE  8D 01 C5    STA $C501
+08F1  4C F4 08    JMP __js_logic_end_5
+08F4        __js_logic_no_4:
+08F4        __js_logic_end_5:
+08F4  AD 67 C7    LDA $C767
+08F7  29 08       AND #$08
+08F9  F0 03       BEQ condition_pass_13
+08FB  4C 1D 09    JMP control_if_else_12
+08FE        condition_pass_13:
+08FE  AD 01 C5    LDA $C501
+0901  C9 01       CMP #$01
+0903  90 0C       BCC condition_pass_15
+0905  D0 07       BNE word_compare_low_15
+0907  AD 00 C5    LDA $C500
+090A  C9 40       CMP #$40
+090C  90 03       BCC condition_pass_15
+090E        word_compare_low_15:
+090E  4C 17 09    JMP control_if_else_14
+0911        condition_pass_15:
+0911  4C 20 09    JMP __js_logic_yes_6
+0914  4C 1A 09    JMP control_if_end_14
+0917        control_if_else_14:
+0917  4C 34 09    JMP __js_logic_no_7
+091A        control_if_end_14:
+091A  4C 20 09    JMP control_if_end_12
+091D        control_if_else_12:
+091D  4C 34 09    JMP __js_logic_no_7
+0920        control_if_end_12:
+0920        __js_logic_yes_6:
+0920  AD 00 C5    LDA $C500
+0923  18          CLC
+0924  69 02       ADC #$02
+0926  8D 00 C5    STA $C500
+0929  AD 01 C5    LDA $C501
+092C  69 00       ADC #$00
+092E  8D 01 C5    STA $C501
+0931  4C 34 09    JMP __js_logic_end_8
+0934        __js_logic_no_7:
+0934        __js_logic_end_8:
+0934  AD 67 C7    LDA $C767
+0937  29 01       AND #$01
+0939  F0 03       BEQ condition_pass_17
+093B  4C 59 09    JMP control_if_else_16
+093E        condition_pass_17:
+093E  AD 02 C5    LDA $C502
+0941  C9 32       CMP #$32
+0943  D0 03       BNE condition_not_equal_19
+0945  4C 53 09    JMP control_if_else_18
+0948        condition_not_equal_19:
+0948  B0 03       BCS condition_pass_19
+094A  4C 53 09    JMP control_if_else_18
+094D        condition_pass_19:
+094D  4C 5C 09    JMP __js_logic_yes_9
+0950  4C 56 09    JMP control_if_end_18
+0953        control_if_else_18:
+0953  4C 68 09    JMP __js_logic_no_10
+0956        control_if_end_18:
+0956  4C 5C 09    JMP control_if_end_16
+0959        control_if_else_16:
+0959  4C 68 09    JMP __js_logic_no_10
+095C        control_if_end_16:
+095C        __js_logic_yes_9:
+095C  AD 02 C5    LDA $C502
+095F  38          SEC
+0960  E9 02       SBC #$02
+0962  8D 02 C5    STA $C502
+0965  4C 68 09    JMP __js_logic_end_11
+0968        __js_logic_no_10:
+0968        __js_logic_end_11:
+0968  AD 67 C7    LDA $C767
+096B  29 02       AND #$02
+096D  F0 03       BEQ condition_pass_21
+096F  4C 88 09    JMP control_if_else_20
+0972        condition_pass_21:
+0972  AD 02 C5    LDA $C502
+0975  C9 DC       CMP #$DC
+0977  90 03       BCC condition_pass_23
+0979  4C 82 09    JMP control_if_else_22
+097C        condition_pass_23:
+097C  4C 8B 09    JMP __js_logic_yes_12
+097F  4C 85 09    JMP control_if_end_22
+0982        control_if_else_22:
+0982  4C 97 09    JMP __js_logic_no_13
+0985        control_if_end_22:
+0985  4C 8B 09    JMP control_if_end_20
+0988        control_if_else_20:
+0988  4C 97 09    JMP __js_logic_no_13
+098B        control_if_end_20:
+098B        __js_logic_yes_12:
+098B  AD 02 C5    LDA $C502
+098E  18          CLC
+098F  69 02       ADC #$02
+0991  8D 02 C5    STA $C502
+0994  4C 97 09    JMP __js_logic_end_14
+0997        __js_logic_no_13:
+0997        __js_logic_end_14:
+0997  AD 67 C7    LDA $C767
+099A  29 10       AND #$10
+099C  F0 03       BEQ condition_pass_25
+099E  4C A9 09    JMP control_if_else_24
+09A1        condition_pass_25:
+09A1  A9 01       LDA #$01
+09A3  8D 00 C1    STA $C100
+09A6  4C AE 09    JMP control_if_end_24
+09A9        control_if_else_24:
+09A9  A9 00       LDA #$00
+09AB  8D 00 C1    STA $C100
+09AE        control_if_end_24:
+09AE  AD 00 C1    LDA $C100
+09B1  09 00       ORA #$00
+09B3  F0 0B       BEQ api_flag_off_26
+09B5  AD 06 C4    LDA $C406
+09B8  09 02       ORA #$02
+09BA  8D 06 C4    STA $C406
+09BD  4C C8 09    JMP api_flag_off_26_done
+09C0        api_flag_off_26:
+09C0  AD 06 C4    LDA $C406
+09C3  29 FD       AND #$FD
+09C5  8D 06 C4    STA $C406
+09C8        api_flag_off_26_done:
+09C8  AD 00 C1    LDA $C100
+09CB  09 00       ORA #$00
+09CD  F0 0B       BEQ api_flag_off_27
+09CF  AD 1D D0    LDA $D01D
+09D2  09 01       ORA #$01
+09D4  8D 1D D0    STA $D01D
+09D7  4C E2 09    JMP api_flag_off_27_done
+09DA        api_flag_off_27:
+09DA  AD 1D D0    LDA $D01D
+09DD  29 FE       AND #$FE
+09DF  8D 1D D0    STA $D01D
+09E2        api_flag_off_27_done:
+09E2  AD 67 C7    LDA $C767
+09E5  29 10       AND #$10
+09E7  F0 03       BEQ condition_pass_29
+09E9  4C F4 09    JMP control_if_else_28
+09EC        condition_pass_29:
+09EC  A9 03       LDA #$03
+09EE  8D 01 C1    STA $C101
+09F1  4C F9 09    JMP control_if_end_28
+09F4        control_if_else_28:
+09F4  A9 07       LDA #$07
+09F6  8D 01 C1    STA $C101
+09F9        control_if_end_28:
+09F9  AD 01 C1    LDA $C101
+09FC  8D 05 C4    STA $C405
+09FF  AD 01 C1    LDA $C101
+0A02  8D 27 D0    STA $D027
+0A05  20 0F 0B    JSR runtime_sprite_sync_0
+0A08  AD 00 C5    LDA $C500
+0A0B  8D 02 C1    STA $C102
+0A0E  AD 01 C5    LDA $C501
+0A11  8D 03 C1    STA $C103
+0A14  20 4E 0B    JSR api_decimal_convert
+0A17  AD 06 C1    LDA $C106
+0A1A  18          CLC
+0A1B  69 30       ADC #$30
+0A1D  8D 7C 04    STA $047C
+0A20  A9 01       LDA #$01
+0A22  29 0F       AND #$0F
+0A24  8D 7C D8    STA $D87C
+0A27  AD 07 C1    LDA $C107
+0A2A  18          CLC
+0A2B  69 30       ADC #$30
+0A2D  8D 7D 04    STA $047D
+0A30  A9 01       LDA #$01
+0A32  29 0F       AND #$0F
+0A34  8D 7D D8    STA $D87D
+0A37  AD 08 C1    LDA $C108
+0A3A  18          CLC
+0A3B  69 30       ADC #$30
+0A3D  8D 7E 04    STA $047E
+0A40  A9 01       LDA #$01
+0A42  29 0F       AND #$0F
+0A44  8D 7E D8    STA $D87E
+0A47  AD 02 C5    LDA $C502
+0A4A  8D 02 C1    STA $C102
+0A4D  A9 00       LDA #$00
+0A4F  8D 03 C1    STA $C103
+0A52  20 4E 0B    JSR api_decimal_convert
+0A55  AD 06 C1    LDA $C106
+0A58  18          CLC
+0A59  69 30       ADC #$30
+0A5B  8D 85 04    STA $0485
+0A5E  A9 01       LDA #$01
+0A60  29 0F       AND #$0F
+0A62  8D 85 D8    STA $D885
+0A65  AD 07 C1    LDA $C107
+0A68  18          CLC
+0A69  69 30       ADC #$30
+0A6B  8D 86 04    STA $0486
+0A6E  A9 01       LDA #$01
+0A70  29 0F       AND #$0F
+0A72  8D 86 D8    STA $D886
+0A75  AD 08 C1    LDA $C108
+0A78  18          CLC
+0A79  69 30       ADC #$30
+0A7B  8D 87 04    STA $0487
+0A7E  A9 01       LDA #$01
+0A80  29 0F       AND #$0F
+0A82  8D 87 D8    STA $D887
+0A85        __js_return_2:
+0A85  60          RTS
+0A86        user_routine___js_updatePlayer_1_after:
+            ; Deterministic game frame loop
+0A86  A9 00       LDA #$00
+0A88  8D 6A C7    STA $C76A
+0A8B  A9 00       LDA #$00
+0A8D  8D 6B C7    STA $C76B
+0A90  A9 00       LDA #$00
+0A92  8D 70 C7    STA $C770
+0A95  A9 FF       LDA #$FF
+0A97  8D 67 C7    STA $C767
+0A9A  A9 FF       LDA #$FF
+0A9C  8D 69 C7    STA $C769
+0A9F  A9 3C       LDA #$3C
+0AA1  8D 6F C7    STA $C76F
+0AA4        game_video_detect_low:
+0AA4  AD 11 D0    LDA $D011
+0AA7  30 FB       BMI game_video_detect_low
+0AA9        game_video_detect_high:
+0AA9  AD 11 D0    LDA $D011
+0AAC  10 FB       BPL game_video_detect_high
+0AAE        game_video_detect_scan:
+0AAE  AD 11 D0    LDA $D011
+0AB1  10 0F       BPL game_video_detect_done
+0AB3  AD 12 D0    LDA $D012
+0AB6  C9 20       CMP #$20
+0AB8  B0 03       BCS game_video_detect_pal
+0ABA  4C AE 0A    JMP game_video_detect_scan
+0ABD        game_video_detect_pal:
+0ABD  A9 32       LDA #$32
+0ABF  8D 6F C7    STA $C76F
+0AC2        game_video_detect_done:
+0AC2        game_frame_loop:
+0AC2        game_frame_wait_leave:
+0AC2  AD 11 D0    LDA $D011
+0AC5  30 FB       BMI game_frame_wait_leave
+0AC7  AD 12 D0    LDA $D012
+0ACA  C9 F0       CMP #$F0
+0ACC  B0 F4       BCS game_frame_wait_leave
+0ACE        game_frame_wait_target:
+0ACE  AD 11 D0    LDA $D011
+0AD1  30 07       BMI game_frame_target_reached
+0AD3  AD 12 D0    LDA $D012
+0AD6  C9 F0       CMP #$F0
+0AD8  90 F4       BCC game_frame_wait_target
+0ADA        game_frame_target_reached:
+0ADA  18          CLC
+0ADB  AD 70 C7    LDA $C770
+0ADE  69 32       ADC #$32
+0AE0  8D 70 C7    STA $C770
+0AE3  CD 6F C7    CMP $C76F
+0AE6  B0 03       BCS game_frame_logical_tick
+0AE8  4C C2 0A    JMP game_frame_loop
+0AEB        game_frame_logical_tick:
+0AEB  38          SEC
+0AEC  AD 70 C7    LDA $C770
+0AEF  ED 6F C7    SBC $C76F
+0AF2  8D 70 C7    STA $C770
+0AF5  AD 67 C7    LDA $C767
+0AF8  8D 69 C7    STA $C769
+0AFB  AD 00 DC    LDA $DC00
+0AFE  8D 67 C7    STA $C767
+0B01  EE 6A C7    INC $C76A
+0B04  D0 03       BNE game_frame_counter_done_30
+0B06  EE 6B C7    INC $C76B
+0B09        game_frame_counter_done_30:
+0B09  20 B2 08    JSR user_routine___js_updatePlayer_1
+0B0C  4C C2 0A    JMP game_frame_loop
+            ; Shared VIC-II synchronization for sprite 0
+0B0F        runtime_sprite_sync_0:
+0B0F  AD 05 C5    LDA $C505
+0B12  D0 0B       BNE sprite_runtime_active_0_31
+0B14  AD 15 D0    LDA $D015
+0B17  29 FE       AND #$FE
+0B19  8D 15 D0    STA $D015
+0B1C  4C 4D 0B    JMP sprite_runtime_sync_done_0_34
+0B1F        sprite_runtime_active_0_31:
+0B1F  AD 15 D0    LDA $D015
+0B22  09 01       ORA #$01
+0B24  8D 15 D0    STA $D015
+0B27  AD 00 C5    LDA $C500
+0B2A  8D 00 D0    STA $D000
+0B2D  AD 01 C5    LDA $C501
+0B30  29 01       AND #$01
+0B32  D0 0B       BNE sprite_runtime_xhigh_0_32
+0B34  AD 10 D0    LDA $D010
+0B37  29 FE       AND #$FE
+0B39  8D 10 D0    STA $D010
+0B3C  4C 47 0B    JMP sprite_runtime_xdone_0_33
+0B3F        sprite_runtime_xhigh_0_32:
+0B3F  AD 10 D0    LDA $D010
+0B42  09 01       ORA #$01
+0B44  8D 10 D0    STA $D010
+0B47        sprite_runtime_xdone_0_33:
+0B47  AD 02 C5    LDA $C502
+0B4A  8D 01 D0    STA $D001
+0B4D        sprite_runtime_sync_done_0_34:
+0B4D  60          RTS
+0B4E        api_decimal_convert:
+0B4E  A9 00       LDA #$00
+0B50  8D 04 C1    STA $C104
+0B53        api_decimal_35:
+0B53  AD 03 C1    LDA $C103
+0B56  C9 27       CMP #$27
+0B58  90 20       BCC api_decimal_35_done
+0B5A  D0 07       BNE api_decimal_35_subtract
+0B5C  AD 02 C1    LDA $C102
+0B5F  C9 10       CMP #$10
+0B61  90 17       BCC api_decimal_35_done
+0B63        api_decimal_35_subtract:
+0B63  38          SEC
+0B64  AD 02 C1    LDA $C102
+0B67  E9 10       SBC #$10
+0B69  8D 02 C1    STA $C102
+0B6C  AD 03 C1    LDA $C103
+0B6F  E9 27       SBC #$27
+0B71  8D 03 C1    STA $C103
+0B74  EE 04 C1    INC $C104
+0B77  4C 53 0B    JMP api_decimal_35
+0B7A        api_decimal_35_done:
+0B7A  A9 00       LDA #$00
+0B7C  8D 05 C1    STA $C105
+0B7F        api_decimal_36:
+0B7F  AD 03 C1    LDA $C103
+0B82  C9 03       CMP #$03
+0B84  90 20       BCC api_decimal_36_done
+0B86  D0 07       BNE api_decimal_36_subtract
+0B88  AD 02 C1    LDA $C102
+0B8B  C9 E8       CMP #$E8
+0B8D  90 17       BCC api_decimal_36_done
+0B8F        api_decimal_36_subtract:
+0B8F  38          SEC
+0B90  AD 02 C1    LDA $C102
+0B93  E9 E8       SBC #$E8
+0B95  8D 02 C1    STA $C102
+0B98  AD 03 C1    LDA $C103
+0B9B  E9 03       SBC #$03
+0B9D  8D 03 C1    STA $C103
+0BA0  EE 05 C1    INC $C105
+0BA3  4C 7F 0B    JMP api_decimal_36
+0BA6        api_decimal_36_done:
+0BA6  A9 00       LDA #$00
+0BA8  8D 06 C1    STA $C106
+0BAB        api_decimal_37:
+0BAB  AD 03 C1    LDA $C103
+0BAE  C9 00       CMP #$00
+0BB0  90 20       BCC api_decimal_37_done
+0BB2  D0 07       BNE api_decimal_37_subtract
+0BB4  AD 02 C1    LDA $C102
+0BB7  C9 64       CMP #$64
+0BB9  90 17       BCC api_decimal_37_done
+0BBB        api_decimal_37_subtract:
+0BBB  38          SEC
+0BBC  AD 02 C1    LDA $C102
+0BBF  E9 64       SBC #$64
+0BC1  8D 02 C1    STA $C102
+0BC4  AD 03 C1    LDA $C103
+0BC7  E9 00       SBC #$00
+0BC9  8D 03 C1    STA $C103
+0BCC  EE 06 C1    INC $C106
+0BCF  4C AB 0B    JMP api_decimal_37
+0BD2        api_decimal_37_done:
+0BD2  A9 00       LDA #$00
+0BD4  8D 07 C1    STA $C107
+0BD7        api_decimal_38:
+0BD7  AD 03 C1    LDA $C103
+0BDA  C9 00       CMP #$00
+0BDC  90 20       BCC api_decimal_38_done
+0BDE  D0 07       BNE api_decimal_38_subtract
+0BE0  AD 02 C1    LDA $C102
+0BE3  C9 0A       CMP #$0A
+0BE5  90 17       BCC api_decimal_38_done
+0BE7        api_decimal_38_subtract:
+0BE7  38          SEC
+0BE8  AD 02 C1    LDA $C102
+0BEB  E9 0A       SBC #$0A
+0BED  8D 02 C1    STA $C102
+0BF0  AD 03 C1    LDA $C103
+0BF3  E9 00       SBC #$00
+0BF5  8D 03 C1    STA $C103
+0BF8  EE 07 C1    INC $C107
+0BFB  4C D7 0B    JMP api_decimal_38
+0BFE        api_decimal_38_done:
+0BFE  AD 02 C1    LDA $C102
+0C01  8D 08 C1    STA $C108
+0C04  60          RTS
+            ; String pool
+0C05        str_screen_0:
+0C05  0A 0F 19 13 14 09 03 0B 20 32 3A 20 0D 0F 16 05 00 .byte $0A, $0F, $19, $13, $14, $09, $03, $0B, $20, $32, $3A, $20, $0D, $0F, $16, $05, $00
+0C16        str_screen_1:
+0C16  18 3A 20 20 20 20 20 20 20 19 3A 00 .byte $18, $3A, $20, $20, $20, $20, $20, $20, $20, $19, $3A, $00
+0C22        str_screen_2:
+0C22  06 09 12 05 3A 20 05 18 10 01 0E 04 20 2F 20 03 0F 0C 0F 12 00 .byte $06, $09, $12, $05, $3A, $20, $05, $18, $10, $01, $0E, $04, $20, $2F, $20, $03, $0F, $0C, $0F, $12, $00
+            ; User data
+0C37        sprite_frames_hero_0:
+0C37  00 18 00 00 3C 00 00 7E 00 00 DB 00 01 FF 80 03 FF C0 03 3C C0 03 7E C0 03 FF C0 01 FF 80 00 7E 00 00 3C 00 00 66 00 00 C3 00 01 81 80 03 00 C0 06 00 60 0C 00 30 18 00 18 30 00 0C 60 00 06 .byte $00, $18, $00, $00, $3C, $00, $00, $7E, $00, $00, $DB, $00, $01, $FF, $80, $03, $FF, $C0, $03, $3C, $C0, $03, $7E, $C0, $03, $FF, $C0, $01, $FF, $80, $00, $7E, $00, $00, $3C, $00, $00, $66, $00, $00, $C3, $00, $01, $81, $80, $03, $00, $C0, $06, $00, $60, $0C, $00, $30, $18, $00, $18, $30, $00, $0C, $60, $00, $06
+0C76        sprite_frames_hero_1:
+0C76  00 18 00 00 3C 00 00 7E 00 00 DB 00 01 FF 80 03 FF C0 03 3C C0 03 7E C0 03 FF C0 01 FF 80 00 7E 00 00 3C 00 00 66 00 00 C3 00 01 81 80 03 00 C0 06 00 60 18 00 18 30 00 0C 60 00 06 30 00 0C .byte $00, $18, $00, $00, $3C, $00, $00, $7E, $00, $00, $DB, $00, $01, $FF, $80, $03, $FF, $C0, $03, $3C, $C0, $03, $7E, $C0, $03, $FF, $C0, $01, $FF, $80, $00, $7E, $00, $00, $3C, $00, $00, $66, $00, $00, $C3, $00, $01, $81, $80, $03, $00, $C0, $06, $00, $60, $18, $00, $18, $30, $00, $0C, $60, $00, $06, $30, $00, $0C

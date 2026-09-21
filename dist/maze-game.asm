@@ -88,7 +88,7 @@ printat_loop_3:
   LDA str_screen_1,X
   BEQ printat_done_4
   STA $0507,X
-  LDA #$01
+  LDA #$07
   STA $D907,X
   INX
   BNE printat_loop_3
@@ -98,7 +98,7 @@ printat_loop_5:
   LDA str_screen_2,X
   BEQ printat_done_6
   STA $052F,X
-  LDA #$01
+  LDA #$07
   STA $D92F,X
   INX
   BNE printat_loop_5

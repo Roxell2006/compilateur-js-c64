@@ -30,6 +30,7 @@ function metricsFor(result) {
     prgBytes: result.prgBytes.length,
     programBytes: memory.programBytes,
     assetBytes: memory.assetBytes,
+    scalarRamBytes: memory.ranges.filter(range => range.kind === "variable").reduce((sum, range) => sum + range.bytes, 0),
     startupCycles: (profile?.startupCyclesEstimate ?? 0) + romCopyCycles,
     reportedFrameCycles: Math.max(
       scroll?.horizontalWrapCyclesEstimate ?? 0,
@@ -46,11 +47,12 @@ function enforceBudget(name, measured, limits) {
     ["PRG bytes", measured.prgBytes, limits.maxPrgBytes],
     ["program bytes", measured.programBytes, limits.maxProgramBytes],
     ["asset bytes", measured.assetBytes, limits.maxAssetBytes],
+    ["scalar RAM bytes", measured.scalarRamBytes, limits.maxScalarRamBytes],
     ["startup cycles", measured.startupCycles, limits.maxStartupCycles],
     ["reported frame cycles", measured.reportedFrameCycles, limits.maxReportedFrameCycles]
   ];
   for (const [label, value, maximum] of checks) {
-    if (value > maximum) throw new Error(`${name}: ${label} ${value} exceeds release budget ${maximum}`);
+    if (maximum !== undefined && value > maximum) throw new Error(`${name}: ${label} ${value} exceeds release budget ${maximum}`);
   }
 }
 
@@ -59,7 +61,7 @@ await run(process.execPath, [path.join(ROOT, "scripts", "build-examples.js")]);
 await run(process.execPath, [
   path.join(ROOT, "src", "cli.js"), "build", "examples/multilevel-d64.js",
   "-o", "dist/release/multilevel.d64", "--format", "d64",
-  "--disk-name", "JS-C64 1.0", "--program-name", "MULTILEVEL",
+  "--disk-name", `JS-C64 ${pkg.version}`, "--program-name", "MULTILEVEL",
   "--report", "dist/release/multilevel.report.json"
 ]);
 

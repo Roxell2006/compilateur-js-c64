@@ -14,8 +14,9 @@ export function validatePackageContents(packResult, pkg) {
       || /^schemas\/[^/]+\.schema\.json$/.test(file)
       || /^examples\/[^/]+\.js$/.test(file)
       || /^examples\/assets\/[^/]+\.json$/.test(file);
-    const development = /(^|\/)(test|tests|__tests__|__fixtures__|fixtures|coverage|node_modules|artifacts|tmp)\//.test(file)
-      || /\.(test|spec)\.js$/.test(file);
+    const development = /(^|\/)(test|tests|__tests__|__fixtures__|fixtures|coverage|node_modules|artifacts|tmp|scripts|build|dist|out|output)\//.test(file)
+      || /(^|\/)[^/]*(?:[.-](?:test|spec)|(?:test|spec)[.-])[^/]*\.(?:js|json)$/.test(file)
+      || /(^|\/)\./.test(file);
     return !allowed || development;
   });
   if (forbidden.length) throw new Error(`Unwanted files in npm package:\n${forbidden.join("\n")}`);
@@ -23,7 +24,9 @@ export function validatePackageContents(packResult, pkg) {
   const exportTargets = Object.values(pkg.exports).flatMap(value => typeof value === "string"
     ? [value] : Object.values(value).filter(entry => typeof entry === "string"));
   const required = [...PUBLIC_DOCUMENTS, pkg.main, pkg.types, ...Object.values(pkg.bin), ...exportTargets,
-    "schemas/map-asset-v1.schema.json", "schemas/sprite-asset-v1.schema.json", "examples/c64.js"];
+    "schemas/map-asset-v1.schema.json", "schemas/sprite-asset-v1.schema.json", "examples/c64.js",
+    "src/natural.js", "src/natural-optimizer.js", "src/opcodes6502.js", "src/runtime.js", "src/prgWriter.js", "src/basicStub.js",
+    "examples/natural-tetris.js", "examples/natural-platformer.js", "examples/natural-hires-interactive.js"];
   for (const target of required) {
     if (!files.has(target.replace(/^\.\//, ""))) throw new Error(`Published package is missing ${target}`);
   }

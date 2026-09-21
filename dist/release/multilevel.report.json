@@ -577,7 +577,7 @@
   },
   {
     "type": "d64-image",
-    "diskName": "JS-C64 1.0",
+    "diskName": "JS-C64 1.1.0",
     "programName": "MULTILEVEL",
     "bytes": 174848,
     "usedBlocks": 25,

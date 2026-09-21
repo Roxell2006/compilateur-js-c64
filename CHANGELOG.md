@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## 1.1.0
+
+- Prepared npm metadata, documentation and the project starter for 1.1.0
+- Strengthened package-content checks and installation validation, including the JavaScript source programs and reference examples
 
 - Optimized natural-mode private temporaries and expression copies, with separate routine/IRQ storage and conservative lifetime checks
 - Recognized full typed-array fill loops without changing side effects, counter wrapping or IRQ-observable write ordering; added optimization reports and a compiler API comparison switch
@@ -25,6 +28,8 @@
 - Added an opt-in `"use c64"` JavaScript frontend with natural conditions, integer expressions, loops and shared functions; legacy 1.0.1 sources keep their recording behavior
 - Added explicit byte/word intrinsics, source diagnostics, short-circuit evaluation, and natural hires/sprite/scroll examples with executed-6502 regression coverage
 - Added runtime coordinates to hires points/lines with endpoint bounds guards while preserving constant drawing paths
+
+## 1.0.1 - 2026-09-19
 
 - Fixed Platformer Mini's late horizontal row copies: prepare camera movement early, defer copying to the scroll-band end, and present up to eight logical sprites in fixed IRQ slots; added PAL row-fetch regression coverage across the complete map in both directions
 - Replaced blocking SID effect delays with an on-demand 50 Hz PAL/NTSC IRQ sequencer, pooled effect tables, atomic retriggers and preserved map pointers; warn on synchronous legacy note/rest durations

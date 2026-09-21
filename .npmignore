@@ -2,6 +2,7 @@
 # Keep local development material excluded if that allowlist is expanded.
 /test/
 /tests/
+/docs/
 /scripts/
 /artifacts/
 /tmp/
@@ -23,6 +24,8 @@
 /ROADMAP.md
 **/__tests__/
 **/__fixtures__/
+**/fixtures/
+/examples/hires-test.js
 *.test.js
 *.spec.js
 *.log

@@ -1,57 +1,91 @@
-# js-c64 1.0.0 release candidate
+﻿# Préparation de js-c64 1.1.0
 
-Candidate prepared on 2026-08-07. The NPM publication itself is intentionally
-manual because it requires the package owner's authenticated account.
+Ce fichier est réservé à la maintenance du dépôt et exclu du paquet npm.
+La publication reste une opération manuelle du propriétaire du paquet.
 
-## Automated release gate
+## Vérification complète
 
-Run from the repository root:
+Depuis le dépôt :
 
-```bash
+```sh
 npm ci
 npm run release:check
 ```
 
-This single gate must pass before `npm publish`. It runs the test suite, compiles all
-examples, creates the 174,848-byte multi-level D64, checks memory conflicts and
-game budgets, inspects every published export, installs the generated tarball
-in an empty project and executes its installed `npx c64js` command.
+Cette commande ne publie rien. Elle :
 
-`npm run package:check` checks the actual `npm pack --dry-run` manifest without
-publishing. The package contains runtime JavaScript, schemas, example sources
-and assets, types and user documentation. Tests, build scripts, generated PRGs,
-reports, caches, the asset studio and release-maintenance documents stay local.
-The same content check is part of `release:check`, which `prepublishOnly` runs
-automatically before publication. Update the version before publishing a new
-release; the checks and build report use the current package version.
+1. Vérifie la cohérence de version entre package.json et package-lock.json.
+2. Exécute les tests, dont les tests d'exécution 6502 et de timing PAL/NTSC.
+3. Recompile les exemples et le D64 multi-niveaux.
+4. Contrôle les budgets de sept programmes, dont Tetris, Platformer et HR interactive.
+5. Construit l'archive npm et refuse les fichiers de développement ou les exports manquants.
+6. Installe l'archive dans un projet temporaire, vérifie les exports et compile les exemples et les programmes du guide/README.
+7. Teste le CLI installé et le projet créé par `c64js init`.
+8. Conserve l'archive validée, son manifeste et son empreinte SHA-512 dans `dist/release/`.
 
-GitHub Actions repeats the gate on Windows and Linux with Node 18, 20 and 22. The
-Linux/Node 22 job uploads `dist/release/` as the release-candidate artifact.
+`npm run package:check` inspecte seulement le contenu prévu par `npm pack`.
+`prepublishOnly` exécute le contrôle complet lors d'une publication depuis le dépôt.
 
-## Frozen validation budgets
+Dans un environnement sans réseau, après installation des dépendances :
 
-The authoritative machine-readable limits are in `release-budgets.json`.
+```sh
+npm run release:check -- --offline
+```
 
-| Game | Measured PRG | PRG limit | Program limit | Asset limit | Startup-cycle limit | Reported frame-cycle limit |
-|---|---:|---:|---:|---:|---:|---:|
-| Snake | 4,110 B | 4,600 B | 4,600 B | 2,600 B | 50,000 | 20,000 |
-| Breakout Mini | 3,361 B | 3,700 B | 3,700 B | 400 B | 1,000 | 20,000 |
-| Maze Game | 2,002 B | 2,300 B | 2,300 B | 2,600 B | 42,000 | 20,000 |
-| Platformer Mini | 11,102 B | 12,500 B | 12,500 B | 3,000 B | 45,000 | 16,250 |
+Cette variante utilise des archives des dépendances locales dont les versions
+correspondent au lockfile. Elle installe toujours le paquet js-c64 dans un projet
+vide, sans lien vers ses sources. Le rapport indique cette provenance ; ce
+contrôle ne vérifie pas la disponibilité du registre npm. Les dépendances de
+l'archive publiée restent inchangées.
 
-`dist/release/validation.json` records fresh measurements for each run. A limit
-is deliberately above the current value but low enough to catch an accidental
-size or cycle regression.
+## Contenu livré
 
-## Manual owner steps
+Inclus : compilateur et runtime JavaScript, CLI, types, schémas, exemples utiles,
+assets JSON, README, changelog, licence et guide utilisateur.
 
-1. Confirm that CI is green and test the candidate artifact in VICE.
-2. Run `npm whoami` and verify that this is the intended owner.
-3. Recheck name availability with `npm view js-c64` immediately before release.
-4. Inspect `npm pack --dry-run` if desired.
-5. Publish with `npm publish`.
-6. In a different directory, run `npm install js-c64` and compile one PRG with
-   `npx c64js`.
+Exclus : tests et fixtures, scripts de construction et de validation, rapports,
+PRG/ASM/listings/D64 générés, caches, fichiers temporaires, Studio graphique,
+configuration de développement et documents de maintenance. L'ancien exemple
+`hires-test.js` reste dans le dépôt mais est exclu de npm ; les exemples HR
+utilisateur sont fournis séparément.
 
-Never reuse version `1.0.0` after it has been published. The next fixes must use
-`1.0.1` or a later semantic version.
+Les tests ne doivent pas être supprimés du dépôt : ils empêchent les régressions.
+La liste `files` de package.json et le validateur de contenu contrôlent l'archive.
+
+## Artefacts vérifiables
+
+- `dist/release/js-c64-1.1.0.tgz` : archive à publier manuellement.
+- `dist/release/pack-manifest.json` : inventaire exact des fichiers de cette archive.
+- `dist/release/package-validation.json` : version, environnement vérifié, résultats et intégrité.
+- `dist/release/validation.json` : mesures et budgets des programmes.
+- `dist/release/multilevel.d64` : image disque de référence reconstruite.
+
+Les budgets ne remplacent pas les tests de jeu. Les cycles indiqués dans le
+rapport de ressources sont des estimations ciblées, pas le coût total de toute
+une frame. Les tests d'exécution vérifient séparément plusieurs comportements.
+
+## Publication manuelle
+
+Après validation, vérifiez le compte npm et publiez l'archive exacte :
+
+```sh
+npm whoami
+npm publish ./dist/release/js-c64-1.1.0.tgz
+```
+
+Cette deuxième commande est réservée au propriétaire : elle n'est exécutée par
+aucun script de préparation. Si le contenu livré est modifié, relancez d'abord
+`npm run release:check` pour reconstruire et revalider l'archive.
+
+Après publication, vérifiez dans un projet distinct l'installation de
+`js-c64@1.1.0` et la compilation d'un PRG avec `npx c64js`.
+Ne réutilisez pas un numéro de version déjà publié.
+
+## Portée des vérifications
+
+Le rapport `package-validation.json` indique la plateforme et la version Node
+réellement utilisées lors du contrôle local. La CI est configurée pour répéter
+le contrôle sous Windows/Linux et Node 18/20/22 ; une exécution locale ne prouve
+pas que tous ces jobs distants ont été exécutés.
+Un dernier essai visuel et sonore dans VICE ou sur le C64 ciblé complète les
+tests automatisés avant la publication.

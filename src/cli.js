@@ -190,6 +190,7 @@ async function handleInit(args) {
   }
 
   const target = path.resolve(args.folder);
+  const pkg = JSON.parse(await fs.readFile(new URL("../package.json", import.meta.url), "utf8"));
   await fs.mkdir(path.join(target, "src"), { recursive: true });
   await fs.mkdir(path.join(target, "examples"), { recursive: true });
   await fs.writeFile(
@@ -202,7 +203,7 @@ async function handleInit(args) {
         build: "c64js build examples/hello.js -o build/hello.prg"
       },
       dependencies: {
-        "js-c64": "^1.0.0"
+        "js-c64": `^${pkg.version}`
       }
     }, null, 2),
     "utf8"
@@ -210,13 +211,14 @@ async function handleInit(args) {
   await fs.writeFile(
     path.join(target, "examples", "hello.js"),
     [
+      '"use c64";',
       'import { c64 } from "js-c64";',
       "",
       "c64.clearScreen();",
       "c64.borderColor(c64.COLOR_BLUE);",
       "c64.backgroundColor(c64.COLOR_BLUE);",
       "c64.textColor(c64.COLOR_WHITE);",
-      'c64.printAt(0, 0, "Hello from js-c64!");',
+      'c64.printAt(0, 0, "HELLO FROM JS-C64!");',
       ""
     ].join("\n"),
     "utf8"

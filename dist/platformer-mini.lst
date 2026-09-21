@@ -724,7 +724,7 @@
 45FB  18          CLC
 45FC  69 01       ADC #$01
 45FE  8D 08 C1    STA $C108
-4601  20 FF 50    JSR runtime_map_entity_move_1
+4601  20 FF 50    JSR runtime_map_entity_move_0
 4604  AD 03 C4    LDA $C403
 4607  D0 03       BNE sprite_anim_active_0_24
 4609  4C 44 47    JMP sprite_anim_done_0_23
@@ -1026,18 +1026,18 @@
 4888  8D BE C7    STA $C7BE
 488B  AD C5 C7    LDA $C7C5
 488E  CD BE C7    CMP $C7BE
-4891  F0 05       BEQ map_camera_follow_x_1_1_65_0_positive_compare_high_equal
-4893  90 10       BCC map_camera_follow_x_1_1_65_0_positive_compare_false
-4895  4C D6 48    JMP map_camera_follow_x_1_1_65_0_move_positive
-4898        map_camera_follow_x_1_1_65_0_positive_compare_high_equal:
+4891  F0 05       BEQ map_camera_follow_x_0_0_65_0_positive_compare_high_equal
+4893  90 10       BCC map_camera_follow_x_0_0_65_0_positive_compare_false
+4895  4C D6 48    JMP map_camera_follow_x_0_0_65_0_move_positive
+4898        map_camera_follow_x_0_0_65_0_positive_compare_high_equal:
 4898  AD C4 C7    LDA $C7C4
 489B  CD BD C7    CMP $C7BD
-489E  F0 05       BEQ map_camera_follow_x_1_1_65_0_positive_compare_false
-48A0  90 03       BCC map_camera_follow_x_1_1_65_0_positive_compare_false
-48A2  4C D6 48    JMP map_camera_follow_x_1_1_65_0_move_positive
-48A5        map_camera_follow_x_1_1_65_0_positive_compare_false:
-48A5  4C A8 48    JMP map_camera_follow_x_1_1_65_0_check_negative
-48A8        map_camera_follow_x_1_1_65_0_check_negative:
+489E  F0 05       BEQ map_camera_follow_x_0_0_65_0_positive_compare_false
+48A0  90 03       BCC map_camera_follow_x_0_0_65_0_positive_compare_false
+48A2  4C D6 48    JMP map_camera_follow_x_0_0_65_0_move_positive
+48A5        map_camera_follow_x_0_0_65_0_positive_compare_false:
+48A5  4C A8 48    JMP map_camera_follow_x_0_0_65_0_check_negative
+48A8        map_camera_follow_x_0_0_65_0_check_negative:
 48A8  18          CLC
 48A9  AD 33 C1    LDA $C133
 48AC  69 68       ADC #$68
@@ -1047,18 +1047,18 @@
 48B6  8D BE C7    STA $C7BE
 48B9  AD BE C7    LDA $C7BE
 48BC  CD C5 C7    CMP $C7C5
-48BF  F0 05       BEQ map_camera_follow_x_1_1_65_0_negative_compare_high_equal
-48C1  90 10       BCC map_camera_follow_x_1_1_65_0_negative_compare_false
-48C3  4C 00 49    JMP map_camera_follow_x_1_1_65_0_move_negative
-48C6        map_camera_follow_x_1_1_65_0_negative_compare_high_equal:
+48BF  F0 05       BEQ map_camera_follow_x_0_0_65_0_negative_compare_high_equal
+48C1  90 10       BCC map_camera_follow_x_0_0_65_0_negative_compare_false
+48C3  4C 00 49    JMP map_camera_follow_x_0_0_65_0_move_negative
+48C6        map_camera_follow_x_0_0_65_0_negative_compare_high_equal:
 48C6  AD BD C7    LDA $C7BD
 48C9  CD C4 C7    CMP $C7C4
-48CC  F0 05       BEQ map_camera_follow_x_1_1_65_0_negative_compare_false
-48CE  90 03       BCC map_camera_follow_x_1_1_65_0_negative_compare_false
-48D0  4C 00 49    JMP map_camera_follow_x_1_1_65_0_move_negative
-48D3        map_camera_follow_x_1_1_65_0_negative_compare_false:
-48D3  4C 31 49    JMP map_camera_follow_x_1_1_65_0_done
-48D6        map_camera_follow_x_1_1_65_0_move_positive:
+48CC  F0 05       BEQ map_camera_follow_x_0_0_65_0_negative_compare_false
+48CE  90 03       BCC map_camera_follow_x_0_0_65_0_negative_compare_false
+48D0  4C 00 49    JMP map_camera_follow_x_0_0_65_0_move_negative
+48D3        map_camera_follow_x_0_0_65_0_negative_compare_false:
+48D3  4C 31 49    JMP map_camera_follow_x_0_0_65_0_done
+48D6        map_camera_follow_x_0_0_65_0_move_positive:
 48D6  AD 2D C1    LDA $C12D
 48D9  C9 2C       CMP #$2C
 48DB  F0 20       BEQ map_scroll_done_66
@@ -1079,8 +1079,8 @@
 48FA  EE 34 C1    INC $C134
 48FD        map_scroll_pixel_x_inc_66_done:
 48FD        map_scroll_done_66:
-48FD  4C 31 49    JMP map_camera_follow_x_1_1_65_0_done
-4900        map_camera_follow_x_1_1_65_0_move_negative:
+48FD  4C 31 49    JMP map_camera_follow_x_0_0_65_0_done
+4900        map_camera_follow_x_0_0_65_0_move_negative:
 4900  AD 2D C1    LDA $C12D
 4903  D0 07       BNE map_scroll_can_move_67
 4905  AD 2E C1    LDA $C12E
@@ -1105,7 +1105,7 @@
 492E        map_scroll_pixel_x_dec_67_low:
 492E  CE 33 C1    DEC $C133
 4931        map_scroll_done_67:
-4931        map_camera_follow_x_1_1_65_0_done:
+4931        map_camera_follow_x_0_0_65_0_done:
 4931  18          CLC
 4932  AD 03 C1    LDA $C103
 4935  69 0C       ADC #$0C
@@ -1122,18 +1122,18 @@
 4950  8D BE C7    STA $C7BE
 4953  AD C5 C7    LDA $C7C5
 4956  CD BE C7    CMP $C7BE
-4959  F0 05       BEQ map_camera_follow_x_1_1_68_1_positive_compare_high_equal
-495B  90 10       BCC map_camera_follow_x_1_1_68_1_positive_compare_false
-495D  4C 9E 49    JMP map_camera_follow_x_1_1_68_1_move_positive
-4960        map_camera_follow_x_1_1_68_1_positive_compare_high_equal:
+4959  F0 05       BEQ map_camera_follow_x_0_0_68_1_positive_compare_high_equal
+495B  90 10       BCC map_camera_follow_x_0_0_68_1_positive_compare_false
+495D  4C 9E 49    JMP map_camera_follow_x_0_0_68_1_move_positive
+4960        map_camera_follow_x_0_0_68_1_positive_compare_high_equal:
 4960  AD C4 C7    LDA $C7C4
 4963  CD BD C7    CMP $C7BD
-4966  F0 05       BEQ map_camera_follow_x_1_1_68_1_positive_compare_false
-4968  90 03       BCC map_camera_follow_x_1_1_68_1_positive_compare_false
-496A  4C 9E 49    JMP map_camera_follow_x_1_1_68_1_move_positive
-496D        map_camera_follow_x_1_1_68_1_positive_compare_false:
-496D  4C 70 49    JMP map_camera_follow_x_1_1_68_1_check_negative
-4970        map_camera_follow_x_1_1_68_1_check_negative:
+4966  F0 05       BEQ map_camera_follow_x_0_0_68_1_positive_compare_false
+4968  90 03       BCC map_camera_follow_x_0_0_68_1_positive_compare_false
+496A  4C 9E 49    JMP map_camera_follow_x_0_0_68_1_move_positive
+496D        map_camera_follow_x_0_0_68_1_positive_compare_false:
+496D  4C 70 49    JMP map_camera_follow_x_0_0_68_1_check_negative
+4970        map_camera_follow_x_0_0_68_1_check_negative:
 4970  18          CLC
 4971  AD 33 C1    LDA $C133
 4974  69 68       ADC #$68
@@ -1143,18 +1143,18 @@
 497E  8D BE C7    STA $C7BE
 4981  AD BE C7    LDA $C7BE
 4984  CD C5 C7    CMP $C7C5
-4987  F0 05       BEQ map_camera_follow_x_1_1_68_1_negative_compare_high_equal
-4989  90 10       BCC map_camera_follow_x_1_1_68_1_negative_compare_false
-498B  4C C8 49    JMP map_camera_follow_x_1_1_68_1_move_negative
-498E        map_camera_follow_x_1_1_68_1_negative_compare_high_equal:
+4987  F0 05       BEQ map_camera_follow_x_0_0_68_1_negative_compare_high_equal
+4989  90 10       BCC map_camera_follow_x_0_0_68_1_negative_compare_false
+498B  4C C8 49    JMP map_camera_follow_x_0_0_68_1_move_negative
+498E        map_camera_follow_x_0_0_68_1_negative_compare_high_equal:
 498E  AD BD C7    LDA $C7BD
 4991  CD C4 C7    CMP $C7C4
-4994  F0 05       BEQ map_camera_follow_x_1_1_68_1_negative_compare_false
-4996  90 03       BCC map_camera_follow_x_1_1_68_1_negative_compare_false
-4998  4C C8 49    JMP map_camera_follow_x_1_1_68_1_move_negative
-499B        map_camera_follow_x_1_1_68_1_negative_compare_false:
-499B  4C F9 49    JMP map_camera_follow_x_1_1_68_1_done
-499E        map_camera_follow_x_1_1_68_1_move_positive:
+4994  F0 05       BEQ map_camera_follow_x_0_0_68_1_negative_compare_false
+4996  90 03       BCC map_camera_follow_x_0_0_68_1_negative_compare_false
+4998  4C C8 49    JMP map_camera_follow_x_0_0_68_1_move_negative
+499B        map_camera_follow_x_0_0_68_1_negative_compare_false:
+499B  4C F9 49    JMP map_camera_follow_x_0_0_68_1_done
+499E        map_camera_follow_x_0_0_68_1_move_positive:
 499E  AD 2D C1    LDA $C12D
 49A1  C9 2C       CMP #$2C
 49A3  F0 20       BEQ map_scroll_done_69
@@ -1175,8 +1175,8 @@
 49C2  EE 34 C1    INC $C134
 49C5        map_scroll_pixel_x_inc_69_done:
 49C5        map_scroll_done_69:
-49C5  4C F9 49    JMP map_camera_follow_x_1_1_68_1_done
-49C8        map_camera_follow_x_1_1_68_1_move_negative:
+49C5  4C F9 49    JMP map_camera_follow_x_0_0_68_1_done
+49C8        map_camera_follow_x_0_0_68_1_move_negative:
 49C8  AD 2D C1    LDA $C12D
 49CB  D0 07       BNE map_scroll_can_move_70
 49CD  AD 2E C1    LDA $C12E
@@ -1201,11 +1201,11 @@
 49F6        map_scroll_pixel_x_dec_70_low:
 49F6  CE 33 C1    DEC $C133
 49F9        map_scroll_done_70:
-49F9        map_camera_follow_x_1_1_68_1_done:
+49F9        map_camera_follow_x_0_0_68_1_done:
 49F9  AD 0D C1    LDA $C10D
-49FC  D0 03       BNE map_entity_enabled_1_71
-49FE  4C 9B 4A    JMP map_entity_hidden_1_71
-4A01        map_entity_enabled_1_71:
+49FC  D0 03       BNE map_entity_enabled_0_71
+49FE  4C 9B 4A    JMP map_entity_hidden_0_71
+4A01        map_entity_enabled_0_71:
 4A01  18          CLC
 4A02  AD 03 C1    LDA $C103
 4A05  69 18       ADC #$18
@@ -1221,7 +1221,7 @@
 4A1F  ED 34 C1    SBC $C134
 4A22  8D BE C7    STA $C7BE
 4A25  B0 03       BCS map_entity_x_71_not_before_72
-4A27  4C 9B 4A    JMP map_entity_hidden_1_71
+4A27  4C 9B 4A    JMP map_entity_hidden_0_71
 4A2A        map_entity_x_71_not_before_72:
 4A2A  AD BE C7    LDA $C7BE
 4A2D  C9 01       CMP #$01
@@ -1231,7 +1231,7 @@
 4A36  C9 50       CMP #$50
 4A38  90 03       BCC map_entity_x_visible_71
 4A3A        map_entity_x_visible_71_hidden:
-4A3A  4C 9B 4A    JMP map_entity_hidden_1_71
+4A3A  4C 9B 4A    JMP map_entity_hidden_0_71
 4A3D        map_entity_x_visible_71:
 4A3D  18          CLC
 4A3E  AD 05 C1    LDA $C105
@@ -1248,7 +1248,7 @@
 4A5B  ED 36 C1    SBC $C136
 4A5E  8D BC C7    STA $C7BC
 4A61  B0 03       BCS map_entity_y_71_not_before_73
-4A63  4C 9B 4A    JMP map_entity_hidden_1_71
+4A63  4C 9B 4A    JMP map_entity_hidden_0_71
 4A66        map_entity_y_71_not_before_73:
 4A66  AD BC C7    LDA $C7BC
 4A69  C9 00       CMP #$00
@@ -1258,7 +1258,7 @@
 4A72  C9 CA       CMP #$CA
 4A74  90 03       BCC map_entity_y_visible_71
 4A76        map_entity_y_visible_71_hidden:
-4A76  4C 9B 4A    JMP map_entity_hidden_1_71
+4A76  4C 9B 4A    JMP map_entity_hidden_0_71
 4A79        map_entity_y_visible_71:
 4A79  18          CLC
 4A7A  AD BD C7    LDA $C7BD
@@ -1273,16 +1273,16 @@
 4A90  8D 02 C5    STA $C502
 4A93  A9 01       LDA #$01
 4A95  8D 05 C5    STA $C505
-4A98  4C A0 4A    JMP map_entity_shown_1_71
-4A9B        map_entity_hidden_1_71:
+4A98  4C A0 4A    JMP map_entity_shown_0_71
+4A9B        map_entity_hidden_0_71:
 4A9B  A9 00       LDA #$00
 4A9D  8D 05 C5    STA $C505
-4AA0        map_entity_shown_1_71:
-4AA0        map_entity_project_done_1_71:
+4AA0        map_entity_shown_0_71:
+4AA0        map_entity_project_done_0_71:
 4AA0  AD 1B C1    LDA $C11B
-4AA3  D0 03       BNE map_entity_enabled_2_74
-4AA5  4C 42 4B    JMP map_entity_hidden_2_74
-4AA8        map_entity_enabled_2_74:
+4AA3  D0 03       BNE map_entity_enabled_1_74
+4AA5  4C 42 4B    JMP map_entity_hidden_1_74
+4AA8        map_entity_enabled_1_74:
 4AA8  18          CLC
 4AA9  AD 11 C1    LDA $C111
 4AAC  69 18       ADC #$18
@@ -1298,7 +1298,7 @@
 4AC6  ED 34 C1    SBC $C134
 4AC9  8D BE C7    STA $C7BE
 4ACC  B0 03       BCS map_entity_x_74_not_before_75
-4ACE  4C 42 4B    JMP map_entity_hidden_2_74
+4ACE  4C 42 4B    JMP map_entity_hidden_1_74
 4AD1        map_entity_x_74_not_before_75:
 4AD1  AD BE C7    LDA $C7BE
 4AD4  C9 01       CMP #$01
@@ -1308,7 +1308,7 @@
 4ADD  C9 50       CMP #$50
 4ADF  90 03       BCC map_entity_x_visible_74
 4AE1        map_entity_x_visible_74_hidden:
-4AE1  4C 42 4B    JMP map_entity_hidden_2_74
+4AE1  4C 42 4B    JMP map_entity_hidden_1_74
 4AE4        map_entity_x_visible_74:
 4AE4  18          CLC
 4AE5  AD 13 C1    LDA $C113
@@ -1325,7 +1325,7 @@
 4B02  ED 36 C1    SBC $C136
 4B05  8D BC C7    STA $C7BC
 4B08  B0 03       BCS map_entity_y_74_not_before_76
-4B0A  4C 42 4B    JMP map_entity_hidden_2_74
+4B0A  4C 42 4B    JMP map_entity_hidden_1_74
 4B0D        map_entity_y_74_not_before_76:
 4B0D  AD BC C7    LDA $C7BC
 4B10  C9 00       CMP #$00
@@ -1335,7 +1335,7 @@
 4B19  C9 CA       CMP #$CA
 4B1B  90 03       BCC map_entity_y_visible_74
 4B1D        map_entity_y_visible_74_hidden:
-4B1D  4C 42 4B    JMP map_entity_hidden_2_74
+4B1D  4C 42 4B    JMP map_entity_hidden_1_74
 4B20        map_entity_y_visible_74:
 4B20  18          CLC
 4B21  AD BD C7    LDA $C7BD
@@ -1350,16 +1350,16 @@
 4B37  8D 0A C5    STA $C50A
 4B3A  A9 01       LDA #$01
 4B3C  8D 0D C5    STA $C50D
-4B3F  4C 47 4B    JMP map_entity_shown_2_74
-4B42        map_entity_hidden_2_74:
+4B3F  4C 47 4B    JMP map_entity_shown_1_74
+4B42        map_entity_hidden_1_74:
 4B42  A9 00       LDA #$00
 4B44  8D 0D C5    STA $C50D
-4B47        map_entity_shown_2_74:
-4B47        map_entity_project_done_2_74:
+4B47        map_entity_shown_1_74:
+4B47        map_entity_project_done_1_74:
 4B47  AD 29 C1    LDA $C129
-4B4A  D0 03       BNE map_entity_enabled_3_77
-4B4C  4C E9 4B    JMP map_entity_hidden_3_77
-4B4F        map_entity_enabled_3_77:
+4B4A  D0 03       BNE map_entity_enabled_2_77
+4B4C  4C E9 4B    JMP map_entity_hidden_2_77
+4B4F        map_entity_enabled_2_77:
 4B4F  18          CLC
 4B50  AD 1F C1    LDA $C11F
 4B53  69 18       ADC #$18
@@ -1375,7 +1375,7 @@
 4B6D  ED 34 C1    SBC $C134
 4B70  8D BE C7    STA $C7BE
 4B73  B0 03       BCS map_entity_x_77_not_before_78
-4B75  4C E9 4B    JMP map_entity_hidden_3_77
+4B75  4C E9 4B    JMP map_entity_hidden_2_77
 4B78        map_entity_x_77_not_before_78:
 4B78  AD BE C7    LDA $C7BE
 4B7B  C9 01       CMP #$01
@@ -1385,7 +1385,7 @@
 4B84  C9 50       CMP #$50
 4B86  90 03       BCC map_entity_x_visible_77
 4B88        map_entity_x_visible_77_hidden:
-4B88  4C E9 4B    JMP map_entity_hidden_3_77
+4B88  4C E9 4B    JMP map_entity_hidden_2_77
 4B8B        map_entity_x_visible_77:
 4B8B  18          CLC
 4B8C  AD 21 C1    LDA $C121
@@ -1402,7 +1402,7 @@
 4BA9  ED 36 C1    SBC $C136
 4BAC  8D BC C7    STA $C7BC
 4BAF  B0 03       BCS map_entity_y_77_not_before_79
-4BB1  4C E9 4B    JMP map_entity_hidden_3_77
+4BB1  4C E9 4B    JMP map_entity_hidden_2_77
 4BB4        map_entity_y_77_not_before_79:
 4BB4  AD BC C7    LDA $C7BC
 4BB7  C9 00       CMP #$00
@@ -1412,7 +1412,7 @@
 4BC0  C9 CA       CMP #$CA
 4BC2  90 03       BCC map_entity_y_visible_77
 4BC4        map_entity_y_visible_77_hidden:
-4BC4  4C E9 4B    JMP map_entity_hidden_3_77
+4BC4  4C E9 4B    JMP map_entity_hidden_2_77
 4BC7        map_entity_y_visible_77:
 4BC7  18          CLC
 4BC8  AD BD C7    LDA $C7BD
@@ -1427,12 +1427,12 @@
 4BDE  8D 42 C5    STA $C542
 4BE1  A9 01       LDA #$01
 4BE3  8D 45 C5    STA $C545
-4BE6  4C EE 4B    JMP map_entity_shown_3_77
-4BE9        map_entity_hidden_3_77:
+4BE6  4C EE 4B    JMP map_entity_shown_2_77
+4BE9        map_entity_hidden_2_77:
 4BE9  A9 00       LDA #$00
 4BEB  8D 45 C5    STA $C545
-4BEE        map_entity_shown_3_77:
-4BEE        map_entity_project_done_3_77:
+4BEE        map_entity_shown_2_77:
+4BEE        map_entity_project_done_2_77:
 4BEE  AD 0E C1    LDA $C10E
 4BF1  C9 01       CMP #$01
 4BF3  F0 03       BEQ condition_pass_81
@@ -2018,8 +2018,8 @@
 50EF  01 02 04 08 10 20 40 80 .byte $01, $02, $04, $08, $10, $20, $40, $80
 50F7        runtime_sprite_mux_inverse_masks:
 50F7  FE FD FB F7 EF DF BF 7F .byte $FE, $FD, $FB, $F7, $EF, $DF, $BF, $7F
-            ; Map entity 1: pixel-stepped X/Y tile collision
-50FF        runtime_map_entity_move_1:
+            ; Map entity 0: pixel-stepped X/Y tile collision
+50FF        runtime_map_entity_move_0:
 50FF  A9 00       LDA #$00
 5101  8D 09 C1    STA $C109
 5104  A9 00       LDA #$00
@@ -2037,23 +2037,23 @@
 5122  A9 00       LDA #$00
 5124  8D C9 C7    STA $C7C9
 5127  AD 07 C1    LDA $C107
-512A  D0 03       BNE runtime_map_entity_1_x_has_velocity
-512C  4C 94 52    JMP runtime_map_entity_1_x_done
-512F        runtime_map_entity_1_x_has_velocity:
-512F  10 03       BPL runtime_map_entity_1_x_positive
-5131  4C E3 51    JMP runtime_map_entity_1_x_negative
-5134        runtime_map_entity_1_x_positive:
+512A  D0 03       BNE runtime_map_entity_0_x_has_velocity
+512C  4C 94 52    JMP runtime_map_entity_0_x_done
+512F        runtime_map_entity_0_x_has_velocity:
+512F  10 03       BPL runtime_map_entity_0_x_positive
+5131  4C E3 51    JMP runtime_map_entity_0_x_negative
+5134        runtime_map_entity_0_x_positive:
 5134  AD 07 C1    LDA $C107
 5137  C9 09       CMP #$09
-5139  90 02       BCC runtime_map_entity_1_x_positive_count_store
+5139  90 02       BCC runtime_map_entity_0_x_positive_count_store
 513B  A9 08       LDA #$08
-513D        runtime_map_entity_1_x_positive_count_store:
+513D        runtime_map_entity_0_x_positive_count_store:
 513D  8D C8 C7    STA $C7C8
-5140        runtime_map_entity_1_x_positive_loop:
+5140        runtime_map_entity_0_x_positive_loop:
 5140  EE 03 C1    INC $C103
-5143  D0 03       BNE runtime_map_entity_1_x_positive_step_done
+5143  D0 03       BNE runtime_map_entity_0_x_positive_step_done
 5145  EE 04 C1    INC $C104
-5148        runtime_map_entity_1_x_positive_step_done:
+5148        runtime_map_entity_0_x_positive_step_done:
 5148  18          CLC
 5149  AD 03 C1    LDA $C103
 514C  69 13       ADC #$13
@@ -2069,9 +2069,9 @@
 5165  69 00       ADC #$00
 5167  8D C7 C7    STA $C7C7
 516A  20 2D 55    JSR runtime_map_entity_point_solid_0
-516D  F0 03       BEQ runtime_map_entity_1_x_positive_sample_0_clear
-516F  4C CB 51    JMP runtime_map_entity_1_x_positive_hit
-5172        runtime_map_entity_1_x_positive_sample_0_clear:
+516D  F0 03       BEQ runtime_map_entity_0_x_positive_sample_0_clear
+516F  4C CB 51    JMP runtime_map_entity_0_x_positive_hit
+5172        runtime_map_entity_0_x_positive_sample_0_clear:
 5172  18          CLC
 5173  AD 05 C1    LDA $C105
 5176  69 09       ADC #$09
@@ -2080,9 +2080,9 @@
 517E  69 00       ADC #$00
 5180  8D C7 C7    STA $C7C7
 5183  20 2D 55    JSR runtime_map_entity_point_solid_0
-5186  F0 03       BEQ runtime_map_entity_1_x_positive_sample_1_clear
-5188  4C CB 51    JMP runtime_map_entity_1_x_positive_hit
-518B        runtime_map_entity_1_x_positive_sample_1_clear:
+5186  F0 03       BEQ runtime_map_entity_0_x_positive_sample_1_clear
+5188  4C CB 51    JMP runtime_map_entity_0_x_positive_hit
+518B        runtime_map_entity_0_x_positive_sample_1_clear:
 518B  18          CLC
 518C  AD 05 C1    LDA $C105
 518F  69 11       ADC #$11
@@ -2091,9 +2091,9 @@
 5197  69 00       ADC #$00
 5199  8D C7 C7    STA $C7C7
 519C  20 2D 55    JSR runtime_map_entity_point_solid_0
-519F  F0 03       BEQ runtime_map_entity_1_x_positive_sample_2_clear
-51A1  4C CB 51    JMP runtime_map_entity_1_x_positive_hit
-51A4        runtime_map_entity_1_x_positive_sample_2_clear:
+519F  F0 03       BEQ runtime_map_entity_0_x_positive_sample_2_clear
+51A1  4C CB 51    JMP runtime_map_entity_0_x_positive_hit
+51A4        runtime_map_entity_0_x_positive_sample_2_clear:
 51A4  18          CLC
 51A5  AD 05 C1    LDA $C105
 51A8  69 14       ADC #$14
@@ -2102,41 +2102,41 @@
 51B0  69 00       ADC #$00
 51B2  8D C7 C7    STA $C7C7
 51B5  20 2D 55    JSR runtime_map_entity_point_solid_0
-51B8  F0 03       BEQ runtime_map_entity_1_x_positive_sample_3_clear
-51BA  4C CB 51    JMP runtime_map_entity_1_x_positive_hit
-51BD        runtime_map_entity_1_x_positive_sample_3_clear:
+51B8  F0 03       BEQ runtime_map_entity_0_x_positive_sample_3_clear
+51BA  4C CB 51    JMP runtime_map_entity_0_x_positive_hit
+51BD        runtime_map_entity_0_x_positive_sample_3_clear:
 51BD  CE C8 C7    DEC $C7C8
 51C0  AD C8 C7    LDA $C7C8
-51C3  F0 03       BEQ runtime_map_entity_1_x_positive_done
-51C5  4C 40 51    JMP runtime_map_entity_1_x_positive_loop
-51C8        runtime_map_entity_1_x_positive_done:
-51C8  4C 94 52    JMP runtime_map_entity_1_x_done
-51CB        runtime_map_entity_1_x_positive_hit:
+51C3  F0 03       BEQ runtime_map_entity_0_x_positive_done
+51C5  4C 40 51    JMP runtime_map_entity_0_x_positive_loop
+51C8        runtime_map_entity_0_x_positive_done:
+51C8  4C 94 52    JMP runtime_map_entity_0_x_done
+51CB        runtime_map_entity_0_x_positive_hit:
 51CB  AD 03 C1    LDA $C103
-51CE  D0 03       BNE runtime_map_entity_1_x_positive_undo_low
+51CE  D0 03       BNE runtime_map_entity_0_x_positive_undo_low
 51D0  CE 04 C1    DEC $C104
-51D3        runtime_map_entity_1_x_positive_undo_low:
+51D3        runtime_map_entity_0_x_positive_undo_low:
 51D3  CE 03 C1    DEC $C103
 51D6  A9 01       LDA #$01
 51D8  8D 0C C1    STA $C10C
 51DB  A9 00       LDA #$00
 51DD  8D 07 C1    STA $C107
-51E0  4C 94 52    JMP runtime_map_entity_1_x_done
-51E3        runtime_map_entity_1_x_negative:
+51E0  4C 94 52    JMP runtime_map_entity_0_x_done
+51E3        runtime_map_entity_0_x_negative:
 51E3  AD 07 C1    LDA $C107
 51E6  49 FF       EOR #$FF
 51E8  18          CLC
 51E9  69 01       ADC #$01
 51EB  C9 09       CMP #$09
-51ED  90 02       BCC runtime_map_entity_1_x_negative_count_store
+51ED  90 02       BCC runtime_map_entity_0_x_negative_count_store
 51EF  A9 08       LDA #$08
-51F1        runtime_map_entity_1_x_negative_count_store:
+51F1        runtime_map_entity_0_x_negative_count_store:
 51F1  8D C8 C7    STA $C7C8
-51F4        runtime_map_entity_1_x_negative_loop:
+51F4        runtime_map_entity_0_x_negative_loop:
 51F4  AD 03 C1    LDA $C103
-51F7  D0 03       BNE runtime_map_entity_1_x_negative_step_low
+51F7  D0 03       BNE runtime_map_entity_0_x_negative_step_low
 51F9  CE 04 C1    DEC $C104
-51FC        runtime_map_entity_1_x_negative_step_low:
+51FC        runtime_map_entity_0_x_negative_step_low:
 51FC  CE 03 C1    DEC $C103
 51FF  18          CLC
 5200  AD 03 C1    LDA $C103
@@ -2153,9 +2153,9 @@
 521C  69 00       ADC #$00
 521E  8D C7 C7    STA $C7C7
 5221  20 2D 55    JSR runtime_map_entity_point_solid_0
-5224  F0 03       BEQ runtime_map_entity_1_x_negative_sample_0_clear
-5226  4C 82 52    JMP runtime_map_entity_1_x_negative_hit
-5229        runtime_map_entity_1_x_negative_sample_0_clear:
+5224  F0 03       BEQ runtime_map_entity_0_x_negative_sample_0_clear
+5226  4C 82 52    JMP runtime_map_entity_0_x_negative_hit
+5229        runtime_map_entity_0_x_negative_sample_0_clear:
 5229  18          CLC
 522A  AD 05 C1    LDA $C105
 522D  69 09       ADC #$09
@@ -2164,9 +2164,9 @@
 5235  69 00       ADC #$00
 5237  8D C7 C7    STA $C7C7
 523A  20 2D 55    JSR runtime_map_entity_point_solid_0
-523D  F0 03       BEQ runtime_map_entity_1_x_negative_sample_1_clear
-523F  4C 82 52    JMP runtime_map_entity_1_x_negative_hit
-5242        runtime_map_entity_1_x_negative_sample_1_clear:
+523D  F0 03       BEQ runtime_map_entity_0_x_negative_sample_1_clear
+523F  4C 82 52    JMP runtime_map_entity_0_x_negative_hit
+5242        runtime_map_entity_0_x_negative_sample_1_clear:
 5242  18          CLC
 5243  AD 05 C1    LDA $C105
 5246  69 11       ADC #$11
@@ -2175,9 +2175,9 @@
 524E  69 00       ADC #$00
 5250  8D C7 C7    STA $C7C7
 5253  20 2D 55    JSR runtime_map_entity_point_solid_0
-5256  F0 03       BEQ runtime_map_entity_1_x_negative_sample_2_clear
-5258  4C 82 52    JMP runtime_map_entity_1_x_negative_hit
-525B        runtime_map_entity_1_x_negative_sample_2_clear:
+5256  F0 03       BEQ runtime_map_entity_0_x_negative_sample_2_clear
+5258  4C 82 52    JMP runtime_map_entity_0_x_negative_hit
+525B        runtime_map_entity_0_x_negative_sample_2_clear:
 525B  18          CLC
 525C  AD 05 C1    LDA $C105
 525F  69 14       ADC #$14
@@ -2186,45 +2186,45 @@
 5267  69 00       ADC #$00
 5269  8D C7 C7    STA $C7C7
 526C  20 2D 55    JSR runtime_map_entity_point_solid_0
-526F  F0 03       BEQ runtime_map_entity_1_x_negative_sample_3_clear
-5271  4C 82 52    JMP runtime_map_entity_1_x_negative_hit
-5274        runtime_map_entity_1_x_negative_sample_3_clear:
+526F  F0 03       BEQ runtime_map_entity_0_x_negative_sample_3_clear
+5271  4C 82 52    JMP runtime_map_entity_0_x_negative_hit
+5274        runtime_map_entity_0_x_negative_sample_3_clear:
 5274  CE C8 C7    DEC $C7C8
 5277  AD C8 C7    LDA $C7C8
-527A  F0 03       BEQ runtime_map_entity_1_x_negative_done
-527C  4C F4 51    JMP runtime_map_entity_1_x_negative_loop
-527F        runtime_map_entity_1_x_negative_done:
-527F  4C 94 52    JMP runtime_map_entity_1_x_done
-5282        runtime_map_entity_1_x_negative_hit:
+527A  F0 03       BEQ runtime_map_entity_0_x_negative_done
+527C  4C F4 51    JMP runtime_map_entity_0_x_negative_loop
+527F        runtime_map_entity_0_x_negative_done:
+527F  4C 94 52    JMP runtime_map_entity_0_x_done
+5282        runtime_map_entity_0_x_negative_hit:
 5282  EE 03 C1    INC $C103
-5285  D0 03       BNE runtime_map_entity_1_x_negative_undo_done
+5285  D0 03       BNE runtime_map_entity_0_x_negative_undo_done
 5287  EE 04 C1    INC $C104
-528A        runtime_map_entity_1_x_negative_undo_done:
+528A        runtime_map_entity_0_x_negative_undo_done:
 528A  A9 01       LDA #$01
 528C  8D 0B C1    STA $C10B
 528F  A9 00       LDA #$00
 5291  8D 07 C1    STA $C107
-5294        runtime_map_entity_1_x_done:
+5294        runtime_map_entity_0_x_done:
 5294  AD 08 C1    LDA $C108
-5297  D0 03       BNE runtime_map_entity_1_y_has_velocity
-5299  4C D9 53    JMP runtime_map_entity_1_y_done
-529C        runtime_map_entity_1_y_has_velocity:
-529C  10 03       BPL runtime_map_entity_1_y_positive
-529E  4C 3C 53    JMP runtime_map_entity_1_y_negative
-52A1        runtime_map_entity_1_y_positive:
+5297  D0 03       BNE runtime_map_entity_0_y_has_velocity
+5299  4C D9 53    JMP runtime_map_entity_0_y_done
+529C        runtime_map_entity_0_y_has_velocity:
+529C  10 03       BPL runtime_map_entity_0_y_positive
+529E  4C 3C 53    JMP runtime_map_entity_0_y_negative
+52A1        runtime_map_entity_0_y_positive:
 52A1  A9 01       LDA #$01
 52A3  8D C9 C7    STA $C7C9
 52A6  AD 08 C1    LDA $C108
 52A9  C9 09       CMP #$09
-52AB  90 02       BCC runtime_map_entity_1_y_positive_count_store
+52AB  90 02       BCC runtime_map_entity_0_y_positive_count_store
 52AD  A9 08       LDA #$08
-52AF        runtime_map_entity_1_y_positive_count_store:
+52AF        runtime_map_entity_0_y_positive_count_store:
 52AF  8D C8 C7    STA $C7C8
-52B2        runtime_map_entity_1_y_positive_loop:
+52B2        runtime_map_entity_0_y_positive_loop:
 52B2  EE 05 C1    INC $C105
-52B5  D0 03       BNE runtime_map_entity_1_y_positive_step_done
+52B5  D0 03       BNE runtime_map_entity_0_y_positive_step_done
 52B7  EE 06 C1    INC $C106
-52BA        runtime_map_entity_1_y_positive_step_done:
+52BA        runtime_map_entity_0_y_positive_step_done:
 52BA  18          CLC
 52BB  AD 05 C1    LDA $C105
 52BE  69 14       ADC #$14
@@ -2240,9 +2240,9 @@
 52D7  69 00       ADC #$00
 52D9  8D C5 C7    STA $C7C5
 52DC  20 2D 55    JSR runtime_map_entity_point_solid_0
-52DF  F0 03       BEQ runtime_map_entity_1_y_positive_sample_0_clear
-52E1  4C 24 53    JMP runtime_map_entity_1_y_positive_hit
-52E4        runtime_map_entity_1_y_positive_sample_0_clear:
+52DF  F0 03       BEQ runtime_map_entity_0_y_positive_sample_0_clear
+52E1  4C 24 53    JMP runtime_map_entity_0_y_positive_hit
+52E4        runtime_map_entity_0_y_positive_sample_0_clear:
 52E4  18          CLC
 52E5  AD 03 C1    LDA $C103
 52E8  69 0C       ADC #$0C
@@ -2251,9 +2251,9 @@
 52F0  69 00       ADC #$00
 52F2  8D C5 C7    STA $C7C5
 52F5  20 2D 55    JSR runtime_map_entity_point_solid_0
-52F8  F0 03       BEQ runtime_map_entity_1_y_positive_sample_1_clear
-52FA  4C 24 53    JMP runtime_map_entity_1_y_positive_hit
-52FD        runtime_map_entity_1_y_positive_sample_1_clear:
+52F8  F0 03       BEQ runtime_map_entity_0_y_positive_sample_1_clear
+52FA  4C 24 53    JMP runtime_map_entity_0_y_positive_hit
+52FD        runtime_map_entity_0_y_positive_sample_1_clear:
 52FD  18          CLC
 52FE  AD 03 C1    LDA $C103
 5301  69 13       ADC #$13
@@ -2262,27 +2262,27 @@
 5309  69 00       ADC #$00
 530B  8D C5 C7    STA $C7C5
 530E  20 2D 55    JSR runtime_map_entity_point_solid_0
-5311  F0 03       BEQ runtime_map_entity_1_y_positive_sample_2_clear
-5313  4C 24 53    JMP runtime_map_entity_1_y_positive_hit
-5316        runtime_map_entity_1_y_positive_sample_2_clear:
+5311  F0 03       BEQ runtime_map_entity_0_y_positive_sample_2_clear
+5313  4C 24 53    JMP runtime_map_entity_0_y_positive_hit
+5316        runtime_map_entity_0_y_positive_sample_2_clear:
 5316  CE C8 C7    DEC $C7C8
 5319  AD C8 C7    LDA $C7C8
-531C  F0 03       BEQ runtime_map_entity_1_y_positive_done
-531E  4C B2 52    JMP runtime_map_entity_1_y_positive_loop
-5321        runtime_map_entity_1_y_positive_done:
-5321  4C D9 53    JMP runtime_map_entity_1_y_done
-5324        runtime_map_entity_1_y_positive_hit:
+531C  F0 03       BEQ runtime_map_entity_0_y_positive_done
+531E  4C B2 52    JMP runtime_map_entity_0_y_positive_loop
+5321        runtime_map_entity_0_y_positive_done:
+5321  4C D9 53    JMP runtime_map_entity_0_y_done
+5324        runtime_map_entity_0_y_positive_hit:
 5324  AD 05 C1    LDA $C105
-5327  D0 03       BNE runtime_map_entity_1_y_positive_undo_low
+5327  D0 03       BNE runtime_map_entity_0_y_positive_undo_low
 5329  CE 06 C1    DEC $C106
-532C        runtime_map_entity_1_y_positive_undo_low:
+532C        runtime_map_entity_0_y_positive_undo_low:
 532C  CE 05 C1    DEC $C105
 532F  A9 01       LDA #$01
 5331  8D 09 C1    STA $C109
 5334  A9 00       LDA #$00
 5336  8D 08 C1    STA $C108
-5339  4C D9 53    JMP runtime_map_entity_1_y_done
-533C        runtime_map_entity_1_y_negative:
+5339  4C D9 53    JMP runtime_map_entity_0_y_done
+533C        runtime_map_entity_0_y_negative:
 533C  A9 00       LDA #$00
 533E  8D C9 C7    STA $C7C9
 5341  AD 08 C1    LDA $C108
@@ -2290,15 +2290,15 @@
 5346  18          CLC
 5347  69 01       ADC #$01
 5349  C9 09       CMP #$09
-534B  90 02       BCC runtime_map_entity_1_y_negative_count_store
+534B  90 02       BCC runtime_map_entity_0_y_negative_count_store
 534D  A9 08       LDA #$08
-534F        runtime_map_entity_1_y_negative_count_store:
+534F        runtime_map_entity_0_y_negative_count_store:
 534F  8D C8 C7    STA $C7C8
-5352        runtime_map_entity_1_y_negative_loop:
+5352        runtime_map_entity_0_y_negative_loop:
 5352  AD 05 C1    LDA $C105
-5355  D0 03       BNE runtime_map_entity_1_y_negative_step_low
+5355  D0 03       BNE runtime_map_entity_0_y_negative_step_low
 5357  CE 06 C1    DEC $C106
-535A        runtime_map_entity_1_y_negative_step_low:
+535A        runtime_map_entity_0_y_negative_step_low:
 535A  CE 05 C1    DEC $C105
 535D  18          CLC
 535E  AD 05 C1    LDA $C105
@@ -2315,9 +2315,9 @@
 537A  69 00       ADC #$00
 537C  8D C5 C7    STA $C7C5
 537F  20 2D 55    JSR runtime_map_entity_point_solid_0
-5382  F0 03       BEQ runtime_map_entity_1_y_negative_sample_0_clear
-5384  4C C7 53    JMP runtime_map_entity_1_y_negative_hit
-5387        runtime_map_entity_1_y_negative_sample_0_clear:
+5382  F0 03       BEQ runtime_map_entity_0_y_negative_sample_0_clear
+5384  4C C7 53    JMP runtime_map_entity_0_y_negative_hit
+5387        runtime_map_entity_0_y_negative_sample_0_clear:
 5387  18          CLC
 5388  AD 03 C1    LDA $C103
 538B  69 0C       ADC #$0C
@@ -2326,9 +2326,9 @@
 5393  69 00       ADC #$00
 5395  8D C5 C7    STA $C7C5
 5398  20 2D 55    JSR runtime_map_entity_point_solid_0
-539B  F0 03       BEQ runtime_map_entity_1_y_negative_sample_1_clear
-539D  4C C7 53    JMP runtime_map_entity_1_y_negative_hit
-53A0        runtime_map_entity_1_y_negative_sample_1_clear:
+539B  F0 03       BEQ runtime_map_entity_0_y_negative_sample_1_clear
+539D  4C C7 53    JMP runtime_map_entity_0_y_negative_hit
+53A0        runtime_map_entity_0_y_negative_sample_1_clear:
 53A0  18          CLC
 53A1  AD 03 C1    LDA $C103
 53A4  69 13       ADC #$13
@@ -2337,25 +2337,25 @@
 53AC  69 00       ADC #$00
 53AE  8D C5 C7    STA $C7C5
 53B1  20 2D 55    JSR runtime_map_entity_point_solid_0
-53B4  F0 03       BEQ runtime_map_entity_1_y_negative_sample_2_clear
-53B6  4C C7 53    JMP runtime_map_entity_1_y_negative_hit
-53B9        runtime_map_entity_1_y_negative_sample_2_clear:
+53B4  F0 03       BEQ runtime_map_entity_0_y_negative_sample_2_clear
+53B6  4C C7 53    JMP runtime_map_entity_0_y_negative_hit
+53B9        runtime_map_entity_0_y_negative_sample_2_clear:
 53B9  CE C8 C7    DEC $C7C8
 53BC  AD C8 C7    LDA $C7C8
-53BF  F0 03       BEQ runtime_map_entity_1_y_negative_done
-53C1  4C 52 53    JMP runtime_map_entity_1_y_negative_loop
-53C4        runtime_map_entity_1_y_negative_done:
-53C4  4C D9 53    JMP runtime_map_entity_1_y_done
-53C7        runtime_map_entity_1_y_negative_hit:
+53BF  F0 03       BEQ runtime_map_entity_0_y_negative_done
+53C1  4C 52 53    JMP runtime_map_entity_0_y_negative_loop
+53C4        runtime_map_entity_0_y_negative_done:
+53C4  4C D9 53    JMP runtime_map_entity_0_y_done
+53C7        runtime_map_entity_0_y_negative_hit:
 53C7  EE 05 C1    INC $C105
-53CA  D0 03       BNE runtime_map_entity_1_y_negative_undo_done
+53CA  D0 03       BNE runtime_map_entity_0_y_negative_undo_done
 53CC  EE 06 C1    INC $C106
-53CF        runtime_map_entity_1_y_negative_undo_done:
+53CF        runtime_map_entity_0_y_negative_undo_done:
 53CF  A9 01       LDA #$01
 53D1  8D 0A C1    STA $C10A
 53D4  A9 00       LDA #$00
 53D6  8D 08 C1    STA $C108
-53D9        runtime_map_entity_1_y_done:
+53D9        runtime_map_entity_0_y_done:
 53D9  A9 01       LDA #$01
 53DB  8D C9 C7    STA $C7C9
 53DE  18          CLC
@@ -2373,9 +2373,9 @@
 53FB  69 00       ADC #$00
 53FD  8D C5 C7    STA $C7C5
 5400  20 2D 55    JSR runtime_map_entity_point_solid_0
-5403  F0 03       BEQ runtime_map_entity_1_ground_probe_sample_0_clear
-5405  4C 3D 54    JMP runtime_map_entity_1_grounded
-5408        runtime_map_entity_1_ground_probe_sample_0_clear:
+5403  F0 03       BEQ runtime_map_entity_0_ground_probe_sample_0_clear
+5405  4C 3D 54    JMP runtime_map_entity_0_grounded
+5408        runtime_map_entity_0_ground_probe_sample_0_clear:
 5408  18          CLC
 5409  AD 03 C1    LDA $C103
 540C  69 0C       ADC #$0C
@@ -2384,9 +2384,9 @@
 5414  69 00       ADC #$00
 5416  8D C5 C7    STA $C7C5
 5419  20 2D 55    JSR runtime_map_entity_point_solid_0
-541C  F0 03       BEQ runtime_map_entity_1_ground_probe_sample_1_clear
-541E  4C 3D 54    JMP runtime_map_entity_1_grounded
-5421        runtime_map_entity_1_ground_probe_sample_1_clear:
+541C  F0 03       BEQ runtime_map_entity_0_ground_probe_sample_1_clear
+541E  4C 3D 54    JMP runtime_map_entity_0_grounded
+5421        runtime_map_entity_0_ground_probe_sample_1_clear:
 5421  18          CLC
 5422  AD 03 C1    LDA $C103
 5425  69 13       ADC #$13
@@ -2395,14 +2395,14 @@
 542D  69 00       ADC #$00
 542F  8D C5 C7    STA $C7C5
 5432  20 2D 55    JSR runtime_map_entity_point_solid_0
-5435  F0 03       BEQ runtime_map_entity_1_ground_probe_sample_2_clear
-5437  4C 3D 54    JMP runtime_map_entity_1_grounded
-543A        runtime_map_entity_1_ground_probe_sample_2_clear:
-543A  4C 42 54    JMP runtime_map_entity_1_behavior_probe
-543D        runtime_map_entity_1_grounded:
+5435  F0 03       BEQ runtime_map_entity_0_ground_probe_sample_2_clear
+5437  4C 3D 54    JMP runtime_map_entity_0_grounded
+543A        runtime_map_entity_0_ground_probe_sample_2_clear:
+543A  4C 42 54    JMP runtime_map_entity_0_behavior_probe
+543D        runtime_map_entity_0_grounded:
 543D  A9 01       LDA #$01
 543F  8D 09 C1    STA $C109
-5442        runtime_map_entity_1_behavior_probe:
+5442        runtime_map_entity_0_behavior_probe:
 5442  18          CLC
 5443  AD 03 C1    LDA $C103
 5446  69 0C       ADC #$0C
@@ -2419,20 +2419,20 @@
 5461  8D C7 C7    STA $C7C7
 5464  20 B2 54    JSR runtime_map_entity_point_value_0
 5467  C9 02       CMP #$02
-5469  D0 05       BNE runtime_map_entity_1_center_danger_2_next
+5469  D0 05       BNE runtime_map_entity_0_center_danger_2_next
 546B  A9 01       LDA #$01
 546D  8D 0E C1    STA $C10E
-5470        runtime_map_entity_1_center_danger_2_next:
+5470        runtime_map_entity_0_center_danger_2_next:
 5470  C9 03       CMP #$03
-5472  D0 05       BNE runtime_map_entity_1_center_exit_3_next
+5472  D0 05       BNE runtime_map_entity_0_center_exit_3_next
 5474  A9 01       LDA #$01
 5476  8D 10 C1    STA $C110
-5479        runtime_map_entity_1_center_exit_3_next:
+5479        runtime_map_entity_0_center_exit_3_next:
 5479  C9 04       CMP #$04
-547B  D0 05       BNE runtime_map_entity_1_center_ladder_4_next
+547B  D0 05       BNE runtime_map_entity_0_center_ladder_4_next
 547D  A9 01       LDA #$01
 547F  8D 0F C1    STA $C10F
-5482        runtime_map_entity_1_center_ladder_4_next:
+5482        runtime_map_entity_0_center_ladder_4_next:
 5482  18          CLC
 5483  AD 05 C1    LDA $C105
 5486  69 14       ADC #$14
@@ -2442,21 +2442,21 @@
 5490  8D C7 C7    STA $C7C7
 5493  20 B2 54    JSR runtime_map_entity_point_value_0
 5496  C9 02       CMP #$02
-5498  D0 05       BNE runtime_map_entity_1_bottom_danger_2_next
+5498  D0 05       BNE runtime_map_entity_0_bottom_danger_2_next
 549A  A9 01       LDA #$01
 549C  8D 0E C1    STA $C10E
-549F        runtime_map_entity_1_bottom_danger_2_next:
+549F        runtime_map_entity_0_bottom_danger_2_next:
 549F  C9 03       CMP #$03
-54A1  D0 05       BNE runtime_map_entity_1_bottom_exit_3_next
+54A1  D0 05       BNE runtime_map_entity_0_bottom_exit_3_next
 54A3  A9 01       LDA #$01
 54A5  8D 10 C1    STA $C110
-54A8        runtime_map_entity_1_bottom_exit_3_next:
+54A8        runtime_map_entity_0_bottom_exit_3_next:
 54A8  C9 04       CMP #$04
-54AA  D0 05       BNE runtime_map_entity_1_bottom_ladder_4_next
+54AA  D0 05       BNE runtime_map_entity_0_bottom_ladder_4_next
 54AC  A9 01       LDA #$01
 54AE  8D 0F C1    STA $C10F
-54B1        runtime_map_entity_1_bottom_ladder_4_next:
-54B1        runtime_map_entity_1_done:
+54B1        runtime_map_entity_0_bottom_ladder_4_next:
+54B1        runtime_map_entity_0_done:
 54B1  60          RTS
             ; Map 0: logical collision lookup from 16-bit world pixels
 54B2        runtime_map_entity_point_value_0:

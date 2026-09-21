@@ -60,7 +60,7 @@
 088B  8D 41 C7    STA $C741
 088E  A9 10       LDA #$10
 0890  8D 45 C7    STA $C745
-0893  20 9B 0A    JSR hires_hline_runtime
+0893  20 9C 0A    JSR hires_hline_runtime
 0896  A9 1E       LDA #$1E
 0898  8D 3F C7    STA $C73F
 089B  A9 00       LDA #$00
@@ -75,7 +75,7 @@
 08B1  8D 54 C7    STA $C754
 08B4  A9 30       LDA #$30
 08B6  8D 45 C7    STA $C745
-08B9  20 E7 0A    JSR hires_fillrect_runtime
+08B9  20 E8 0A    JSR hires_fillrect_runtime
 08BC  A9 B4       LDA #$B4
 08BE  8D 55 C7    STA $C755
 08C1  A9 00       LDA #$00
@@ -88,7 +88,7 @@
 08D2  8D 59 C7    STA $C759
 08D5  A9 00       LDA #$00
 08D7  8D 5A C7    STA $C75A
-08DA  20 F9 0A    JSR hires_circle_runtime
+08DA  20 FA 0A    JSR hires_circle_runtime
 08DD  A9 04       LDA #$04
 08DF  8D 55 C7    STA $C755
 08E2  A9 01       LDA #$01
@@ -101,7 +101,7 @@
 08F3  8D 59 C7    STA $C759
 08F6  A9 01       LDA #$01
 08F8  8D 5A C7    STA $C75A
-08FB  20 F9 0A    JSR hires_circle_runtime
+08FB  20 FA 0A    JSR hires_circle_runtime
 08FE  AD 00 DC    LDA $DC00
 0901  8D 5F C7    STA $C75F
 0904  AD 02 DC    LDA $DC02
@@ -299,323 +299,324 @@
 0A84  90 02       BCC hires_point_screen_ok_13_hi_done
 0A86  E6 FC       INC $FC
 0A88        hires_point_screen_ok_13_hi_done:
-0A88  A5 FC       LDA $FC
-0A8A  69 04       ADC #$04
-0A8C  85 FC       STA $FC
-0A8E  B1 FB       LDA ($FB),Y
-0A90  29 0F       AND #$0F
-0A92  0D 3D C7    ORA $C73D
-0A95  91 FB       STA ($FB),Y
-0A97  AD 3D C7    LDA $C73D
-0A9A  60          RTS
-0A9B        hires_hline_runtime:
-0A9B  AD 3F C7    LDA $C73F
-0A9E  8D 46 C7    STA $C746
-0AA1  AD 40 C7    LDA $C740
-0AA4  8D 47 C7    STA $C747
-0AA7        hires_hline_loop_48:
-0AA7  AD 46 C7    LDA $C746
-0AAA  8D 3B C7    STA $C73B
-0AAD  AD 47 C7    LDA $C747
-0AB0  8D 3E C7    STA $C73E
-0AB3  AD 41 C7    LDA $C741
-0AB6  8D 3C C7    STA $C73C
-0AB9  AD 45 C7    LDA $C745
-0ABC  8D 3D C7    STA $C73D
-0ABF  20 AA 09    JSR hires_point_runtime
-0AC2  AD 47 C7    LDA $C747
-0AC5  CD 43 C7    CMP $C743
-0AC8  D0 08       BNE hires_hline_loop_48_inc
-0ACA  AD 46 C7    LDA $C746
-0ACD  CD 42 C7    CMP $C742
-0AD0  F0 14       BEQ hires_hline_done_49
-0AD2        hires_hline_loop_48_inc:
-0AD2  18          CLC
-0AD3  AD 46 C7    LDA $C746
-0AD6  69 01       ADC #$01
-0AD8  8D 46 C7    STA $C746
-0ADB  AD 47 C7    LDA $C747
-0ADE  69 00       ADC #$00
-0AE0  8D 47 C7    STA $C747
-0AE3  4C A7 0A    JMP hires_hline_loop_48
-0AE6        hires_hline_done_49:
-0AE6  60          RTS
-0AE7        hires_fillrect_runtime:
-0AE7        hires_fillrect_loop_50:
-0AE7  20 9B 0A    JSR hires_hline_runtime
-0AEA  AD 41 C7    LDA $C741
-0AED  CD 54 C7    CMP $C754
-0AF0  F0 06       BEQ hires_fillrect_done_51
-0AF2  EE 41 C7    INC $C741
-0AF5  4C E7 0A    JMP hires_fillrect_loop_50
-0AF8        hires_fillrect_done_51:
-0AF8  60          RTS
-0AF9        hires_circle_runtime:
-0AF9  AD 58 C7    LDA $C758
-0AFC  8D 5B C7    STA $C75B
-0AFF  A9 00       LDA #$00
-0B01  8D 5C C7    STA $C75C
-0B04  A9 01       LDA #$01
-0B06  38          SEC
-0B07  ED 58 C7    SBC $C758
-0B0A  8D 5D C7    STA $C75D
-0B0D  A9 00       LDA #$00
-0B0F  E9 00       SBC #$00
-0B11  8D 5E C7    STA $C75E
-0B14        hires_circle_loop_37:
-0B14  AD 5C C7    LDA $C75C
-0B17  CD 5B C7    CMP $C75B
-0B1A  90 05       BCC hires_circle_after_draw_39
-0B1C  F0 03       BEQ hires_circle_after_draw_39
-0B1E  4C 96 0D    JMP hires_circle_done_38
-0B21        hires_circle_after_draw_39:
-0B21  AD 5A C7    LDA $C75A
-0B24  D0 03       BNE hires_circle_do_fill_42
-0B26  4C 18 0C    JMP hires_circle_plot_mode_41
-0B29        hires_circle_do_fill_42:
-0B29  38          SEC
-0B2A  AD 55 C7    LDA $C755
-0B2D  ED 5B C7    SBC $C75B
-0B30  8D 3F C7    STA $C73F
-0B33  AD 56 C7    LDA $C756
-0B36  E9 00       SBC #$00
-0B38  8D 40 C7    STA $C740
-0B3B  AD 55 C7    LDA $C755
-0B3E  18          CLC
-0B3F  6D 5B C7    ADC $C75B
-0B42  8D 42 C7    STA $C742
-0B45  AD 56 C7    LDA $C756
-0B48  69 00       ADC #$00
-0B4A  8D 43 C7    STA $C743
-0B4D  AD 57 C7    LDA $C757
-0B50  18          CLC
-0B51  6D 5C C7    ADC $C75C
-0B54  8D 41 C7    STA $C741
-0B57  AD 59 C7    LDA $C759
-0B5A  8D 45 C7    STA $C745
-0B5D  20 9B 0A    JSR hires_hline_runtime
-0B60  AD 5C C7    LDA $C75C
-0B63  F0 37       BEQ hires_circle_fill_third_span_44
-0B65  38          SEC
-0B66  AD 55 C7    LDA $C755
-0B69  ED 5B C7    SBC $C75B
-0B6C  8D 3F C7    STA $C73F
-0B6F  AD 56 C7    LDA $C756
-0B72  E9 00       SBC #$00
-0B74  8D 40 C7    STA $C740
-0B77  AD 55 C7    LDA $C755
-0B7A  18          CLC
-0B7B  6D 5B C7    ADC $C75B
-0B7E  8D 42 C7    STA $C742
-0B81  AD 56 C7    LDA $C756
-0B84  69 00       ADC #$00
-0B86  8D 43 C7    STA $C743
-0B89  38          SEC
-0B8A  AD 57 C7    LDA $C757
-0B8D  ED 5C C7    SBC $C75C
-0B90  8D 41 C7    STA $C741
-0B93  AD 59 C7    LDA $C759
-0B96  8D 45 C7    STA $C745
-0B99  20 9B 0A    JSR hires_hline_runtime
-0B9C        hires_circle_fill_third_span_44:
-0B9C  AD 5B C7    LDA $C75B
-0B9F  CD 5C C7    CMP $C75C
-0BA2  D0 03       BNE hires_circle_skip_extra_fill_47
-0BA4  4C 40 0D    JMP hires_circle_fill_after_fourth_46
-0BA7        hires_circle_skip_extra_fill_47:
-0BA7  38          SEC
-0BA8  AD 55 C7    LDA $C755
-0BAB  ED 5C C7    SBC $C75C
-0BAE  8D 3F C7    STA $C73F
-0BB1  AD 56 C7    LDA $C756
-0BB4  E9 00       SBC #$00
-0BB6  8D 40 C7    STA $C740
-0BB9  AD 55 C7    LDA $C755
-0BBC  18          CLC
-0BBD  6D 5C C7    ADC $C75C
-0BC0  8D 42 C7    STA $C742
-0BC3  AD 56 C7    LDA $C756
-0BC6  69 00       ADC #$00
-0BC8  8D 43 C7    STA $C743
-0BCB  AD 57 C7    LDA $C757
-0BCE  18          CLC
-0BCF  6D 5B C7    ADC $C75B
-0BD2  8D 41 C7    STA $C741
-0BD5  AD 59 C7    LDA $C759
-0BD8  8D 45 C7    STA $C745
-0BDB  20 9B 0A    JSR hires_hline_runtime
-0BDE  38          SEC
-0BDF  AD 55 C7    LDA $C755
-0BE2  ED 5C C7    SBC $C75C
-0BE5  8D 3F C7    STA $C73F
-0BE8  AD 56 C7    LDA $C756
-0BEB  E9 00       SBC #$00
-0BED  8D 40 C7    STA $C740
-0BF0  AD 55 C7    LDA $C755
-0BF3  18          CLC
-0BF4  6D 5C C7    ADC $C75C
-0BF7  8D 42 C7    STA $C742
-0BFA  AD 56 C7    LDA $C756
-0BFD  69 00       ADC #$00
-0BFF  8D 43 C7    STA $C743
-0C02  38          SEC
-0C03  AD 57 C7    LDA $C757
-0C06  ED 5B C7    SBC $C75B
-0C09  8D 41 C7    STA $C741
-0C0C  AD 59 C7    LDA $C759
-0C0F  8D 45 C7    STA $C745
-0C12  20 9B 0A    JSR hires_hline_runtime
-0C15  4C 40 0D    JMP hires_circle_fill_after_fourth_46
-0C18        hires_circle_plot_mode_41:
-0C18  AD 55 C7    LDA $C755
-0C1B  18          CLC
-0C1C  6D 5B C7    ADC $C75B
-0C1F  8D 3B C7    STA $C73B
-0C22  AD 56 C7    LDA $C756
-0C25  69 00       ADC #$00
-0C27  8D 3E C7    STA $C73E
-0C2A  AD 57 C7    LDA $C757
-0C2D  18          CLC
-0C2E  6D 5C C7    ADC $C75C
-0C31  8D 3C C7    STA $C73C
-0C34  AD 59 C7    LDA $C759
-0C37  8D 3D C7    STA $C73D
-0C3A  20 AA 09    JSR hires_point_runtime
-0C3D  38          SEC
-0C3E  AD 55 C7    LDA $C755
-0C41  ED 5B C7    SBC $C75B
-0C44  8D 3B C7    STA $C73B
-0C47  AD 56 C7    LDA $C756
-0C4A  E9 00       SBC #$00
-0C4C  8D 3E C7    STA $C73E
-0C4F  AD 57 C7    LDA $C757
-0C52  18          CLC
-0C53  6D 5C C7    ADC $C75C
-0C56  8D 3C C7    STA $C73C
-0C59  AD 59 C7    LDA $C759
-0C5C  8D 3D C7    STA $C73D
-0C5F  20 AA 09    JSR hires_point_runtime
-0C62  AD 55 C7    LDA $C755
-0C65  18          CLC
-0C66  6D 5B C7    ADC $C75B
-0C69  8D 3B C7    STA $C73B
-0C6C  AD 56 C7    LDA $C756
-0C6F  69 00       ADC #$00
-0C71  8D 3E C7    STA $C73E
-0C74  38          SEC
-0C75  AD 57 C7    LDA $C757
-0C78  ED 5C C7    SBC $C75C
-0C7B  8D 3C C7    STA $C73C
-0C7E  AD 59 C7    LDA $C759
-0C81  8D 3D C7    STA $C73D
-0C84  20 AA 09    JSR hires_point_runtime
-0C87  38          SEC
-0C88  AD 55 C7    LDA $C755
-0C8B  ED 5B C7    SBC $C75B
-0C8E  8D 3B C7    STA $C73B
-0C91  AD 56 C7    LDA $C756
-0C94  E9 00       SBC #$00
-0C96  8D 3E C7    STA $C73E
-0C99  38          SEC
-0C9A  AD 57 C7    LDA $C757
-0C9D  ED 5C C7    SBC $C75C
-0CA0  8D 3C C7    STA $C73C
-0CA3  AD 59 C7    LDA $C759
-0CA6  8D 3D C7    STA $C73D
-0CA9  20 AA 09    JSR hires_point_runtime
-0CAC  AD 55 C7    LDA $C755
-0CAF  18          CLC
-0CB0  6D 5C C7    ADC $C75C
-0CB3  8D 3B C7    STA $C73B
-0CB6  AD 56 C7    LDA $C756
-0CB9  69 00       ADC #$00
-0CBB  8D 3E C7    STA $C73E
-0CBE  AD 57 C7    LDA $C757
-0CC1  18          CLC
-0CC2  6D 5B C7    ADC $C75B
-0CC5  8D 3C C7    STA $C73C
-0CC8  AD 59 C7    LDA $C759
-0CCB  8D 3D C7    STA $C73D
-0CCE  20 AA 09    JSR hires_point_runtime
-0CD1  38          SEC
-0CD2  AD 55 C7    LDA $C755
-0CD5  ED 5C C7    SBC $C75C
-0CD8  8D 3B C7    STA $C73B
-0CDB  AD 56 C7    LDA $C756
-0CDE  E9 00       SBC #$00
-0CE0  8D 3E C7    STA $C73E
-0CE3  AD 57 C7    LDA $C757
-0CE6  18          CLC
-0CE7  6D 5B C7    ADC $C75B
-0CEA  8D 3C C7    STA $C73C
-0CED  AD 59 C7    LDA $C759
-0CF0  8D 3D C7    STA $C73D
-0CF3  20 AA 09    JSR hires_point_runtime
-0CF6  AD 55 C7    LDA $C755
-0CF9  18          CLC
-0CFA  6D 5C C7    ADC $C75C
-0CFD  8D 3B C7    STA $C73B
-0D00  AD 56 C7    LDA $C756
-0D03  69 00       ADC #$00
-0D05  8D 3E C7    STA $C73E
-0D08  38          SEC
-0D09  AD 57 C7    LDA $C757
-0D0C  ED 5B C7    SBC $C75B
-0D0F  8D 3C C7    STA $C73C
-0D12  AD 59 C7    LDA $C759
-0D15  8D 3D C7    STA $C73D
-0D18  20 AA 09    JSR hires_point_runtime
-0D1B  38          SEC
-0D1C  AD 55 C7    LDA $C755
-0D1F  ED 5C C7    SBC $C75C
-0D22  8D 3B C7    STA $C73B
-0D25  AD 56 C7    LDA $C756
-0D28  E9 00       SBC #$00
-0D2A  8D 3E C7    STA $C73E
-0D2D  38          SEC
-0D2E  AD 57 C7    LDA $C757
-0D31  ED 5B C7    SBC $C75B
-0D34  8D 3C C7    STA $C73C
-0D37  AD 59 C7    LDA $C759
-0D3A  8D 3D C7    STA $C73D
-0D3D  20 AA 09    JSR hires_point_runtime
-0D40        hires_circle_fill_after_fourth_46:
-0D40  EE 5C C7    INC $C75C
-0D43  AD 5E C7    LDA $C75E
-0D46  30 35       BMI hires_circle_err_negative_40
-0D48  CE 5B C7    DEC $C75B
-0D4B  18          CLC
-0D4C  AD 5C C7    LDA $C75C
-0D4F  0A          ASL A
-0D50  69 01       ADC #$01
-0D52  18          CLC
-0D53  6D 5D C7    ADC $C75D
-0D56  8D 5D C7    STA $C75D
-0D59  AD 5E C7    LDA $C75E
-0D5C  69 00       ADC #$00
-0D5E  8D 5E C7    STA $C75E
-0D61  38          SEC
-0D62  AD 5B C7    LDA $C75B
-0D65  0A          ASL A
-0D66  8D FD 00    STA $00FD
-0D69  AD 5D C7    LDA $C75D
-0D6C  ED FD 00    SBC $00FD
-0D6F  8D 5D C7    STA $C75D
-0D72  AD 5E C7    LDA $C75E
-0D75  E9 00       SBC #$00
-0D77  8D 5E C7    STA $C75E
-0D7A  4C 14 0B    JMP hires_circle_loop_37
-0D7D        hires_circle_err_negative_40:
-0D7D  18          CLC
-0D7E  AD 5C C7    LDA $C75C
-0D81  0A          ASL A
-0D82  69 01       ADC #$01
-0D84  18          CLC
-0D85  6D 5D C7    ADC $C75D
-0D88  8D 5D C7    STA $C75D
-0D8B  AD 5E C7    LDA $C75E
-0D8E  69 00       ADC #$00
-0D90  8D 5E C7    STA $C75E
-0D93  4C 14 0B    JMP hires_circle_loop_37
-0D96        hires_circle_done_38:
-0D96  60          RTS
+0A88  18          CLC
+0A89  A5 FC       LDA $FC
+0A8B  69 04       ADC #$04
+0A8D  85 FC       STA $FC
+0A8F  B1 FB       LDA ($FB),Y
+0A91  29 0F       AND #$0F
+0A93  0D 3D C7    ORA $C73D
+0A96  91 FB       STA ($FB),Y
+0A98  AD 3D C7    LDA $C73D
+0A9B  60          RTS
+0A9C        hires_hline_runtime:
+0A9C  AD 3F C7    LDA $C73F
+0A9F  8D 46 C7    STA $C746
+0AA2  AD 40 C7    LDA $C740
+0AA5  8D 47 C7    STA $C747
+0AA8        hires_hline_loop_48:
+0AA8  AD 46 C7    LDA $C746
+0AAB  8D 3B C7    STA $C73B
+0AAE  AD 47 C7    LDA $C747
+0AB1  8D 3E C7    STA $C73E
+0AB4  AD 41 C7    LDA $C741
+0AB7  8D 3C C7    STA $C73C
+0ABA  AD 45 C7    LDA $C745
+0ABD  8D 3D C7    STA $C73D
+0AC0  20 AA 09    JSR hires_point_runtime
+0AC3  AD 47 C7    LDA $C747
+0AC6  CD 43 C7    CMP $C743
+0AC9  D0 08       BNE hires_hline_loop_48_inc
+0ACB  AD 46 C7    LDA $C746
+0ACE  CD 42 C7    CMP $C742
+0AD1  F0 14       BEQ hires_hline_done_49
+0AD3        hires_hline_loop_48_inc:
+0AD3  18          CLC
+0AD4  AD 46 C7    LDA $C746
+0AD7  69 01       ADC #$01
+0AD9  8D 46 C7    STA $C746
+0ADC  AD 47 C7    LDA $C747
+0ADF  69 00       ADC #$00
+0AE1  8D 47 C7    STA $C747
+0AE4  4C A8 0A    JMP hires_hline_loop_48
+0AE7        hires_hline_done_49:
+0AE7  60          RTS
+0AE8        hires_fillrect_runtime:
+0AE8        hires_fillrect_loop_50:
+0AE8  20 9C 0A    JSR hires_hline_runtime
+0AEB  AD 41 C7    LDA $C741
+0AEE  CD 54 C7    CMP $C754
+0AF1  F0 06       BEQ hires_fillrect_done_51
+0AF3  EE 41 C7    INC $C741
+0AF6  4C E8 0A    JMP hires_fillrect_loop_50
+0AF9        hires_fillrect_done_51:
+0AF9  60          RTS
+0AFA        hires_circle_runtime:
+0AFA  AD 58 C7    LDA $C758
+0AFD  8D 5B C7    STA $C75B
+0B00  A9 00       LDA #$00
+0B02  8D 5C C7    STA $C75C
+0B05  A9 01       LDA #$01
+0B07  38          SEC
+0B08  ED 58 C7    SBC $C758
+0B0B  8D 5D C7    STA $C75D
+0B0E  A9 00       LDA #$00
+0B10  E9 00       SBC #$00
+0B12  8D 5E C7    STA $C75E
+0B15        hires_circle_loop_37:
+0B15  AD 5C C7    LDA $C75C
+0B18  CD 5B C7    CMP $C75B
+0B1B  90 05       BCC hires_circle_after_draw_39
+0B1D  F0 03       BEQ hires_circle_after_draw_39
+0B1F  4C 97 0D    JMP hires_circle_done_38
+0B22        hires_circle_after_draw_39:
+0B22  AD 5A C7    LDA $C75A
+0B25  D0 03       BNE hires_circle_do_fill_42
+0B27  4C 19 0C    JMP hires_circle_plot_mode_41
+0B2A        hires_circle_do_fill_42:
+0B2A  38          SEC
+0B2B  AD 55 C7    LDA $C755
+0B2E  ED 5B C7    SBC $C75B
+0B31  8D 3F C7    STA $C73F
+0B34  AD 56 C7    LDA $C756
+0B37  E9 00       SBC #$00
+0B39  8D 40 C7    STA $C740
+0B3C  AD 55 C7    LDA $C755
+0B3F  18          CLC
+0B40  6D 5B C7    ADC $C75B
+0B43  8D 42 C7    STA $C742
+0B46  AD 56 C7    LDA $C756
+0B49  69 00       ADC #$00
+0B4B  8D 43 C7    STA $C743
+0B4E  AD 57 C7    LDA $C757
+0B51  18          CLC
+0B52  6D 5C C7    ADC $C75C
+0B55  8D 41 C7    STA $C741
+0B58  AD 59 C7    LDA $C759
+0B5B  8D 45 C7    STA $C745
+0B5E  20 9C 0A    JSR hires_hline_runtime
+0B61  AD 5C C7    LDA $C75C
+0B64  F0 37       BEQ hires_circle_fill_third_span_44
+0B66  38          SEC
+0B67  AD 55 C7    LDA $C755
+0B6A  ED 5B C7    SBC $C75B
+0B6D  8D 3F C7    STA $C73F
+0B70  AD 56 C7    LDA $C756
+0B73  E9 00       SBC #$00
+0B75  8D 40 C7    STA $C740
+0B78  AD 55 C7    LDA $C755
+0B7B  18          CLC
+0B7C  6D 5B C7    ADC $C75B
+0B7F  8D 42 C7    STA $C742
+0B82  AD 56 C7    LDA $C756
+0B85  69 00       ADC #$00
+0B87  8D 43 C7    STA $C743
+0B8A  38          SEC
+0B8B  AD 57 C7    LDA $C757
+0B8E  ED 5C C7    SBC $C75C
+0B91  8D 41 C7    STA $C741
+0B94  AD 59 C7    LDA $C759
+0B97  8D 45 C7    STA $C745
+0B9A  20 9C 0A    JSR hires_hline_runtime
+0B9D        hires_circle_fill_third_span_44:
+0B9D  AD 5B C7    LDA $C75B
+0BA0  CD 5C C7    CMP $C75C
+0BA3  D0 03       BNE hires_circle_skip_extra_fill_47
+0BA5  4C 41 0D    JMP hires_circle_fill_after_fourth_46
+0BA8        hires_circle_skip_extra_fill_47:
+0BA8  38          SEC
+0BA9  AD 55 C7    LDA $C755
+0BAC  ED 5C C7    SBC $C75C
+0BAF  8D 3F C7    STA $C73F
+0BB2  AD 56 C7    LDA $C756
+0BB5  E9 00       SBC #$00
+0BB7  8D 40 C7    STA $C740
+0BBA  AD 55 C7    LDA $C755
+0BBD  18          CLC
+0BBE  6D 5C C7    ADC $C75C
+0BC1  8D 42 C7    STA $C742
+0BC4  AD 56 C7    LDA $C756
+0BC7  69 00       ADC #$00
+0BC9  8D 43 C7    STA $C743
+0BCC  AD 57 C7    LDA $C757
+0BCF  18          CLC
+0BD0  6D 5B C7    ADC $C75B
+0BD3  8D 41 C7    STA $C741
+0BD6  AD 59 C7    LDA $C759
+0BD9  8D 45 C7    STA $C745
+0BDC  20 9C 0A    JSR hires_hline_runtime
+0BDF  38          SEC
+0BE0  AD 55 C7    LDA $C755
+0BE3  ED 5C C7    SBC $C75C
+0BE6  8D 3F C7    STA $C73F
+0BE9  AD 56 C7    LDA $C756
+0BEC  E9 00       SBC #$00
+0BEE  8D 40 C7    STA $C740
+0BF1  AD 55 C7    LDA $C755
+0BF4  18          CLC
+0BF5  6D 5C C7    ADC $C75C
+0BF8  8D 42 C7    STA $C742
+0BFB  AD 56 C7    LDA $C756
+0BFE  69 00       ADC #$00
+0C00  8D 43 C7    STA $C743
+0C03  38          SEC
+0C04  AD 57 C7    LDA $C757
+0C07  ED 5B C7    SBC $C75B
+0C0A  8D 41 C7    STA $C741
+0C0D  AD 59 C7    LDA $C759
+0C10  8D 45 C7    STA $C745
+0C13  20 9C 0A    JSR hires_hline_runtime
+0C16  4C 41 0D    JMP hires_circle_fill_after_fourth_46
+0C19        hires_circle_plot_mode_41:
+0C19  AD 55 C7    LDA $C755
+0C1C  18          CLC
+0C1D  6D 5B C7    ADC $C75B
+0C20  8D 3B C7    STA $C73B
+0C23  AD 56 C7    LDA $C756
+0C26  69 00       ADC #$00
+0C28  8D 3E C7    STA $C73E
+0C2B  AD 57 C7    LDA $C757
+0C2E  18          CLC
+0C2F  6D 5C C7    ADC $C75C
+0C32  8D 3C C7    STA $C73C
+0C35  AD 59 C7    LDA $C759
+0C38  8D 3D C7    STA $C73D
+0C3B  20 AA 09    JSR hires_point_runtime
+0C3E  38          SEC
+0C3F  AD 55 C7    LDA $C755
+0C42  ED 5B C7    SBC $C75B
+0C45  8D 3B C7    STA $C73B
+0C48  AD 56 C7    LDA $C756
+0C4B  E9 00       SBC #$00
+0C4D  8D 3E C7    STA $C73E
+0C50  AD 57 C7    LDA $C757
+0C53  18          CLC
+0C54  6D 5C C7    ADC $C75C
+0C57  8D 3C C7    STA $C73C
+0C5A  AD 59 C7    LDA $C759
+0C5D  8D 3D C7    STA $C73D
+0C60  20 AA 09    JSR hires_point_runtime
+0C63  AD 55 C7    LDA $C755
+0C66  18          CLC
+0C67  6D 5B C7    ADC $C75B
+0C6A  8D 3B C7    STA $C73B
+0C6D  AD 56 C7    LDA $C756
+0C70  69 00       ADC #$00
+0C72  8D 3E C7    STA $C73E
+0C75  38          SEC
+0C76  AD 57 C7    LDA $C757
+0C79  ED 5C C7    SBC $C75C
+0C7C  8D 3C C7    STA $C73C
+0C7F  AD 59 C7    LDA $C759
+0C82  8D 3D C7    STA $C73D
+0C85  20 AA 09    JSR hires_point_runtime
+0C88  38          SEC
+0C89  AD 55 C7    LDA $C755
+0C8C  ED 5B C7    SBC $C75B
+0C8F  8D 3B C7    STA $C73B
+0C92  AD 56 C7    LDA $C756
+0C95  E9 00       SBC #$00
+0C97  8D 3E C7    STA $C73E
+0C9A  38          SEC
+0C9B  AD 57 C7    LDA $C757
+0C9E  ED 5C C7    SBC $C75C
+0CA1  8D 3C C7    STA $C73C
+0CA4  AD 59 C7    LDA $C759
+0CA7  8D 3D C7    STA $C73D
+0CAA  20 AA 09    JSR hires_point_runtime
+0CAD  AD 55 C7    LDA $C755
+0CB0  18          CLC
+0CB1  6D 5C C7    ADC $C75C
+0CB4  8D 3B C7    STA $C73B
+0CB7  AD 56 C7    LDA $C756
+0CBA  69 00       ADC #$00
+0CBC  8D 3E C7    STA $C73E
+0CBF  AD 57 C7    LDA $C757
+0CC2  18          CLC
+0CC3  6D 5B C7    ADC $C75B
+0CC6  8D 3C C7    STA $C73C
+0CC9  AD 59 C7    LDA $C759
+0CCC  8D 3D C7    STA $C73D
+0CCF  20 AA 09    JSR hires_point_runtime
+0CD2  38          SEC
+0CD3  AD 55 C7    LDA $C755
+0CD6  ED 5C C7    SBC $C75C
+0CD9  8D 3B C7    STA $C73B
+0CDC  AD 56 C7    LDA $C756
+0CDF  E9 00       SBC #$00
+0CE1  8D 3E C7    STA $C73E
+0CE4  AD 57 C7    LDA $C757
+0CE7  18          CLC
+0CE8  6D 5B C7    ADC $C75B
+0CEB  8D 3C C7    STA $C73C
+0CEE  AD 59 C7    LDA $C759
+0CF1  8D 3D C7    STA $C73D
+0CF4  20 AA 09    JSR hires_point_runtime
+0CF7  AD 55 C7    LDA $C755
+0CFA  18          CLC
+0CFB  6D 5C C7    ADC $C75C
+0CFE  8D 3B C7    STA $C73B
+0D01  AD 56 C7    LDA $C756
+0D04  69 00       ADC #$00
+0D06  8D 3E C7    STA $C73E
+0D09  38          SEC
+0D0A  AD 57 C7    LDA $C757
+0D0D  ED 5B C7    SBC $C75B
+0D10  8D 3C C7    STA $C73C
+0D13  AD 59 C7    LDA $C759
+0D16  8D 3D C7    STA $C73D
+0D19  20 AA 09    JSR hires_point_runtime
+0D1C  38          SEC
+0D1D  AD 55 C7    LDA $C755
+0D20  ED 5C C7    SBC $C75C
+0D23  8D 3B C7    STA $C73B
+0D26  AD 56 C7    LDA $C756
+0D29  E9 00       SBC #$00
+0D2B  8D 3E C7    STA $C73E
+0D2E  38          SEC
+0D2F  AD 57 C7    LDA $C757
+0D32  ED 5B C7    SBC $C75B
+0D35  8D 3C C7    STA $C73C
+0D38  AD 59 C7    LDA $C759
+0D3B  8D 3D C7    STA $C73D
+0D3E  20 AA 09    JSR hires_point_runtime
+0D41        hires_circle_fill_after_fourth_46:
+0D41  EE 5C C7    INC $C75C
+0D44  AD 5E C7    LDA $C75E
+0D47  30 35       BMI hires_circle_err_negative_40
+0D49  CE 5B C7    DEC $C75B
+0D4C  18          CLC
+0D4D  AD 5C C7    LDA $C75C
+0D50  0A          ASL A
+0D51  69 01       ADC #$01
+0D53  18          CLC
+0D54  6D 5D C7    ADC $C75D
+0D57  8D 5D C7    STA $C75D
+0D5A  AD 5E C7    LDA $C75E
+0D5D  69 00       ADC #$00
+0D5F  8D 5E C7    STA $C75E
+0D62  38          SEC
+0D63  AD 5B C7    LDA $C75B
+0D66  0A          ASL A
+0D67  8D FD 00    STA $00FD
+0D6A  AD 5D C7    LDA $C75D
+0D6D  ED FD 00    SBC $00FD
+0D70  8D 5D C7    STA $C75D
+0D73  AD 5E C7    LDA $C75E
+0D76  E9 00       SBC #$00
+0D78  8D 5E C7    STA $C75E
+0D7B  4C 15 0B    JMP hires_circle_loop_37
+0D7E        hires_circle_err_negative_40:
+0D7E  18          CLC
+0D7F  AD 5C C7    LDA $C75C
+0D82  0A          ASL A
+0D83  69 01       ADC #$01
+0D85  18          CLC
+0D86  6D 5D C7    ADC $C75D
+0D89  8D 5D C7    STA $C75D
+0D8C  AD 5E C7    LDA $C75E
+0D8F  69 00       ADC #$00
+0D91  8D 5E C7    STA $C75E
+0D94  4C 15 0B    JMP hires_circle_loop_37
+0D97        hires_circle_done_38:
+0D97  60          RTS

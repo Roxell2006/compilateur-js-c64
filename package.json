@@ -1,7 +1,7 @@
 {
   "name": "js-c64",
-  "version": "1.0.1",
-  "description": "JavaScript DSL and mini game engine that emits Commodore 64 6502 programs, assets and D64 disks.",
+  "version": "1.1.0",
+  "description": "JavaScript compiler and game library that emits native Commodore 64 6502 programs, assets and D64 disks.",
   "type": "module",
   "bin": {
     "c64js": "src/cli.js"
@@ -25,7 +25,15 @@
     "LICENSE",
     "CHANGELOG.md",
     "MODE_EMPLOI_DEBUTANT.txt",
-    "index.d.ts"
+    "index.d.ts",
+    "!**/*.test.js",
+    "!**/*.spec.js",
+    "!**/test/**",
+    "!**/tests/**",
+    "!**/__tests__/**",
+    "!**/__fixtures__/**",
+    "!**/fixtures/**",
+    "!examples/hires-test.js"
   ],
   "scripts": {
     "build:hello": "node src/cli.js build examples/hello.js -o dist/hello.prg",

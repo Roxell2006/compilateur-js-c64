@@ -1096,7 +1096,7 @@ printat_loop_41:
   LDA str_screen_5,X
   BEQ printat_done_42
   STA $06F9,X
-  LDA #$01
+  LDA #$02
   STA $DAF9,X
   INX
   BNE printat_loop_41

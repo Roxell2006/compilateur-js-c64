@@ -83,7 +83,7 @@ asset_map_initial_rle_8_repeat:
   STA $C106
   LDA #$00
   LDX #$00
-map_scroll_blank_charset_2:
+map_scroll_blank_charset_0:
   STA $3800,X
   STA $3900,X
   STA $3A00,X
@@ -93,7 +93,7 @@ map_scroll_blank_charset_2:
   STA $3E00,X
   STA $3F00,X
   INX
-  BNE map_scroll_blank_charset_2
+  BNE map_scroll_blank_charset_0
   LDA #$93
   JSR $FFD2
   LDA #$00

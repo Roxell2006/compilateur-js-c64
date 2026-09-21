@@ -299,6 +299,7 @@ hires_point_screen_ok_13:
   BCC hires_point_screen_ok_13_hi_done
   INC $FC
 hires_point_screen_ok_13_hi_done:
+  CLC
   LDA $FC
   ADC #$04
   STA $FC

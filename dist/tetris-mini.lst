@@ -1096,7 +1096,7 @@
 1149  BD B2 14    LDA str_screen_5,X
 114C  F0 0B       BEQ printat_done_42
 114E  9D F9 06    STA $06F9,X
-1151  A9 01       LDA #$01
+1151  A9 02       LDA #$02
 1153  9D F9 DA    STA $DAF9,X
 1156  E8          INX
 1157  D0 F0       BNE printat_loop_41

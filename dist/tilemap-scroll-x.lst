@@ -83,7 +83,7 @@
 08B9  8D 06 C1    STA $C106
 08BC  A9 00       LDA #$00
 08BE  A2 00       LDX #$00
-08C0        map_scroll_blank_charset_2:
+08C0        map_scroll_blank_charset_0:
 08C0  9D 00 38    STA $3800,X
 08C3  9D 00 39    STA $3900,X
 08C6  9D 00 3A    STA $3A00,X
@@ -93,7 +93,7 @@
 08D2  9D 00 3E    STA $3E00,X
 08D5  9D 00 3F    STA $3F00,X
 08D8  E8          INX
-08D9  D0 E5       BNE map_scroll_blank_charset_2
+08D9  D0 E5       BNE map_scroll_blank_charset_0
 08DB  A9 93       LDA #$93
 08DD  20 D2 FF    JSR $FFD2
 08E0  A9 00       LDA #$00

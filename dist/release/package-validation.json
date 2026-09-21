@@ -1,0 +1,17 @@
+{
+  "packageVersion": "1.1.0",
+  "exports": 6,
+  "examples": 37,
+  "documentationPrograms": 15,
+  "platform": "win32",
+  "node": "v24.13.0",
+  "generatedAt": "2026-09-21T11:39:39.852Z",
+  "dependencySource": "local tarballs matching package-lock",
+  "archive": "js-c64-1.1.0.tgz",
+  "integrity": "sha512-qe3gFv1KdsMMHvo1TsN87PRabYdsuKXIbFK0U+ppA3QWNAdgldW1xqRRqXHTHihUq7TNhW+kqkl7I7cIGgiAxQ==",
+  "files": 72,
+  "packedBytes": 181576,
+  "unpackedBytes": 763723,
+  "starter": "passed",
+  "published": false
+}
