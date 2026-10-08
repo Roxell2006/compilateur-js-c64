@@ -5,13 +5,13 @@
   "documentationPrograms": 15,
   "platform": "win32",
   "node": "v24.13.0",
-  "generatedAt": "2026-09-21T11:39:39.852Z",
-  "dependencySource": "local tarballs matching package-lock",
+  "generatedAt": "2026-10-08T14:46:00.409Z",
+  "dependencySource": "npm registry/cache",
   "archive": "js-c64-1.1.0.tgz",
-  "integrity": "sha512-qe3gFv1KdsMMHvo1TsN87PRabYdsuKXIbFK0U+ppA3QWNAdgldW1xqRRqXHTHihUq7TNhW+kqkl7I7cIGgiAxQ==",
+  "integrity": "sha512-Q+D+RvSfS+UPXJpS07DEUfZa3vd1r1OcagJXM+W8L9TWLUwk1sOaKM9ik/zqHrhlYeqQEDtT4mO6Cpg7JGMPrA==",
   "files": 72,
-  "packedBytes": 181576,
-  "unpackedBytes": 763723,
+  "packedBytes": 181732,
+  "unpackedBytes": 775217,
   "starter": "passed",
   "published": false
 }

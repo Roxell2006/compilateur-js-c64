@@ -2,15 +2,15 @@
   "id": "js-c64@1.1.0",
   "name": "js-c64",
   "version": "1.1.0",
-  "size": 181576,
-  "unpackedSize": 763723,
-  "shasum": "f31ebbf5868980242094c1884627a7d561bfd832",
-  "integrity": "sha512-qe3gFv1KdsMMHvo1TsN87PRabYdsuKXIbFK0U+ppA3QWNAdgldW1xqRRqXHTHihUq7TNhW+kqkl7I7cIGgiAxQ==",
+  "size": 181732,
+  "unpackedSize": 775217,
+  "shasum": "f478383807b3be0ce99567cf58009450443304cc",
+  "integrity": "sha512-Q+D+RvSfS+UPXJpS07DEUfZa3vd1r1OcagJXM+W8L9TWLUwk1sOaKM9ik/zqHrhlYeqQEDtT4mO6Cpg7JGMPrA==",
   "filename": "js-c64-1.1.0.tgz",
   "files": [
     {
       "path": "CHANGELOG.md",
-      "size": 19445,
+      "size": 19647,
       "mode": 420
     },
     {
@@ -25,7 +25,7 @@
     },
     {
       "path": "README.md",
-      "size": 11497,
+      "size": 11777,
       "mode": 420
     },
     {
@@ -65,7 +65,7 @@
     },
     {
       "path": "examples/assets/platformer-room.json",
-      "size": 10372,
+      "size": 10643,
       "mode": 420
     },
     {
@@ -160,47 +160,47 @@
     },
     {
       "path": "examples/natural-helpers.js",
-      "size": 674,
+      "size": 706,
       "mode": 420
     },
     {
       "path": "examples/natural-hires-interactive.js",
-      "size": 1790,
+      "size": 1847,
       "mode": 420
     },
     {
       "path": "examples/natural-hires.js",
-      "size": 562,
+      "size": 589,
       "mode": 420
     },
     {
       "path": "examples/natural-lights.js",
-      "size": 2273,
+      "size": 2364,
       "mode": 420
     },
     {
       "path": "examples/natural-platformer.js",
-      "size": 2868,
+      "size": 2948,
       "mode": 420
     },
     {
       "path": "examples/natural-score.js",
-      "size": 1006,
+      "size": 1052,
       "mode": 420
     },
     {
       "path": "examples/natural-scroll.js",
-      "size": 631,
+      "size": 656,
       "mode": 420
     },
     {
       "path": "examples/natural-sprites.js",
-      "size": 1067,
+      "size": 1101,
       "mode": 420
     },
     {
       "path": "examples/natural-tetris.js",
-      "size": 3834,
+      "size": 3985,
       "mode": 420
     },
     {
@@ -280,12 +280,12 @@
     },
     {
       "path": "index.d.ts",
-      "size": 27252,
+      "size": 27326,
       "mode": 420
     },
     {
       "path": "package.json",
-      "size": 2117,
+      "size": 2194,
       "mode": 420
     },
     {
@@ -315,17 +315,17 @@
     },
     {
       "path": "src/c64.js",
-      "size": 53279,
+      "size": 53358,
       "mode": 420
     },
     {
       "path": "src/cli.js",
-      "size": 8337,
+      "size": 8345,
       "mode": 420
     },
     {
       "path": "src/compiler.js",
-      "size": 385518,
+      "size": 394600,
       "mode": 420
     },
     {
@@ -345,12 +345,12 @@
     },
     {
       "path": "src/natural-optimizer.js",
-      "size": 7364,
+      "size": 7514,
       "mode": 420
     },
     {
       "path": "src/natural.js",
-      "size": 41416,
+      "size": 42132,
       "mode": 420
     },
     {
@@ -365,7 +365,7 @@
     },
     {
       "path": "src/runtime.js",
-      "size": 6520,
+      "size": 6532,
       "mode": 420
     }
   ],
